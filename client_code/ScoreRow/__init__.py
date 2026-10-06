@@ -43,11 +43,3 @@ class ScoreRow(ScoreRowTemplate):
   @handle("gross_box", "change")
   def gross_box_change(self, **event_args):
     self._update_net_preview()
-
-  @handle("save_button", "click")
-  def save_button_click(self, **event_args):
-    self.parent.raise_event(
-      "x-save-entry-scores",
-      entry=self.item,
-      gross=self.gross_box.text,
-    )

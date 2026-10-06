@@ -84,11 +84,12 @@
       <div class="view-heading">
         <p class="eyebrow">ROUND ONE · 18 HOLES</p>
         <h2>Round one scores</h2>
-        <p class="muted-copy">Review each player's division and handicap, then enter gross. Net is calculated automatically.</p>
+        <p class="muted-copy">Review each player's division and handicap, enter gross scores, then save them together. Net is calculated automatically.</p>
       </div>
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">SCORE ENTRY</p><h2>Gross and net scores</h2></div></div>
         <anvil-component type="RepeatingPanel" name="score_rows" prop:item_template="Minimal_Theme_1.ScoreRow" prop:role="score-list"></anvil-component>
+        <anvil-component type="Button" name="save_round_one_scores_button" prop:text="Save all scores" prop:role="secondary-button"></anvil-component>
       </div>
       <anvil-component type="Label" name="round_one_status" prop:role="status-text"></anvil-component>
     </anvil-component>

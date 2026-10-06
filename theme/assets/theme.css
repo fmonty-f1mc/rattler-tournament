@@ -445,7 +445,7 @@ textarea.anvil-text-area:disabled,
 
 .score-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.5fr) minmax(90px, 0.7fr) minmax(90px, 0.7fr) auto;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(90px, 0.7fr) minmax(90px, 0.7fr);
   align-items: end;
   gap: 14px;
 }

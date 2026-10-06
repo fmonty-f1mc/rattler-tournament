@@ -251,6 +251,14 @@ class Form1(Form1Template):
       for row in self.field_rows.get_components()
     ]
 
+  def _current_round_one_scores(self):
+    scores = []
+    for row in self.score_rows.get_components():
+      gross = getattr(row, "gross_box").text
+      if gross is not None and str(gross).strip():
+        scores.append({"entry": getattr(row, "item"), "gross": gross})
+    return scores
+
   def _load_division_standings(self):
     division = self.division_standings_picker.selected_value
     if self.current_event is None or not division:
@@ -583,14 +591,27 @@ class Form1(Form1Template):
     self._load_players()
     self._load_event_data()
 
-  @handle("score_rows", "x-save-entry-scores")
-  def score_rows_save_entry_scores(self, entry, gross, **event_args):
-    result = anvil.server.call("save_round_one_scores", entry, gross)
+  @handle("save_round_one_scores_button", "click")
+  def save_round_one_scores_button_click(self, **event_args):
+    if self.current_event is None:
+      self.round_one_status.text = "Create or select a tournament first."
+      return
+    scores = self._current_round_one_scores()
+    if not scores:
+      self.round_one_status.text = "Enter at least one gross score before saving."
+      return
+    result = anvil.server.call(
+      "save_round_one_scores_batch",
+      self.current_event,
+      scores,
+    )
     if not result["ok"]:
       self.round_one_status.text = result["message"]
       return
     self._load_event_data()
-    self.round_one_status.text = f"Round-one score saved for {entry['golfer']['name']}. Net: {result['net']}."
+    self.round_one_status.text = (
+      f"Round-one scores saved for {result['saved_count']} players."
+    )
 
   @handle("budget_rows", "x-save-entry-budget")
   def budget_rows_save_entry_budget(

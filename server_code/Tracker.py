@@ -420,31 +420,78 @@ def save_tournament_entry_details_batch(tournament, entry_details):
 
 @anvil.server.callable
 def save_round_one_scores(entry, gross):
-  if not _valid_row(app_tables.tournament_entries, entry):
-    return _result("Choose a tournament entry.")
-  if not _entry_is_player(entry):
-    return _result("Only players can enter golf scores.")
-  if entry["division"] not in _division_names(entry["tournament"]):
-    return _result("Assign a division on the Field page before saving this score.")
-  handicap_value = _number(entry["handicap"], "Handicap", allow_blank=True)
-  if handicap_value is None:
-    return _result("Assign a valid handicap on the Field page before saving this score.")
-  gross_value = _number(gross, "Gross score", allow_blank=True)
+  gross_value, net_value, error = _round_one_score_values(entry, gross)
+  if error:
+    return _result(error)
   if gross_value is None:
     return _result("Enter a valid gross score.")
-  if int(gross_value) != gross_value:
-    return _result("Round-one gross scores must be whole numbers.")
-  if gross_value < 1:
-    return _result("Gross scores must be positive whole numbers.")
-
-  net_value = round(gross_value - handicap_value, 10)
-  if net_value < 1:
-    return _result("Gross score minus handicap must be a positive score.")
   entry.update(
     gross_18=int(gross_value),
     net_18=net_value,
   )
   return _result(net=net_value)
+
+
+def _round_one_score_values(entry, gross):
+  if not _valid_row(app_tables.tournament_entries, entry):
+    return None, None, "Choose a tournament entry."
+  if not _entry_is_player(entry):
+    return None, None, "Only players can enter golf scores."
+  if entry["division"] not in _division_names(entry["tournament"]):
+    return None, None, "Assign a division on the Field page before saving this score."
+  handicap_value = _number(entry["handicap"], "Handicap", allow_blank=True)
+  if handicap_value is None:
+    return None, None, "Assign a valid handicap on the Field page before saving this score."
+  gross_value = _number(gross, "Gross score", allow_blank=True)
+  if gross_value is None:
+    return None, None, "Enter a valid gross score."
+  if int(gross_value) != gross_value:
+    return None, None, "Round-one gross scores must be whole numbers."
+  if gross_value < 1:
+    return None, None, "Gross scores must be positive whole numbers."
+
+  net_value = round(gross_value - handicap_value, 10)
+  if net_value < 1:
+    return None, None, "Gross score minus handicap must be a positive score."
+  return gross_value, net_value, None
+
+
+@anvil.server.callable
+def save_round_one_scores_batch(tournament, scores):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament.")
+  if not isinstance(scores, (list, tuple)) or not scores:
+    return _result("Enter at least one gross score before saving.")
+
+  updates = []
+  seen_ids = set()
+  for score in scores:
+    if not isinstance(score, dict):
+      return _result("Choose valid tournament entries to score.")
+    entry = score.get("entry")
+    if entry is None or not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose valid tournament entries to score.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament.get_id():
+      return _result("Choose players from the selected tournament.")
+    entry_id = entry.get_id()
+    if entry_id in seen_ids:
+      return _result("Each player can only be saved once.")
+    seen_ids.add(entry_id)
+
+    gross_value, net_value, error = _round_one_score_values(
+      entry,
+      score.get("gross"),
+    )
+    if error:
+      return _result(error)
+    if gross_value is None:
+      return _result("Enter a valid gross score.")
+    updates.append((entry, int(gross_value), net_value))
+
+  for entry, gross_value, net_value in updates:
+    entry.update(gross_18=gross_value, net_18=net_value)
+  return _result(saved_count=len(updates))
 
 
 @anvil.server.callable
