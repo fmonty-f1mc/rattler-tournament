@@ -5,7 +5,6 @@ import io
 import math
 import re
 
-import anvil.email
 import anvil.server
 from anvil.tables import app_tables
 
@@ -263,6 +262,31 @@ def list_tournaments():
 
 
 @anvil.server.callable(require_user=True)
+def delete_tournament(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament.")
+
+  rattler_pairings = list(app_tables.rattler_pairings.search(tournament=tournament))
+  round_two_pairings = list(app_tables.round_two_pairings.search(tournament=tournament))
+  entries = list(app_tables.tournament_entries.search(tournament=tournament))
+  divisions = list(app_tables.tournament_divisions.search(tournament=tournament))
+
+  for pairing in rattler_pairings + round_two_pairings:
+    pairing.delete()
+  for entry in entries:
+    entry.delete()
+  for division in divisions:
+    division.delete()
+  tournament.delete()
+
+  return _result(
+    removed_entry_count=len(entries),
+    removed_division_count=len(divisions),
+    removed_pairing_count=len(rattler_pairings) + len(round_two_pairings),
+  )
+
+
+@anvil.server.callable(require_user=True)
 def get_tournament_email_summary(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -289,11 +313,10 @@ def send_tournament_email(tournament, subject, body):
   if not recipients:
     return _result("No participants have a usable email address.")
 
-  anvil.email.send(
+  anvil.google.mail.send(
     bcc=recipients,
     subject=subject,
     text=body,
-    from_name="The Rattler Invitational",
   )
   skipped_count = missing_count + invalid_count
   message = f"Email sent to {len(recipients)} unique email addresses."

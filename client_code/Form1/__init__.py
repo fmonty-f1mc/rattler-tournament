@@ -125,6 +125,7 @@ class Form1(Form1Template):
     self.field_status.text = ""
     self.division_status.text = ""
     if self.current_event is None:
+      self.delete_tournament_button.visible = False
       self.current_event_title.text = "Create your first tournament"
       self.current_event_subtitle.text = "Add a year and course to get started."
       self.field_summary.text = "No players entered yet"
@@ -154,6 +155,7 @@ class Form1(Form1Template):
       return
 
     tournament = self.current_event
+    self.delete_tournament_button.visible = True
     self.current_event_title.text = f"{tournament['year']} · {tournament['course']}"
     event_date = tournament["event_date"]
     notes = tournament["notes"]
@@ -596,6 +598,31 @@ class Form1(Form1Template):
     self.event_date.date = None
     self.event_status.text = "Tournament created. Add this year's players below."
     self._load_events(selected=result["tournament"])
+
+  @handle("delete_tournament_button", "click")
+  def delete_tournament_button_click(self, **event_args):
+    tournament = self.current_event
+    if tournament is None:
+      return
+
+    title = f"{tournament['year']} · {tournament['course']}"
+    confirmed = confirm(
+      f"Delete {title}? This permanently removes the tournament, all player entries and budget details, divisions, scores, and pairings. It will also disappear from public standings.",
+      title="Delete tournament",
+    )
+    if not confirmed:
+      return
+
+    result = anvil.server.call("delete_tournament", tournament)
+    if not result["ok"]:
+      self.event_status.text = result["message"]
+      return
+
+    self._field_detail_drafts = {}
+    self.field_rows.items = []
+    self.current_event = None
+    self.event_status.text = f"Deleted tournament {title}."
+    self._load_events()
 
   def _add_selected_entries(self, is_player):
     if self.current_event is None:

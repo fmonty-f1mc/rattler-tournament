@@ -306,13 +306,10 @@ services:
 - client_config: {enable_v2: true}
   server_config: {}
   source: /runtime/services/tables.yml
-- client_config: {}
-  server_config: {}
-  source: /runtime/services/anvil/email.yml
 - client_config: {allow_signup: false, confirm_email: false, enable_automatically: false, require_secure_passwords: true, use_email: true, use_google: true}
   server_config: {user_table: users}
   source: /runtime/services/anvil/users.yml
 - client_config: {}
-  server_config: {}
+  server_config: {enc_delegation_refresh_token: H5Fr03IOkdNl15JiVaLAhXMIjIQmrIYF5pZG5SKCsxuUMTDNS6ES+NOhug1elvjKa0cugg0JlORqMMUOtj+BhV1FG+6cStEEJBxgGeOFzBxf5IN7027u6NVAqPI5zsSwcQEVCLwAL4X1Rm/Q+7vgXWCkaKjcgjjK5MzobXnY0qdolgE2HKsVbfhVhaHfrz4Yphgn6dnDa2J6kouQYOwtd618o9gQdX1k57LDKFOgir+xV9qjUcN9j4vpKXNeGkOhxoCtkeY2lujS00vOlsjdf00q+1GFvadZvX2qFcf1IcgTBnhYStgBszcGKI4gZw==}
   source: /runtime/services/google.yml
 startup: {module: Form1, type: form}

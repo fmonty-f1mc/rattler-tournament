@@ -136,6 +136,18 @@ a:focus {
   color: var(--blank-primary-dark);
 }
 
+.anvil-role-danger-button > button {
+  border-color: #e4b8b5;
+  background: #fff7f6;
+  color: #8f2525;
+}
+
+.anvil-role-danger-button > button:hover,
+.anvil-role-danger-button > button:focus {
+  background: #fbe6e3;
+  color: #7c1d1d;
+}
+
 .anvil-role-tournament-subnav {
   width: 100%;
   margin: 18px 0 26px;
@@ -398,6 +410,12 @@ textarea.anvil-text-area:disabled,
 }
 
 .event-title-row {
+  margin-bottom: 18px;
+}
+
+.tournament-delete-actions {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 18px;
 }
 
