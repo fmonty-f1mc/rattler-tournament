@@ -90,12 +90,12 @@ def _delete_pairings_for_entries(pairing_table, entries):
   return len(pairings)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def list_golfers():
   return sorted(app_tables.golfers.search(), key=lambda golfer: (not golfer["active"], golfer["name"].lower()))
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def import_golfers_from_csv(csv_file):
   if csv_file is None:
     return _result("Choose a CSV file first.")
@@ -162,7 +162,7 @@ def import_golfers_from_csv(csv_file):
   }
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def create_golfer(name, email, phone, city, state):
   name = (name or "").strip()
   if not name:
@@ -180,7 +180,7 @@ def create_golfer(name, email, phone, city, state):
   return _result(golfer=golfer)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def set_golfer_active(golfer, active):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
@@ -188,7 +188,7 @@ def set_golfer_active(golfer, active):
   return _result()
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def update_golfer(golfer, email, phone, city, state):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
@@ -201,7 +201,7 @@ def update_golfer(golfer, email, phone, city, state):
   return _result()
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def delete_golfer(golfer):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
@@ -224,12 +224,12 @@ def delete_golfer(golfer):
   )
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def list_tournaments():
   return sorted(app_tables.tournaments.search(), key=lambda tournament: tournament["year"], reverse=True)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def create_tournament(year, course, event_date, notes):
   year_value = _number(year, "Year", allow_blank=True)
   course = (course or "").strip()
@@ -253,7 +253,7 @@ def create_tournament(year, course, event_date, notes):
   return _result(tournament=tournament)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def add_golfer_to_tournament(tournament, golfer, is_player=True):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
@@ -287,7 +287,7 @@ def _create_tournament_entry(tournament, golfer, is_player=True):
   )
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def add_golfers_to_tournament(tournament, golfers, is_player=True):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
@@ -318,7 +318,7 @@ def add_golfers_to_tournament(tournament, golfers, is_player=True):
   return _result(added_count=len(new_golfers), already_entered_count=already_entered_count)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def remove_tournament_entry(tournament, entry):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
@@ -344,7 +344,7 @@ def remove_tournament_entry(tournament, entry):
   return _result(removed_pairing_count=removed_pairing_count)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
@@ -358,14 +358,14 @@ def list_tournament_entries(tournament):
   return sorted(entries, key=_entry_sort_key)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def list_tournament_divisions(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   return _division_names(tournament)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def create_tournament_division(tournament, name):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -379,7 +379,7 @@ def create_tournament_division(tournament, name):
   return _result(division_name=name)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def save_tournament_entry_details_batch(tournament, entry_details):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
@@ -418,7 +418,7 @@ def save_tournament_entry_details_batch(tournament, entry_details):
   return _result(saved_count=len(updates))
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def save_round_one_scores(entry, gross):
   gross_value, net_value, error = _round_one_score_values(entry, gross)
   if error:
@@ -456,7 +456,7 @@ def _round_one_score_values(entry, gross):
   return gross_value, net_value, None
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def save_round_one_scores_batch(tournament, scores):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
@@ -494,7 +494,7 @@ def save_round_one_scores_batch(tournament, scores):
   return _result(saved_count=len(updates))
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def get_net_standings(tournament):
   entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
   return _net_standings(entries)
@@ -513,6 +513,37 @@ def _net_standings(entries):
     }
     for index, entry in enumerate(scored)
   ]
+
+
+@anvil.server.callable
+def get_public_tournament_standings():
+  tournaments = sorted(
+    app_tables.tournaments.search(),
+    key=lambda tournament: tournament["year"],
+    reverse=True,
+  )
+  public_standings = []
+  for tournament in tournaments:
+    player_entries = [
+      entry
+      for entry in app_tables.tournament_entries.search(tournament=tournament)
+      if _entry_is_player(entry)
+    ]
+    divisions = [
+      {
+        "name": name,
+        "standings": _net_standings(
+          [entry for entry in player_entries if entry["division"] == name]
+        ),
+      }
+      for name in _division_names(tournament)
+    ]
+    public_standings.append({
+      "title": f"{tournament['year']} · {tournament['course']}",
+      "standings": _net_standings(player_entries),
+      "divisions": divisions,
+    })
+  return public_standings
 
 
 def _round_two_pair_label(sequence, first_entry, second_entry, rank_by_id):
@@ -541,7 +572,7 @@ def _entry_id_or_none(entry):
   return None if entry is None else entry.get_id()
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def build_round_two_pairings(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -594,7 +625,7 @@ def build_round_two_pairings(tournament):
   return _result(pair_count=pair_count)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def list_round_two_pairings(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
@@ -604,7 +635,7 @@ def list_round_two_pairings(tournament):
   )
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def save_round_two_pairings(tournament, assignments):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -714,7 +745,7 @@ def save_round_two_pairings(tournament, assignments):
   )
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def get_division_standings(tournament, division):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
@@ -728,7 +759,7 @@ def get_division_standings(tournament, division):
   return _net_standings(entries)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def build_rattler_pairings(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -760,14 +791,14 @@ def build_rattler_pairings(tournament):
   return _result(pair_count=pair_count)
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def list_rattler_pairings(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   return sorted(app_tables.rattler_pairings.search(tournament=tournament), key=lambda pairing: pairing["sequence"])
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def save_rattler_card(pairing, scores):
   if not _valid_row(app_tables.rattler_pairings, pairing):
     return _result("Choose a rattler pairing.")
@@ -785,7 +816,7 @@ def save_rattler_card(pairing, scores):
   return _result()
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def save_tournament_budget(tournament, accommodation, golf, travel, other):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Choose a tournament.")
@@ -804,7 +835,7 @@ def save_tournament_budget(tournament, accommodation, golf, travel, other):
   return _result()
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def save_entry_budget(entry, accommodation, golf, travel, other, paid):
   if not _valid_row(app_tables.tournament_entries, entry):
     return _result("Choose a tournament entry.")
@@ -821,7 +852,7 @@ def save_entry_budget(entry, accommodation, golf, travel, other, paid):
   return _result()
 
 
-@anvil.server.callable
+@anvil.server.callable(require_user=True)
 def get_budget_summary(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return {

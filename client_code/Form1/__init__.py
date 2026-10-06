@@ -9,10 +9,8 @@ class Form1(Form1Template):
     super().__init__(**properties)
     self.current_user = anvil.users.get_user()
     if self.current_user is None:
-      self.current_user = anvil.users.login_with_form(
-        show_signup_option=True,
-        allow_cancel=False,
-      )
+      open_form("PublicStandings")
+      return
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
     self._field_detail_drafts = {}

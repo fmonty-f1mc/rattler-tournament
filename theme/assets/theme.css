@@ -153,6 +153,69 @@ a:focus {
   color: white;
 }
 
+.public-standings-intro {
+  margin-bottom: 24px;
+}
+
+.public-standings-intro h2 {
+  margin: 0 0 8px;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.15;
+}
+
+.public-tournament-picker {
+  width: min(420px, 100%);
+  margin-bottom: 24px;
+}
+
+.anvil-role-public-field-label {
+  margin: 0;
+  color: var(--blank-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.public-tournament-list {
+  width: 100%;
+}
+
+.public-tournament-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.public-tournament-card {
+  padding: 24px;
+  border: 1px solid var(--blank-border);
+  border-radius: 8px;
+  background: var(--blank-surface);
+}
+
+.public-tournament-heading {
+  margin-bottom: 16px;
+}
+
+.public-tournament-heading .eyebrow {
+  margin-bottom: 2px;
+}
+
+.public-tournament-heading .anvil-role-h2 {
+  display: block;
+  font-size: 22px;
+}
+
+.public-leaderboard-section + .public-leaderboard-section {
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid var(--blank-border);
+}
+
+.public-leaderboard-section .section-heading h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
 .anvil-role-card {
   padding: 24px;
   border: 1px solid var(--blank-border);
@@ -741,6 +804,10 @@ textarea.anvil-text-area:disabled,
     grid-template-columns: 0.45fr 1.5fr 1fr 0.65fr 0.65fr;
     gap: 6px;
     font-size: 12px;
+  }
+
+  .public-tournament-card {
+    padding: 16px;
   }
 
   .hole-input-grid {
