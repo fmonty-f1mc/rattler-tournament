@@ -14,3 +14,7 @@ class EntryDetailsRow(EntryDetailsRowTemplate):
   @handle("handicap_box", "change")
   def handicap_box_change(self, **event_args):
     self.item["handicap"] = self.handicap_box.text
+
+  @handle("remove_button", "click")
+  def remove_button_click(self, **event_args):
+    self.parent.raise_event("x-remove-entry", entry=self.item["entry"])

@@ -325,6 +325,34 @@ class Form1(Form1Template):
     self._load_event_data()
     self.field_status.text = f"Division and handicap saved for {result['saved_count']} players."
 
+  @handle("field_rows", "x-remove-entry")
+  def field_rows_remove_entry(self, entry, **event_args):
+    name = entry["golfer"]["name"]
+    tournament = self.current_event
+    confirmed = confirm(
+      f"Remove {name} from this tournament? Their scores and budget details for this tournament will be deleted. Any pairings containing them will also be removed, including shared pairing scores for the other player.",
+      title="Remove player from tournament",
+    )
+    if not confirmed:
+      return
+
+    result = anvil.server.call("remove_tournament_entry", tournament, entry)
+    if not result["ok"]:
+      self.field_status.text = result["message"]
+      return
+
+    self._load_event_data()
+    self._field_detail_drafts.pop(entry.get_id(), None)
+    pairing_count = result["removed_pairing_count"]
+    if pairing_count:
+      pairing_label = "pairing" if pairing_count == 1 else "pairings"
+      self.field_status.text = (
+        f"Removed {name} from this tournament and removed "
+        f"{pairing_count} {pairing_label}, including their shared scores."
+      )
+    else:
+      self.field_status.text = f"Removed {name} from this tournament."
+
   @handle("round_one_nav", "click")
   def round_one_nav_click(self, **event_args):
     self._show_view("round_one")

@@ -319,6 +319,32 @@ def add_golfers_to_tournament(tournament, golfers, is_player=True):
 
 
 @anvil.server.callable
+def remove_tournament_entry(tournament, entry):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament.")
+  if not _valid_row(app_tables.tournament_entries, entry):
+    return _result("This player is no longer entered in a tournament.")
+
+  entry_tournament = entry["tournament"]
+  if (
+    entry_tournament is None
+    or entry_tournament.get_id() != tournament.get_id()
+  ):
+    return _result("Choose a player entered in the selected tournament.")
+
+  removed_pairing_count = _delete_pairings_for_entries(
+    app_tables.rattler_pairings,
+    [entry],
+  )
+  removed_pairing_count += _delete_pairings_for_entries(
+    app_tables.round_two_pairings,
+    [entry],
+  )
+  entry.delete()
+  return _result(removed_pairing_count=removed_pairing_count)
+
+
+@anvil.server.callable
 def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
