@@ -124,6 +124,10 @@ def create_tournament(year, course, event_date, notes):
     course=course,
     event_date=event_date,
     notes=(notes or "").strip(),
+    accommodation_total=0,
+    golf_total=0,
+    travel_total=0,
+    other_total=0,
   )
   return _result(tournament=tournament)
 
@@ -154,6 +158,9 @@ def _create_tournament_entry(tournament, golfer):
     golf_cost=0,
     travel_cost=0,
     other_cost=0,
+    shares_golf=False,
+    shares_travel=False,
+    shares_other=False,
     amount_paid=0,
   )
 
@@ -370,41 +377,132 @@ def save_rattler_card(pairing, scores):
 
 
 @anvil.server.callable
-def save_entry_budget(entry, accommodation, lodging, golf, travel, other, paid):
-  if not _valid_row(app_tables.tournament_entries, entry):
-    return _result("Choose a tournament entry.")
+def save_tournament_budget(tournament, accommodation, golf, travel, other):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
   parsed = {}
   for key, value, label in (
-    ("lodging_cost", lodging, "Accommodation cost"),
-    ("golf_cost", golf, "Golf cost"),
-    ("travel_cost", travel, "Travel cost"),
-    ("other_cost", other, "Other cost"),
-    ("amount_paid", paid, "Amount paid"),
+    ("accommodation_total", accommodation, "Accommodation total"),
+    ("golf_total", golf, "Golf total"),
+    ("travel_total", travel, "Travel total"),
+    ("other_total", other, "Other total"),
   ):
     number = _number(value, label, allow_blank=False)
     if number is None or number < 0:
       return _result(f"Enter a valid non-negative value for {label.lower()}.")
     parsed[key] = number
-  entry.update(accommodation=bool(accommodation), **parsed)
+  tournament.update(**parsed)
+  return _result()
+
+
+@anvil.server.callable
+def save_entry_budget(entry, accommodation, golf, travel, other, paid):
+  if not _valid_row(app_tables.tournament_entries, entry):
+    return _result("Choose a tournament entry.")
+  amount_paid = _number(paid, "Amount paid", allow_blank=False)
+  if amount_paid is None or amount_paid < 0:
+    return _result("Enter a valid non-negative value for amount paid.")
+  entry.update(
+    accommodation=bool(accommodation),
+    shares_golf=bool(golf),
+    shares_travel=bool(travel),
+    shares_other=bool(other),
+    amount_paid=amount_paid,
+  )
   return _result()
 
 
 @anvil.server.callable
 def get_budget_summary(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return {
+      "participants": 0,
+      "accommodated": 0,
+      "total": 0,
+      "paid": 0,
+      "balance": 0,
+      "category_totals": {"accommodation": 0, "golf": 0, "travel": 0, "other": 0},
+      "category_counts": {"accommodation": 0, "golf": 0, "travel": 0, "other": 0},
+      "rows": [],
+    }
   entries = list_tournament_entries(tournament)
-  total = sum(
-    (entry["lodging_cost"] or 0)
-    + (entry["golf_cost"] or 0)
-    + (entry["travel_cost"] or 0)
-    + (entry["other_cost"] or 0)
-    for entry in entries
-  )
+
+  category_totals = {}
+  for category, total_column, legacy_column in (
+    ("accommodation", "accommodation_total", "lodging_cost"),
+    ("golf", "golf_total", "golf_cost"),
+    ("travel", "travel_total", "travel_cost"),
+    ("other", "other_total", "other_cost"),
+  ):
+    total_value = tournament[total_column]
+    if total_value is None:
+      total_value = sum(entry[legacy_column] or 0 for entry in entries)
+    category_totals[category] = total_value or 0
+
+  entry_selections = {}
+  category_counts = {category: 0 for category in category_totals}
+  for entry in entries:
+    selections = {
+      "accommodation": bool(entry["accommodation"]) or (entry["lodging_cost"] or 0) > 0,
+      "golf": (
+        bool(entry["shares_golf"])
+        if entry["shares_golf"] is not None
+        else (entry["golf_cost"] or 0) > 0
+      ),
+      "travel": (
+        bool(entry["shares_travel"])
+        if entry["shares_travel"] is not None
+        else (entry["travel_cost"] or 0) > 0
+      ),
+      "other": (
+        bool(entry["shares_other"])
+        if entry["shares_other"] is not None
+        else (entry["other_cost"] or 0) > 0
+      ),
+    }
+    entry_selections[entry.get_id()] = selections
+    for category, selected in selections.items():
+      if selected:
+        category_counts[category] += 1
+
+  category_shares = {
+    category: total / category_counts[category] if category_counts[category] else total
+    for category, total in category_totals.items()
+  }
+  rows = []
+  for entry in entries:
+    selections = entry_selections[entry.get_id()]
+    rows.append({
+      "entry": entry,
+      "shares_accommodation": selections["accommodation"],
+      "shares_golf": selections["golf"],
+      "shares_travel": selections["travel"],
+      "shares_other": selections["other"],
+      "accommodation_share": category_shares["accommodation"],
+      "golf_share": category_shares["golf"],
+      "travel_share": category_shares["travel"],
+      "other_share": category_shares["other"],
+      "accommodation_count": category_counts["accommodation"],
+      "golf_count": category_counts["golf"],
+      "travel_count": category_counts["travel"],
+      "other_count": category_counts["other"],
+      "estimated_share": sum(
+        category_shares[category]
+        for category, selected in selections.items()
+        if selected
+      ),
+    })
+
+  total = sum(category_totals.values())
   paid = sum(entry["amount_paid"] or 0 for entry in entries)
-  accommodated = sum(1 for entry in entries if entry["accommodation"])
+  accommodated = category_counts["accommodation"]
   return {
     "participants": len(entries),
     "accommodated": accommodated,
     "total": total,
     "paid": paid,
     "balance": total - paid,
+    "category_totals": category_totals,
+    "category_counts": category_counts,
+    "rows": rows,
   }

@@ -165,6 +165,18 @@ db_schema:
       type: number
     - admin_ui: {}
       client_hidden: null
+      name: shares_golf
+      type: bool
+    - admin_ui: {}
+      client_hidden: null
+      name: shares_travel
+      type: bool
+    - admin_ui: {}
+      client_hidden: null
+      name: shares_other
+      type: bool
+    - admin_ui: {}
+      client_hidden: null
       name: amount_paid
       type: number
     indexes: []
@@ -189,6 +201,22 @@ db_schema:
       client_hidden: null
       name: notes
       type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: accommodation_total
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: golf_total
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: travel_total
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: other_total
+      type: number
     indexes: []
     server: full
     title: Tournaments

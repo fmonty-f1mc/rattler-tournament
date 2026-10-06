@@ -92,6 +92,10 @@ class Form1(Form1Template):
       self.division_standings_rows.items = []
       self.round_two_rows.items = []
       self.budget_rows.items = []
+      self.budget_accommodation_total.text = ""
+      self.budget_golf_total.text = ""
+      self.budget_travel_total.text = ""
+      self.budget_other_total.text = ""
       self._load_division_standings()
       self.budget_total.text = "$0.00"
       self.budget_paid.text = "$0.00"
@@ -126,7 +130,6 @@ class Form1(Form1Template):
     ]
     self.score_rows.items = entries
     self.round_two_rows.items = entries
-    self.budget_rows.items = entries
     division_counts = {division: 0 for division in self.division_options}
     missing_division_count = 0
     for entry in entries:
@@ -150,6 +153,12 @@ class Form1(Form1Template):
     self.round_two_status.text = ""
 
     summary = anvil.server.call("get_budget_summary", tournament)
+    totals = summary["category_totals"]
+    self.budget_accommodation_total.text = self._amount(totals["accommodation"])
+    self.budget_golf_total.text = self._amount(totals["golf"])
+    self.budget_travel_total.text = self._amount(totals["travel"])
+    self.budget_other_total.text = self._amount(totals["other"])
+    self.budget_rows.items = summary["rows"]
     self.budget_total.text = self._money(summary["total"])
     self.budget_paid.text = self._money(summary["paid"])
     self.budget_balance.text = self._money(summary["balance"])
@@ -176,6 +185,10 @@ class Form1(Form1Template):
   @staticmethod
   def _money(value):
     return "${:,.2f}".format(value or 0)
+
+  @staticmethod
+  def _amount(value):
+    return "{:g}".format(value or 0)
 
   @handle("event_nav", "click")
   def event_nav_click(self, **event_args):
@@ -225,6 +238,25 @@ class Form1(Form1Template):
   @handle("budget_nav", "click")
   def budget_nav_click(self, **event_args):
     self._show_view("budget")
+
+  @handle("save_budget_totals_button", "click")
+  def save_budget_totals_button_click(self, **event_args):
+    if self.current_event is None:
+      self.budget_status.text = "Create or select a tournament first."
+      return
+    result = anvil.server.call(
+      "save_tournament_budget",
+      self.current_event,
+      self.budget_accommodation_total.text,
+      self.budget_golf_total.text,
+      self.budget_travel_total.text,
+      self.budget_other_total.text,
+    )
+    if not result["ok"]:
+      self.budget_status.text = result["message"]
+      return
+    self._load_event_data()
+    self.budget_status.text = "Budget totals saved."
 
   @handle("event_picker", "change")
   def event_picker_change(self, **event_args):
@@ -347,26 +379,24 @@ class Form1(Form1Template):
   def budget_rows_save_entry_budget(
     self,
     entry,
-    accommodation,
-    lodging,
-    golf,
-    travel,
-    other,
-    paid,
+    shares_accommodation,
+    shares_golf,
+    shares_travel,
+    shares_other,
+    amount_paid,
     **event_args,
   ):
     result = anvil.server.call(
       "save_entry_budget",
       entry,
-      accommodation,
-      lodging,
-      golf,
-      travel,
-      other,
-      paid,
+      shares_accommodation,
+      shares_golf,
+      shares_travel,
+      shares_other,
+      amount_paid,
     )
     if not result["ok"]:
       self.budget_status.text = result["message"]
       return
-    self.budget_status.text = f"Budget updated for {entry['golfer']['name']}."
+    self.budget_status.text = f"Sharing updated for {entry['golfer']['name']}."
     self._load_event_data()
