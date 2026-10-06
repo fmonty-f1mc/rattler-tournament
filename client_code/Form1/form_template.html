@@ -122,13 +122,24 @@
     <anvil-component type="ColumnPanel" name="round_two_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">ROUND TWO · 9 HOLES</p>
-        <h2>Round two scores</h2>
-        <p class="muted-copy">Enter one score for each golfer.</p>
+        <h2>Round two pairings and scores</h2>
+        <p class="muted-copy">Pair players from first to last in the Round One net standings, then enter one shared score for each pair.</p>
       </div>
       <div class="tracker-card">
-        <anvil-component type="RepeatingPanel" name="round_two_rows" prop:item_template="Minimal_Theme_1.RoundTwoScoreRow" prop:role="score-list"></anvil-component>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PLAYER PAIRINGS</p>
+            <h2>Set the groups</h2>
+            <p class="muted-copy">The generator matches first place with last, second with second-to-last, and so on. Enter one shared 9-hole score for each pair. If the field is odd, the solo player gets one score field.</p>
+          </div>
+          <div class="round-two-pairing-actions">
+            <anvil-component type="Button" name="generate_round_two_pairings_button" prop:text="Generate pairs from Round One"></anvil-component>
+            <anvil-component type="Button" name="save_round_two_pairings_button" prop:text="Save pairs and scores" prop:role="secondary-button"></anvil-component>
+          </div>
+        </div>
+        <anvil-component type="RepeatingPanel" name="round_two_pairing_rows" prop:item_template="Minimal_Theme_1.RoundTwoPairingRow" prop:role="round-two-pairing-list"></anvil-component>
+        <anvil-component type="Label" name="round_two_pairing_status" prop:role="status-text"></anvil-component>
       </div>
-      <anvil-component type="Label" name="round_two_status" prop:role="status-text"></anvil-component>
     </anvil-component>
 
     <anvil-component type="ColumnPanel" name="player_section" prop:role="tracker-view">

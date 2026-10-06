@@ -54,6 +54,17 @@ def _entry_net_score(entry):
   return round(gross - handicap, 10)
 
 
+def _ranked_entries(entries):
+  return sorted(
+    entries,
+    key=lambda entry: (
+      _entry_net_score(entry),
+      entry["gross_18"],
+      _entry_name(entry).lower(),
+    ),
+  )
+
+
 def _clear_pairings(tournament):
   for pairing in app_tables.rattler_pairings.search(tournament=tournament):
     pairing.delete()
@@ -243,7 +254,7 @@ def save_tournament_entry_details_batch(tournament, entry_details):
     if not isinstance(details, dict):
       return _result("Choose valid tournament entries.")
     entry = details.get("entry")
-    if not _valid_row(app_tables.tournament_entries, entry):
+    if entry is None or not _valid_row(app_tables.tournament_entries, entry):
       return _result("Choose valid tournament entries.")
     entry_tournament = entry["tournament"]
     if entry_tournament is None or entry_tournament.get_id() != tournament.get_id():
@@ -294,28 +305,13 @@ def save_round_one_scores(entry, gross):
 
 
 @anvil.server.callable
-def save_round_two_score(entry, score):
-  if not _valid_row(app_tables.tournament_entries, entry):
-    return _result("Choose a tournament entry.")
-  score_value = _number(score, "Second-round score", allow_blank=True)
-  if score_value is None:
-    return _result("Enter a valid second-round score.")
-  if int(score_value) != score_value:
-    return _result("Second-round scores must be whole numbers.")
-  if score_value < 1:
-    return _result("Second-round scores must be positive whole numbers.")
-  entry["gross_9"] = int(score_value)
-  return _result(score=int(score_value))
-
-
-@anvil.server.callable
 def get_net_standings(tournament):
   return _net_standings(list_tournament_entries(tournament))
 
 
 def _net_standings(entries):
   scored = [entry for entry in entries if (_entry_net_score(entry) or 0) > 0]
-  scored.sort(key=lambda entry: (_entry_net_score(entry), entry["gross_18"], _entry_name(entry).lower()))
+  scored = _ranked_entries(scored)
   return [
     {
       "rank": index + 1,
@@ -326,6 +322,205 @@ def _net_standings(entries):
     }
     for index, entry in enumerate(scored)
   ]
+
+
+def _round_two_pair_label(sequence, first_entry, second_entry, rank_by_id):
+  first_rank = rank_by_id.get(first_entry.get_id())
+  if second_entry is None:
+    if first_rank is None:
+      return f"Pair {sequence} · {_entry_name(first_entry)} solo"
+    return f"{first_rank}. {_entry_name(first_entry)} · solo"
+
+  second_rank = rank_by_id.get(second_entry.get_id())
+  if first_rank is None or second_rank is None:
+    return f"Pair {sequence} · {_entry_name(first_entry)} + {_entry_name(second_entry)}"
+  return (
+    f"{first_rank}. {_entry_name(first_entry)}  +  "
+    f"{second_rank}. {_entry_name(second_entry)}"
+  )
+
+
+def _same_round_two_pair(first_entry, second_entry, other_first_entry, other_second_entry):
+  return frozenset((first_entry.get_id(), _entry_id_or_none(second_entry))) == frozenset(
+    (other_first_entry.get_id(), _entry_id_or_none(other_second_entry))
+  )
+
+
+def _entry_id_or_none(entry):
+  return None if entry is None else entry.get_id()
+
+
+@anvil.server.callable
+def build_round_two_pairings(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  entries = list_tournament_entries(tournament)
+  if not entries:
+    return _result("Add players to this tournament before building Round Two pairs.")
+  if any((_entry_net_score(entry) or 0) <= 0 for entry in entries):
+    return _result("Enter a first-round net score for every player before building Round Two pairs.")
+
+  ranked_entries = _ranked_entries(entries)
+  rank_by_id = {
+    entry.get_id(): index + 1
+    for index, entry in enumerate(ranked_entries)
+  }
+  existing_rows = {
+    pairing["sequence"]: pairing
+    for pairing in app_tables.round_two_pairings.search(tournament=tournament)
+  }
+  pair_count = (len(ranked_entries) + 1) // 2
+  for index in range(pair_count):
+    first_entry = ranked_entries[index]
+    second_index = len(ranked_entries) - index - 1
+    second_entry = ranked_entries[second_index] if second_index != index else None
+    sequence = index + 1
+    values = {
+      "tournament": tournament,
+      "sequence": sequence,
+      "pair_label": _round_two_pair_label(
+        sequence, first_entry, second_entry, rank_by_id
+      ),
+      "first_entry": first_entry,
+      "second_entry": second_entry,
+    }
+    existing = existing_rows.pop(sequence, None)
+    if existing is None:
+      values["score_9"] = None
+      app_tables.round_two_pairings.add_row(**values)
+    else:
+      if not _same_round_two_pair(
+        first_entry,
+        second_entry,
+        existing["first_entry"],
+        existing["second_entry"],
+      ):
+        values["score_9"] = None
+      existing.update(**values)
+
+  for stale_pairing in existing_rows.values():
+    stale_pairing.delete()
+  return _result(pair_count=pair_count)
+
+
+@anvil.server.callable
+def list_round_two_pairings(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  return sorted(
+    app_tables.round_two_pairings.search(tournament=tournament),
+    key=lambda pairing: pairing["sequence"],
+  )
+
+
+@anvil.server.callable
+def save_round_two_pairings(tournament, assignments):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  entries = list_tournament_entries(tournament)
+  if not entries:
+    return _result("Add players to this tournament before saving Round Two pairs.")
+  if not isinstance(assignments, (list, tuple)):
+    return _result("Generate Round Two pairs before editing them.")
+
+  expected_pair_count = (len(entries) + 1) // 2
+  if len(assignments) != expected_pair_count:
+    return _result("Generate Round Two pairs before editing them.")
+
+  entry_by_id = {entry.get_id(): entry for entry in entries}
+  assigned_ids = []
+  normalized_assignments = []
+  for assignment in assignments:
+    if not isinstance(assignment, dict):
+      return _result("Each pairing must have a selected first and second player.")
+    first_entry = assignment.get("first_entry")
+    second_entry = assignment.get("second_entry")
+    if first_entry is None or not hasattr(first_entry, "get_id"):
+      return _result("Choose a first player for every pair.")
+    if second_entry is not None and not hasattr(second_entry, "get_id"):
+      return _result("Choose a player from this tournament's field.")
+    first_id = first_entry.get_id()
+    second_id = second_entry.get_id() if second_entry is not None else None
+    if first_id not in entry_by_id:
+      return _result("Choose players from this tournament's field.")
+    if second_entry is not None and second_id not in entry_by_id:
+      return _result("Choose players from this tournament's field.")
+    if second_id == first_id:
+      return _result("A player cannot be listed twice in the same pair.")
+    assigned_ids.append(first_id)
+    if second_id is not None:
+      assigned_ids.append(second_id)
+    raw_score = assignment.get("score_9")
+    score_text = "" if raw_score is None else str(raw_score).strip()
+    if not score_text:
+      score_value = None
+    else:
+      parsed_score = _number(score_text, "Round Two score", allow_blank=True)
+      if parsed_score is None:
+        return _result("Enter a valid shared Round Two score.")
+      if int(parsed_score) != parsed_score:
+        return _result("Round Two scores must be whole numbers.")
+      if parsed_score < 1:
+        return _result("Round Two scores must be positive whole numbers.")
+      score_value = int(parsed_score)
+    normalized_assignments.append((
+      first_entry,
+      second_entry,
+      score_value,
+      bool(assignment.get("score_changed")),
+    ))
+
+  expected_ids = set(entry_by_id)
+  if len(assigned_ids) != len(entries) or set(assigned_ids) != expected_ids:
+    return _result("Assign every player exactly once. Leave one player solo when the field is odd.")
+
+  ranked_entries = _ranked_entries(
+    [entry for entry in entries if (_entry_net_score(entry) or 0) > 0]
+  )
+  rank_by_id = (
+    {entry.get_id(): index + 1 for index, entry in enumerate(ranked_entries)}
+    if len(ranked_entries) == len(entries)
+    else {}
+  )
+  existing_rows = {
+    pairing["sequence"]: pairing
+    for pairing in app_tables.round_two_pairings.search(tournament=tournament)
+  }
+  saved_score_count = 0
+  for sequence, (first_entry, second_entry, score_value, score_changed) in enumerate(
+    normalized_assignments, 1
+  ):
+    existing = existing_rows.pop(sequence, None)
+    if existing is not None and not _same_round_two_pair(
+      first_entry,
+      second_entry,
+      existing["first_entry"],
+      existing["second_entry"],
+    ) and not score_changed:
+      score_value = None
+    if score_value is not None:
+      saved_score_count += 1
+    values = {
+      "tournament": tournament,
+      "sequence": sequence,
+      "pair_label": _round_two_pair_label(
+        sequence, first_entry, second_entry, rank_by_id
+      ),
+      "first_entry": first_entry,
+      "second_entry": second_entry,
+      "score_9": score_value,
+    }
+    if existing is None:
+      app_tables.round_two_pairings.add_row(**values)
+    else:
+      existing.update(**values)
+
+  for stale_pairing in existing_rows.values():
+    stale_pairing.delete()
+  return _result(
+    pair_count=len(normalized_assignments),
+    scored_pair_count=saved_score_count,
+  )
 
 
 @anvil.server.callable

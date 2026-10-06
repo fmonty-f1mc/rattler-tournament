@@ -467,6 +467,43 @@ textarea.anvil-text-area:disabled,
   grid-template-columns: minmax(180px, 1.5fr) minmax(90px, 0.7fr) auto;
 }
 
+.round-two-pairing-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.8fr);
+  align-items: center;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--blank-border);
+}
+
+.round-two-pairing-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.round-two-pairing-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.round-two-pairing-players label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--blank-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.round-two-pairing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .score-player {
   display: flex;
   align-items: baseline;
@@ -676,7 +713,8 @@ textarea.anvil-text-area:disabled,
   .score-row,
   .player-row,
   .budget-row,
-  .entry-details-row {
+  .entry-details-row,
+  .round-two-pairing-row {
     grid-template-columns: 1fr;
   }
 

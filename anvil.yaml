@@ -95,6 +95,39 @@ db_schema:
     indexes: []
     server: full
     title: Rattler Pairings
+  round_two_pairings:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: sequence
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: pair_label
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: first_entry
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: second_entry
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: score_9
+      type: number
+    indexes: []
+    server: full
+    title: Round Two Pairings
   tournament_divisions:
     client: none
     columns:
