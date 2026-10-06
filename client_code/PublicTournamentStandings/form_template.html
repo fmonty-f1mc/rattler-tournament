@@ -6,23 +6,19 @@
     </div>
     <section class="public-leaderboard-section">
       <div class="section-heading">
-        <div><p class="eyebrow">OVERALL</p><h3>Overall leaderboard</h3></div>
-      </div>
-      <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
-      <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
-      <anvil-component type="Label" name="no_scores_state" prop:role="muted-text" prop:text="No scores have been posted for this tournament yet."></anvil-component>
-    </section>
-    <section class="public-leaderboard-section">
-      <div class="section-heading">
-        <div><p class="eyebrow">BY DIVISION</p><h3>Division leaderboard</h3></div>
+        <div><p class="eyebrow">LEADERBOARD</p><h3>Standings</h3></div>
         <div class="field-block">
-          <anvil-component type="Label" name="division_label" prop:text="Select division" prop:role="public-field-label"></anvil-component>
-          <anvil-component type="DropDown" name="division_picker"></anvil-component>
+          <anvil-component type="Label" name="scope_label" prop:text="View" prop:role="public-field-label"></anvil-component>
+          <anvil-component type="DropDown" name="standings_scope_picker"></anvil-component>
+        </div>
+        <div class="field-block">
+          <label>Sort by</label>
+          <anvil-component type="DropDown" name="standings_sort_by"></anvil-component>
         </div>
       </div>
       <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
-      <anvil-component type="RepeatingPanel" name="division_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
-      <anvil-component type="Label" name="division_empty_state" prop:role="muted-text"></anvil-component>
+      <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
+      <anvil-component type="Label" name="no_scores_state" prop:role="muted-text"></anvil-component>
     </section>
   </section>
 </anvil-form>

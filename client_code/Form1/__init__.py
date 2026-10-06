@@ -14,11 +14,17 @@ class Form1(Form1Template):
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
     self._field_detail_drafts = {}
+    self._overall_standings = []
+    self._active_standings = []
+    self.standings_scope_picker.items = [("Overall", "overall")]
+    self.standings_scope_picker.selected_value = "overall"
+    self.standings_sort_by.items = [("Net", "net"), ("Gross", "gross")]
+    self.standings_sort_by.selected_value = "net"
     self.event_status.text = ""
     self.entry_status.text = ""
     self.field_status.text = ""
     self.division_status.text = ""
-    self.division_standings_status.text = ""
+    self.standings_status.text = ""
     self.player_status.text = ""
     self.round_one_status.text = ""
     self.round_two_pairing_status.text = ""
@@ -119,19 +125,20 @@ class Form1(Form1Template):
       self.field_summary.text = "No players entered yet"
       self.division_options = []
       self.division_list_label.text = "Create or select a tournament first."
-      self.division_standings_picker.items = []
-      self.division_standings_picker.selected_value = None
+      self.standings_scope_picker.items = [("Overall", "overall")]
+      self.standings_scope_picker.selected_value = "overall"
       self.field_rows.items = []
       self.score_rows.items = []
+      self._overall_standings = []
+      self._active_standings = []
       self.standings_rows.items = []
-      self.division_standings_rows.items = []
+      self.standings_status.text = "Create or select a tournament to see standings."
       self.round_two_pairing_rows.items = []
       self.budget_rows.items = []
       self.budget_accommodation_total.text = ""
       self.budget_golf_total.text = ""
       self.budget_travel_total.text = ""
       self.budget_other_total.text = ""
-      self._load_division_standings()
       self.budget_total.text = "$0.00"
       self.budget_paid.text = "$0.00"
       self.budget_balance.text = "$0.00"
@@ -152,11 +159,17 @@ class Form1(Form1Template):
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
     self.division_list_label.text = ", ".join(self.division_options) or "No divisions created yet."
-    self.division_standings_picker.items = self.division_options
-    selected_division = self.division_standings_picker.selected_value
-    if selected_division not in self.division_options:
-      selected_division = self.division_options[0] if self.division_options else None
-    self.division_standings_picker.selected_value = selected_division
+    selected_scope = self.standings_scope_picker.selected_value or "overall"
+    scopes = [("Overall", "overall")] + [
+      ("Division: " + division, "division:" + division)
+      for division in self.division_options
+    ]
+    self.standings_scope_picker.items = scopes
+    if selected_scope != "overall" and selected_scope not in [
+      "division:" + division for division in self.division_options
+    ]:
+      selected_scope = "overall"
+    self.standings_scope_picker.selected_value = selected_scope
     entries = anvil.server.call("list_tournament_entries", tournament)
     self._load_entry_options(entries)
     player_entries = [entry for entry in entries if entry["is_player"] is not False]
@@ -228,8 +241,8 @@ class Form1(Form1Template):
     if missing_division_count:
       self.field_summary.text += f"  ·  {missing_division_count} need a division"
 
-    self.standings_rows.items = anvil.server.call("get_net_standings", tournament)
-    self._load_division_standings()
+    self._overall_standings = anvil.server.call("get_net_standings", tournament)
+    self._load_standings()
     self.round_one_status.text = ""
 
     summary = anvil.server.call("get_budget_summary", tournament)
@@ -270,23 +283,48 @@ class Form1(Form1Template):
         scores.append({"entry": getattr(row, "item"), "gross": gross})
     return scores
 
-  def _load_division_standings(self):
-    division = self.division_standings_picker.selected_value
-    if self.current_event is None or not division:
-      self.division_standings_rows.items = []
-      self.division_standings_status.text = "Create a division on the Field page to see standings."
+  def _load_standings(self):
+    if self.current_event is None:
+      self._active_standings = []
+      self.standings_rows.items = []
+      self.standings_status.text = "Create or select a tournament to see standings."
       return
 
-    self.division_standings_rows.items = anvil.server.call(
-      "get_division_standings",
-      self.current_event,
-      division,
+    scope = self.standings_scope_picker.selected_value or "overall"
+    if scope == "overall":
+      self._active_standings = self._overall_standings
+    else:
+      self._active_standings = anvil.server.call(
+        "get_division_standings",
+        self.current_event,
+        scope[len("division:"):],
+      )
+    self._show_standings()
+    if self._active_standings:
+      self.standings_status.text = ""
+    elif scope == "overall":
+      self.standings_status.text = "No scores have been posted for this tournament yet."
+    else:
+      self.standings_status.text = "No scores have been posted for this division yet."
+
+  def _show_standings(self):
+    self.standings_rows.items = self._sort_standings(
+      self._active_standings,
+      self.standings_sort_by.selected_value,
     )
-    self.division_standings_status.text = (
-      "No scores yet for this division."
-      if not self.division_standings_rows.items
-      else ""
+
+  def _sort_standings(self, rows, sort_by):
+    sort_by = sort_by or "net"
+    other_score = "gross" if sort_by == "net" else "net"
+    sorted_rows = sorted(
+      rows,
+      key=lambda row: (
+        row[sort_by],
+        row[other_score],
+        row["player_name"].lower(),
+      ),
     )
+    return [dict(row, rank=index + 1) for index, row in enumerate(sorted_rows)]
 
   @staticmethod
   def _money(value):
@@ -383,9 +421,13 @@ class Form1(Form1Template):
   def standings_nav_click(self, **event_args):
     self._show_view("standings")
 
-  @handle("division_standings_picker", "change")
-  def division_standings_picker_change(self, **event_args):
-    self._load_division_standings()
+  @handle("standings_scope_picker", "change")
+  def standings_scope_picker_change(self, **event_args):
+    self._load_standings()
+
+  @handle("standings_sort_by", "change")
+  def standings_sort_by_change(self, **event_args):
+    self._show_standings()
 
   @handle("round_two_nav", "click")
   def round_two_nav_click(self, **event_args):

@@ -95,28 +95,23 @@
       <div class="view-heading">
         <p class="eyebrow">LEADERBOARDS</p>
         <h2>First-round standings</h2>
-        <p class="muted-copy">Compare net scores across all divisions.</p>
+        <p class="muted-copy">View the overall leaderboard or choose a division.</p>
       </div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">OVERALL</p><h2>Overall leaderboard</h2></div></div>
-        <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
-        <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
-      </div>
-      <div class="tracker-card">
-        <div class="event-title-row">
-          <div>
-            <p class="eyebrow">DIVISION</p>
-            <h2>Division leaderboard</h2>
-            <p class="muted-copy">Ranks are calculated within the selected division.</p>
+        <div class="section-heading">
+          <div><p class="eyebrow">LEADERBOARD</p><h2>Standings</h2></div>
+          <div class="field-block">
+            <label>View</label>
+            <anvil-component type="DropDown" name="standings_scope_picker"></anvil-component>
           </div>
           <div class="field-block">
-            <label>Selected division</label>
-            <anvil-component type="DropDown" name="division_standings_picker"></anvil-component>
+            <label>Sort by</label>
+            <anvil-component type="DropDown" name="standings_sort_by"></anvil-component>
           </div>
         </div>
         <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
-        <anvil-component type="RepeatingPanel" name="division_standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
-        <anvil-component type="Label" name="division_standings_status" prop:role="muted-text"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
+        <anvil-component type="Label" name="standings_status" prop:role="muted-text"></anvil-component>
       </div>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="round_two_section" prop:role="tracker-view">
