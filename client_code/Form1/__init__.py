@@ -1,11 +1,19 @@
 from ._anvil_designer import Form1Template
 from anvil import *
 import anvil.server
+import anvil.users
 
 
 class Form1(Form1Template):
   def __init__(self, **properties):
     super().__init__(**properties)
+    self.current_user = anvil.users.get_user()
+    if self.current_user is None:
+      self.current_user = anvil.users.login_with_form(
+        show_signup_option=True,
+        allow_cancel=False,
+      )
+    self.current_user_label.text = self.current_user["email"]
     self.current_event = None
     self._field_detail_drafts = {}
     self.event_status.text = ""
@@ -20,6 +28,11 @@ class Form1(Form1Template):
     self._show_view("event")
     self._load_players()
     self._load_events()
+
+  @handle("sign_out_button", "click")
+  def sign_out_button_click(self, **event_args):
+    anvil.users.logout(invalidate_client_objects=True)
+    open_form("Form1")
 
   def _show_view(self, name):
     show_tournament_context = name != "players"

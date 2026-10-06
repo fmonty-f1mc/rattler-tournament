@@ -257,9 +257,39 @@ db_schema:
     indexes: []
     server: full
     title: Tournaments
+  users:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: email
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: enabled
+      type: bool
+    - admin_ui: {}
+      client_hidden: null
+      name: signed_up
+      type: datetime
+    - admin_ui: {}
+      client_hidden: null
+      name: password_hash
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: confirmed_email
+      type: bool
+    - admin_ui: {}
+      client_hidden: null
+      name: remembered_logins
+      type: simpleObject
+    indexes: []
+    server: full
+    title: Users
 metadata: {title: Rattler Invitational}
 name: Annual Golf Weekend
-package_name: Minimal_Theme_1
+package_name: rattler_tournament
 runtime_options:
   client_version: '3'
   server_spec: {base: python310-minimal}
@@ -268,4 +298,7 @@ services:
 - client_config: {enable_v2: true}
   server_config: {}
   source: /runtime/services/tables.yml
+- client_config: {allow_signup: true, confirm_email: false, enable_automatically: true, require_secure_passwords: true, use_email: true}
+  server_config: {user_table: users}
+  source: /runtime/services/anvil/users.yml
 startup: {module: Form1, type: form}

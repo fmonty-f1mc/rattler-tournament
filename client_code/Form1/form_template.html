@@ -1,5 +1,7 @@
-<anvil-form layout="Minimal_Theme_1.Layouts.BaseLayout">
+<anvil-form layout="rattler_tournament.Layouts.BaseLayout">
   <anvil-block slot="actions">
+    <anvil-component type="Label" name="current_user_label" prop:role="muted-text"></anvil-component>
+    <anvil-component type="Button" name="sign_out_button" prop:text="Sign out" prop:role="secondary-button"></anvil-component>
     <anvil-component type="Button" name="event_nav" prop:text="Tournament" prop:role="secondary-button"></anvil-component>
     <anvil-component type="Button" name="players_nav" prop:text="Players" prop:role="secondary-button"></anvil-component>
   </anvil-block>
@@ -13,7 +15,6 @@
       <anvil-component type="DropDown" name="event_picker"></anvil-component>
     </div>
     <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
-
     <anvil-component type="FlowPanel" name="tournament_subnav" prop:role="tournament-subnav">
       <anvil-component type="Button" name="setup_nav" prop:text="Setup" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="field_nav" prop:text="Field" prop:role="tournament-subtab"></anvil-component>
@@ -22,7 +23,6 @@
       <anvil-component type="Button" name="round_two_nav" prop:text="Round Two" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="budget_nav" prop:text="Budget" prop:role="tournament-subtab"></anvil-component>
     </anvil-component>
-
     <anvil-component type="ColumnPanel" name="event_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT</p>
@@ -46,7 +46,7 @@
         <p class="eyebrow">BUILD THE FIELD</p>
         <h2>Add players to this year</h2>
         <p class="muted-copy">Select roster golfers who are not already in this tournament. Add them as players to include them in divisions and golf rounds, or as non-players to include them in the budget only.</p>
-        <anvil-component type="RepeatingPanel" name="entry_options" prop:item_template="Minimal_Theme_1.EntryPlayerChoice" prop:role="entry-options"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="entry_options" prop:item_template="rattler_tournament.EntryPlayerChoice" prop:role="entry-options"></anvil-component>
         <div class="inline-form">
           <anvil-component type="Button" name="add_players_button" prop:text="Add selected as players" prop:role="secondary-button"></anvil-component>
           <anvil-component type="Button" name="add_non_players_button" prop:text="Add selected as non-players" prop:role="secondary-button"></anvil-component>
@@ -54,7 +54,6 @@
         <anvil-component type="Label" name="entry_status" prop:role="status-text"></anvil-component>
       </div>
     </anvil-component>
-
     <anvil-component type="ColumnPanel" name="field_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT FIELD</p>
@@ -75,11 +74,10 @@
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and handicaps together.</span></div>
         <anvil-component type="Label" name="field_status" prop:role="status-text"></anvil-component>
-        <anvil-component type="RepeatingPanel" name="field_rows" prop:item_template="Minimal_Theme_1.EntryDetailsRow"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="field_rows" prop:item_template="rattler_tournament.EntryDetailsRow"></anvil-component>
         <anvil-component type="Button" name="save_field_details_button" prop:text="Save all player details" prop:role="secondary-button"></anvil-component>
       </div>
     </anvil-component>
-
     <anvil-component type="ColumnPanel" name="round_one_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">ROUND ONE · 18 HOLES</p>
@@ -88,12 +86,11 @@
       </div>
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">SCORE ENTRY</p><h2>Gross and net scores</h2></div></div>
-        <anvil-component type="RepeatingPanel" name="score_rows" prop:item_template="Minimal_Theme_1.ScoreRow" prop:role="score-list"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="score_rows" prop:item_template="rattler_tournament.ScoreRow" prop:role="score-list"></anvil-component>
         <anvil-component type="Button" name="save_round_one_scores_button" prop:text="Save all scores" prop:role="secondary-button"></anvil-component>
       </div>
       <anvil-component type="Label" name="round_one_status" prop:role="status-text"></anvil-component>
     </anvil-component>
-
     <anvil-component type="ColumnPanel" name="standings_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">LEADERBOARDS</p>
@@ -103,7 +100,7 @@
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">OVERALL</p><h2>Overall leaderboard</h2></div></div>
         <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
-        <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="Minimal_Theme_1.StandingRow" prop:role="standing-list"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
       </div>
       <div class="tracker-card">
         <div class="event-title-row">
@@ -118,11 +115,10 @@
           </div>
         </div>
         <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
-        <anvil-component type="RepeatingPanel" name="division_standings_rows" prop:item_template="Minimal_Theme_1.StandingRow" prop:role="standing-list"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="division_standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
         <anvil-component type="Label" name="division_standings_status" prop:role="muted-text"></anvil-component>
       </div>
     </anvil-component>
-
     <anvil-component type="ColumnPanel" name="round_two_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">ROUND TWO · 9 HOLES</p>
@@ -141,11 +137,10 @@
             <anvil-component type="Button" name="save_round_two_pairings_button" prop:text="Save pairs and scores" prop:role="secondary-button"></anvil-component>
           </div>
         </div>
-        <anvil-component type="RepeatingPanel" name="round_two_pairing_rows" prop:item_template="Minimal_Theme_1.RoundTwoPairingRow" prop:role="round-two-pairing-list"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="round_two_pairing_rows" prop:item_template="rattler_tournament.RoundTwoPairingRow" prop:role="round-two-pairing-list"></anvil-component>
         <anvil-component type="Label" name="round_two_pairing_status" prop:role="status-text"></anvil-component>
       </div>
     </anvil-component>
-
     <anvil-component type="ColumnPanel" name="player_section" prop:role="tracker-view">
       <div class="view-heading"><p class="eyebrow">ROSTER</p><h2>Players across the years</h2><p class="muted-copy">Keep contact details with each player across years. Inactive players stay available for past and future tournaments.</p></div>
       <div class="tracker-card">
@@ -167,10 +162,9 @@
       </div>
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">EVERY SEASON</p><h2>Player roster</h2></div><span class="muted-copy">Round-one division and handicap are set for each tournament on the Field page.</span></div>
-        <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="Minimal_Theme_1.PlayerRow" prop:role="player-list"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="rattler_tournament.PlayerRow" prop:role="player-list"></anvil-component>
       </div>
     </anvil-component>
-
     <anvil-component type="ColumnPanel" name="budget_section" prop:role="tracker-view">
       <div class="view-heading"><p class="eyebrow">WEEKEND COSTS</p><h2>Participant budget</h2><p class="muted-copy">Players and non-players can share accommodation, travel, and other costs. Golf costs can be shared by players.</p></div>
       <div class="tracker-card">
@@ -192,7 +186,7 @@
       <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">PARTICIPANT SHARES</p><h2>Choose who shares each cost</h2></div><span class="muted-copy">Non-players can share all costs except golf.</span></div>
-        <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="Minimal_Theme_1.BudgetRow" prop:role="budget-list"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="rattler_tournament.BudgetRow" prop:role="budget-list"></anvil-component>
       </div>
     </anvil-component>
   </anvil-block>
