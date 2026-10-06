@@ -7,8 +7,6 @@ class Form1(Form1Template):
   def __init__(self, **properties):
     super().__init__(**properties)
     self.current_event = None
-    self.player_division.items = ["Division 1", "Division 2", "Division 3"]
-    self.player_division.selected_value = "Division 1"
     self.event_status.text = ""
     self.entry_status.text = ""
     self.player_status.text = ""
@@ -37,7 +35,7 @@ class Form1(Form1Template):
     self._entry_options = [
       {
         "golfer": golfer,
-        "label": f"{golfer['name']} · {golfer['division']}" + (" · inactive" if not golfer["active"] else ""),
+        "label": golfer["name"] + (" · inactive" if not golfer["active"] else ""),
         "selected": False,
       }
       for golfer in self.golfers
@@ -101,12 +99,19 @@ class Form1(Form1Template):
     self.round_two_rows.items = entries
     self.budget_rows.items = entries
     division_counts = {"Division 1": 0, "Division 2": 0, "Division 3": 0}
+    missing_round_one_details = 0
     for entry in entries:
-      division_counts[entry["division"]] += 1
+      division = entry["division"]
+      if division in division_counts:
+        division_counts[division] += 1
+      if division not in division_counts:
+        missing_round_one_details += 1
     self.field_summary.text = (
       f"{len(entries)} players  ·  Division 1: {division_counts['Division 1']}  ·  "
       f"Division 2: {division_counts['Division 2']}  ·  Division 3: {division_counts['Division 3']}"
     ) if entries else "No players entered yet"
+    if entries and missing_round_one_details:
+      self.field_summary.text += f"  ·  {missing_round_one_details} need first-round details"
 
     self.standings_rows.items = anvil.server.call("get_net_standings", tournament)
     self.round_two_status.text = ""
@@ -186,14 +191,19 @@ class Form1(Form1Template):
     result = anvil.server.call(
       "create_golfer",
       self.player_name.text,
-      self.player_division.selected_value,
-      self.player_handicap.text,
+      self.player_email.text,
+      self.player_phone.text,
+      self.player_city.text,
+      self.player_state.text,
     )
     if not result["ok"]:
       self.player_status.text = result["message"]
       return
     self.player_name.text = ""
-    self.player_handicap.text = ""
+    self.player_email.text = ""
+    self.player_phone.text = ""
+    self.player_city.text = ""
+    self.player_state.text = ""
     self.player_status.text = "Player added to the roster."
     self._load_players()
     self._load_event_data()
@@ -209,18 +219,18 @@ class Form1(Form1Template):
     self._load_event_data()
 
   @handle("player_rows", "x-save-player")
-  def player_rows_save_player(self, golfer, division, handicap, **event_args):
-    result = anvil.server.call("update_golfer", golfer, division, handicap)
+  def player_rows_save_player(self, golfer, email, phone, city, state, **event_args):
+    result = anvil.server.call("update_golfer", golfer, email, phone, city, state)
     if not result["ok"]:
       self.player_status.text = result["message"]
       return
-    self.player_status.text = "Roster details updated. Existing tournament handicap snapshots were kept."
+    self.player_status.text = "Roster contact details updated."
     self._load_players()
     self._load_event_data()
 
   @handle("score_rows", "x-save-entry-scores")
-  def score_rows_save_entry_scores(self, entry, gross, **event_args):
-    result = anvil.server.call("save_round_one_scores", entry, gross)
+  def score_rows_save_entry_scores(self, entry, division, handicap, gross, **event_args):
+    result = anvil.server.call("save_round_one_scores", entry, division, handicap, gross)
     if not result["ok"]:
       self.event_status.text = result["message"]
       return

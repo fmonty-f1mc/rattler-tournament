@@ -32,7 +32,7 @@ def _entry_name(entry):
 
 
 def _entry_sort_key(entry):
-  return (entry["division"], _entry_name(entry).lower())
+  return (entry["division"] or "", _entry_name(entry).lower())
 
 
 def _entry_net_score(entry):
@@ -54,21 +54,18 @@ def list_golfers():
 
 
 @anvil.server.callable
-def create_golfer(name, division, handicap):
+def create_golfer(name, email, phone, city, state):
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
-  if division not in DIVISIONS:
-    return _result("Choose one of the three divisions.")
-  handicap_value = _number(handicap, "Handicap", allow_blank=True)
-  if handicap_value is None:
-    return _result("Enter a valid handicap.")
   if any(golfer["name"].strip().lower() == name.lower() for golfer in app_tables.golfers.search()):
     return _result("That player is already on the roster.")
   golfer = app_tables.golfers.add_row(
     name=name,
-    division=division,
-    handicap=handicap_value,
+    email=(email or "").strip(),
+    phone=(phone or "").strip(),
+    city=(city or "").strip(),
+    state=(state or "").strip(),
     active=True,
   )
   return _result(golfer=golfer)
@@ -83,15 +80,15 @@ def set_golfer_active(golfer, active):
 
 
 @anvil.server.callable
-def update_golfer(golfer, division, handicap):
+def update_golfer(golfer, email, phone, city, state):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
-  if division not in DIVISIONS:
-    return _result("Choose one of the three divisions.")
-  handicap_value = _number(handicap, "Handicap", allow_blank=True)
-  if handicap_value is None:
-    return _result("Enter a valid handicap.")
-  golfer.update(division=division, handicap=handicap_value)
+  golfer.update(
+    email=(email or "").strip(),
+    phone=(phone or "").strip(),
+    city=(city or "").strip(),
+    state=(state or "").strip(),
+  )
   return _result()
 
 
@@ -136,8 +133,8 @@ def _create_tournament_entry(tournament, golfer):
   return app_tables.tournament_entries.add_row(
     tournament=tournament,
     golfer=golfer,
-    division=golfer["division"],
-    handicap=golfer["handicap"],
+    division="",
+    handicap=0,
     gross_18=0,
     net_18=0,
     gross_9=0,
@@ -194,9 +191,14 @@ def list_tournament_entries(tournament):
 
 
 @anvil.server.callable
-def save_round_one_scores(entry, gross):
+def save_round_one_scores(entry, division, handicap, gross):
   if not _valid_row(app_tables.tournament_entries, entry):
     return _result("Choose a tournament entry.")
+  if division not in DIVISIONS:
+    return _result("Choose one of the three divisions for this tournament.")
+  handicap_value = _number(handicap, "Handicap", allow_blank=True)
+  if handicap_value is None:
+    return _result("Enter a valid handicap for this tournament entry.")
   gross_value = _number(gross, "Gross score", allow_blank=True)
   if gross_value is None:
     return _result("Enter a valid gross score.")
@@ -205,13 +207,15 @@ def save_round_one_scores(entry, gross):
   if gross_value < 1:
     return _result("Gross scores must be positive whole numbers.")
 
-  handicap = _number(entry["handicap"], "Handicap", allow_blank=True)
-  if handicap is None:
-    return _result("Enter a valid handicap for this tournament entry.")
-  net_value = round(gross_value - handicap, 10)
+  net_value = round(gross_value - handicap_value, 10)
   if net_value < 1:
     return _result("Gross score minus handicap must be a positive score.")
-  entry.update(gross_18=int(gross_value), net_18=net_value)
+  entry.update(
+    division=division,
+    handicap=handicap_value,
+    gross_18=int(gross_value),
+    net_18=net_value,
+  )
   return _result(net=net_value)
 
 

@@ -22,7 +22,7 @@
       <div class="tracker-card">
         <p class="eyebrow">NEW YEAR</p>
         <h2>Set up a tournament</h2>
-        <p class="muted-copy">Each year keeps its own course, player list, handicaps, and scores.</p>
+        <p class="muted-copy">Each year keeps its own course, player list, divisions, handicaps, and scores.</p>
         <div class="form-grid form-grid-four">
           <div class="field-block"><label>Year</label><anvil-component type="TextBox" name="tournament_year" prop:placeholder="2026"></anvil-component></div>
           <div class="field-block"><label>Course</label><anvil-component type="TextBox" name="course_name" prop:placeholder="Course name"></anvil-component></div>
@@ -56,18 +56,20 @@
       </div>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="player_section" prop:role="tracker-view">
-      <div class="view-heading"><p class="eyebrow">ROSTER</p><h2>Players and handicaps</h2><p class="muted-copy">Keep one roster across years. Inactive players stay available for past and future tournaments.</p></div>
+      <div class="view-heading"><p class="eyebrow">ROSTER</p><h2>Players across the years</h2><p class="muted-copy">Keep contact details with each player across years. Inactive players stay available for past and future tournaments.</p></div>
       <div class="tracker-card">
-        <div class="form-grid form-grid-three">
+        <div class="form-grid form-grid-five">
           <div class="field-block"><label>Player name</label><anvil-component type="TextBox" name="player_name" prop:placeholder="Full name"></anvil-component></div>
-          <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="player_division"></anvil-component></div>
-          <div class="field-block"><label>Handicap</label><anvil-component type="TextBox" name="player_handicap" prop:placeholder="e.g. 12.4"></anvil-component></div>
+          <div class="field-block"><label>Email</label><anvil-component type="TextBox" name="player_email" prop:placeholder="name@example.com"></anvil-component></div>
+          <div class="field-block"><label>Phone</label><anvil-component type="TextBox" name="player_phone" prop:placeholder="Phone number"></anvil-component></div>
+          <div class="field-block"><label>City</label><anvil-component type="TextBox" name="player_city" prop:placeholder="City"></anvil-component></div>
+          <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
         </div>
         <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
         <anvil-component type="Label" name="player_status" prop:role="status-text"></anvil-component>
       </div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">EVERY SEASON</p><h2>Player roster</h2></div><span class="muted-copy">Tournament entries save a handicap snapshot.</span></div>
+        <div class="section-heading"><div><p class="eyebrow">EVERY SEASON</p><h2>Player roster</h2></div><span class="muted-copy">Division and handicap are set for each tournament in round one.</span></div>
         <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="Minimal_Theme_1.PlayerRow" prop:role="player-list"></anvil-component>
       </div>
     </anvil-component>

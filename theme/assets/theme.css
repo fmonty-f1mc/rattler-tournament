@@ -351,6 +351,10 @@ textarea.anvil-text-area:disabled,
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.form-grid-five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .field-block,
 .score-input-block,
 .budget-input-grid label,
@@ -443,6 +447,14 @@ textarea.anvil-text-area:disabled,
   flex-basis: 100%;
 }
 
+.season-score-details {
+  display: grid;
+  grid-template-columns: minmax(100px, 1.2fr) minmax(70px, 0.8fr);
+  flex-basis: 100%;
+  gap: 8px;
+  width: 100%;
+}
+
 .anvil-role-row-title {
   color: var(--blank-text);
   font-size: 15px;
@@ -520,7 +532,7 @@ textarea.anvil-text-area:disabled,
 
 .player-row {
   display: grid;
-  grid-template-columns: 2fr minmax(120px, 1fr) minmax(90px, 0.7fr) auto auto;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(150px, 1.3fr) minmax(120px, 1fr) minmax(100px, 0.8fr) minmax(65px, 0.5fr) auto auto;
   align-items: center;
   gap: 14px;
 }
@@ -590,6 +602,7 @@ textarea.anvil-text-area:disabled,
 
   .form-grid-four,
   .form-grid-three,
+  .form-grid-five,
   .budget-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -605,11 +618,13 @@ textarea.anvil-text-area:disabled,
   }
 
   .score-row,
+  .player-row,
   .budget-row {
     grid-template-columns: 1fr 1fr;
   }
 
   .score-player,
+  .player-row > div:first-child,
   .budget-player {
     grid-column: 1 / -1;
   }

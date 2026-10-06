@@ -9,12 +9,20 @@ db_schema:
       type: string
     - admin_ui: {}
       client_hidden: null
-      name: division
+      name: email
       type: string
     - admin_ui: {}
       client_hidden: null
-      name: handicap
-      type: number
+      name: phone
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: city
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: state
+      type: string
     - admin_ui: {}
       client_hidden: null
       name: active
