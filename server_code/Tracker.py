@@ -3,9 +3,6 @@ from anvil.tables import app_tables
 import math
 
 
-DIVISIONS = ("Division 1", "Division 2", "Division 3")
-
-
 def _result(message=None, **values):
   return {"ok": message is None, "message": message, **values}
 
@@ -33,6 +30,20 @@ def _entry_name(entry):
 
 def _entry_sort_key(entry):
   return (entry["division"] or "", _entry_name(entry).lower())
+
+
+def _division_names(tournament):
+  names = {
+    division["name"].strip()
+    for division in app_tables.tournament_divisions.search(tournament=tournament)
+    if division["name"] and division["name"].strip()
+  }
+  names.update(
+    entry["division"].strip()
+    for entry in app_tables.tournament_entries.search(tournament=tournament)
+    if entry["division"] and entry["division"].strip()
+  )
+  return sorted(names, key=str.lower)
 
 
 def _entry_net_score(entry):
@@ -191,14 +202,49 @@ def list_tournament_entries(tournament):
 
 
 @anvil.server.callable
-def save_round_one_scores(entry, division, handicap, gross):
+def list_tournament_divisions(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  return _division_names(tournament)
+
+
+@anvil.server.callable
+def create_tournament_division(tournament, name):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  name = (name or "").strip()
+  if not name:
+    return _result("Enter a division name.")
+  if any(existing.lower() == name.lower() for existing in _division_names(tournament)):
+    return _result("That division already exists for this tournament.")
+
+  app_tables.tournament_divisions.add_row(tournament=tournament, name=name)
+  return _result(division_name=name)
+
+
+@anvil.server.callable
+def save_tournament_entry_details(entry, division, handicap):
   if not _valid_row(app_tables.tournament_entries, entry):
     return _result("Choose a tournament entry.")
-  if division not in DIVISIONS:
-    return _result("Choose one of the three divisions for this tournament.")
+  if division not in _division_names(entry["tournament"]):
+    return _result("Choose a division created for this tournament.")
   handicap_value = _number(handicap, "Handicap", allow_blank=True)
   if handicap_value is None:
     return _result("Enter a valid handicap for this tournament entry.")
+
+  entry.update(division=division, handicap=handicap_value)
+  return _result()
+
+
+@anvil.server.callable
+def save_round_one_scores(entry, gross):
+  if not _valid_row(app_tables.tournament_entries, entry):
+    return _result("Choose a tournament entry.")
+  if entry["division"] not in _division_names(entry["tournament"]):
+    return _result("Assign a division on the Field page before saving this score.")
+  handicap_value = _number(entry["handicap"], "Handicap", allow_blank=True)
+  if handicap_value is None:
+    return _result("Assign a valid handicap on the Field page before saving this score.")
   gross_value = _number(gross, "Gross score", allow_blank=True)
   if gross_value is None:
     return _result("Enter a valid gross score.")
@@ -211,8 +257,6 @@ def save_round_one_scores(entry, division, handicap, gross):
   if net_value < 1:
     return _result("Gross score minus handicap must be a positive score.")
   entry.update(
-    division=division,
-    handicap=handicap_value,
     gross_18=int(gross_value),
     net_18=net_value,
   )
@@ -236,7 +280,10 @@ def save_round_two_score(entry, score):
 
 @anvil.server.callable
 def get_net_standings(tournament):
-  entries = list_tournament_entries(tournament)
+  return _net_standings(list_tournament_entries(tournament))
+
+
+def _net_standings(entries):
   scored = [entry for entry in entries if (_entry_net_score(entry) or 0) > 0]
   scored.sort(key=lambda entry: (_entry_net_score(entry), entry["gross_18"], _entry_name(entry).lower()))
   return [
@@ -249,6 +296,20 @@ def get_net_standings(tournament):
     }
     for index, entry in enumerate(scored)
   ]
+
+
+@anvil.server.callable
+def get_division_standings(tournament, division):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  if division not in _division_names(tournament):
+    return []
+  entries = [
+    entry
+    for entry in list_tournament_entries(tournament)
+    if entry["division"] == division
+  ]
+  return _net_standings(entries)
 
 
 @anvil.server.callable

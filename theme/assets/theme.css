@@ -357,6 +357,7 @@ textarea.anvil-text-area:disabled,
 
 .field-block,
 .score-input-block,
+.score-reference,
 .budget-input-grid label,
 .hole-input-grid label {
   display: flex;
@@ -419,6 +420,7 @@ textarea.anvil-text-area:disabled,
 .standing-row,
 .player-row,
 .budget-row,
+.entry-details-row,
 .pairing-row {
   padding: 14px 0;
   border-bottom: 1px solid var(--blank-border);
@@ -429,6 +431,19 @@ textarea.anvil-text-area:disabled,
   grid-template-columns: minmax(180px, 1.5fr) minmax(90px, 0.7fr) minmax(90px, 0.7fr) auto;
   align-items: end;
   gap: 14px;
+}
+
+.entry-details-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(140px, 1fr) minmax(110px, 0.8fr) auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.field-player {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
 }
 
 .round-two-score-row {
@@ -619,12 +634,14 @@ textarea.anvil-text-area:disabled,
 
   .score-row,
   .player-row,
-  .budget-row {
+  .budget-row,
+  .entry-details-row {
     grid-template-columns: 1fr 1fr;
   }
 
   .score-player,
   .player-row > div:first-child,
+  .entry-details-row > .field-player,
   .budget-player {
     grid-column: 1 / -1;
   }

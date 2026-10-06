@@ -95,6 +95,21 @@ db_schema:
     indexes: []
     server: full
     title: Rattler Pairings
+  tournament_divisions:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: name
+      type: string
+    indexes: []
+    server: full
+    title: Tournament Divisions
   tournament_entries:
     client: none
     columns:

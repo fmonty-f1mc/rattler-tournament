@@ -3,13 +3,13 @@
     <div class="score-player">
       <anvil-component type="Label" name="player_name" bind:text="self.item['golfer']['name']" prop:role="row-title"></anvil-component>
       <div class="season-score-details">
-        <div class="score-input-block">
+        <div class="score-reference">
           <label>Division</label>
-          <anvil-component type="DropDown" name="division_dropdown"></anvil-component>
+          <anvil-component type="Label" name="division_label" prop:role="row-title"></anvil-component>
         </div>
-        <div class="score-input-block">
+        <div class="score-reference">
           <label>Handicap</label>
-          <anvil-component type="TextBox" name="handicap_box" prop:placeholder="e.g. 12.4"></anvil-component>
+          <anvil-component type="Label" name="handicap_label" prop:role="row-title"></anvil-component>
         </div>
       </div>
     </div>

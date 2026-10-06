@@ -9,7 +9,11 @@ class Form1(Form1Template):
     self.current_event = None
     self.event_status.text = ""
     self.entry_status.text = ""
+    self.field_status.text = ""
+    self.division_status.text = ""
+    self.division_standings_status.text = ""
     self.player_status.text = ""
+    self.round_one_status.text = ""
     self.round_two_status.text = ""
     self.budget_status.text = ""
     self._show_view("event")
@@ -18,6 +22,10 @@ class Form1(Form1Template):
 
   def _show_view(self, name):
     self.event_section.visible = name == "event"
+    self.field_section.visible = name == "field"
+    self.round_one_section.visible = name == "round_one"
+    self.standings_section.visible = name == "standings"
+    self.round_two_section.visible = name == "round_two"
     self.player_section.visible = name == "players"
     self.budget_section.visible = name == "budget"
 
@@ -68,18 +76,28 @@ class Form1(Form1Template):
     self._load_event_data()
 
   def _load_event_data(self):
+    self.field_status.text = ""
+    self.division_status.text = ""
     if self.current_event is None:
       self.current_event_title.text = "Create your first tournament"
       self.current_event_subtitle.text = "Add a year and course to get started."
       self.field_summary.text = "No players entered yet"
+      self.division_options = []
+      self.division_list_label.text = "Create or select a tournament first."
+      self.division_standings_picker.items = []
+      self.division_standings_picker.selected_value = None
+      self.field_rows.items = []
       self.score_rows.items = []
       self.standings_rows.items = []
+      self.division_standings_rows.items = []
       self.round_two_rows.items = []
       self.budget_rows.items = []
+      self._load_division_standings()
       self.budget_total.text = "$0.00"
       self.budget_paid.text = "$0.00"
       self.budget_balance.text = "$0.00"
       self.budget_accommodated.text = "0 players"
+      self.round_one_status.text = ""
       self.round_two_status.text = ""
       self._load_entry_options([])
       return
@@ -93,27 +111,42 @@ class Form1(Form1Template):
       details = f"{details} · {notes}"
     self.current_event_subtitle.text = details
 
+    self.division_options = anvil.server.call("list_tournament_divisions", tournament)
+    self.division_list_label.text = ", ".join(self.division_options) or "No divisions created yet."
+    self.division_standings_picker.items = self.division_options
+    selected_division = self.division_standings_picker.selected_value
+    if selected_division not in self.division_options:
+      selected_division = self.division_options[0] if self.division_options else None
+    self.division_standings_picker.selected_value = selected_division
     entries = anvil.server.call("list_tournament_entries", tournament)
     self._load_entry_options(entries)
+    self.field_rows.items = [
+      {"entry": entry, "division_options": self.division_options}
+      for entry in entries
+    ]
     self.score_rows.items = entries
     self.round_two_rows.items = entries
     self.budget_rows.items = entries
-    division_counts = {"Division 1": 0, "Division 2": 0, "Division 3": 0}
-    missing_round_one_details = 0
+    division_counts = {division: 0 for division in self.division_options}
+    missing_division_count = 0
     for entry in entries:
       division = entry["division"]
       if division in division_counts:
         division_counts[division] += 1
-      if division not in division_counts:
-        missing_round_one_details += 1
-    self.field_summary.text = (
-      f"{len(entries)} players  ·  Division 1: {division_counts['Division 1']}  ·  "
-      f"Division 2: {division_counts['Division 2']}  ·  Division 3: {division_counts['Division 3']}"
-    ) if entries else "No players entered yet"
-    if entries and missing_round_one_details:
-      self.field_summary.text += f"  ·  {missing_round_one_details} need first-round details"
+      else:
+        missing_division_count += 1
+    self.field_summary.text = f"{len(entries)} players" if entries else "No players entered yet"
+    if division_counts:
+      division_summary = "  ·  ".join(
+        f"{division}: {count}" for division, count in division_counts.items()
+      )
+      self.field_summary.text += f"  ·  {division_summary}"
+    if missing_division_count:
+      self.field_summary.text += f"  ·  {missing_division_count} need a division"
 
     self.standings_rows.items = anvil.server.call("get_net_standings", tournament)
+    self._load_division_standings()
+    self.round_one_status.text = ""
     self.round_two_status.text = ""
 
     summary = anvil.server.call("get_budget_summary", tournament)
@@ -122,6 +155,24 @@ class Form1(Form1Template):
     self.budget_balance.text = self._money(summary["balance"])
     self.budget_accommodated.text = f"{summary['accommodated']} of {summary['participants']} players"
 
+  def _load_division_standings(self):
+    division = self.division_standings_picker.selected_value
+    if self.current_event is None or not division:
+      self.division_standings_rows.items = []
+      self.division_standings_status.text = "Create a division on the Field page to see standings."
+      return
+
+    self.division_standings_rows.items = anvil.server.call(
+      "get_division_standings",
+      self.current_event,
+      division,
+    )
+    self.division_standings_status.text = (
+      "No scores yet for this division."
+      if not self.division_standings_rows.items
+      else ""
+    )
+
   @staticmethod
   def _money(value):
     return "${:,.2f}".format(value or 0)
@@ -129,6 +180,43 @@ class Form1(Form1Template):
   @handle("event_nav", "click")
   def event_nav_click(self, **event_args):
     self._show_view("event")
+
+  @handle("field_nav", "click")
+  def field_nav_click(self, **event_args):
+    self._show_view("field")
+
+  @handle("create_division_button", "click")
+  def create_division_button_click(self, **event_args):
+    if self.current_event is None:
+      self.division_status.text = "Create or select a tournament first."
+      return
+    result = anvil.server.call(
+      "create_tournament_division",
+      self.current_event,
+      self.new_division_name.text,
+    )
+    if not result["ok"]:
+      self.division_status.text = result["message"]
+      return
+    self.new_division_name.text = ""
+    self._load_event_data()
+    self.division_status.text = f"{result['division_name']} created for this tournament."
+
+  @handle("round_one_nav", "click")
+  def round_one_nav_click(self, **event_args):
+    self._show_view("round_one")
+
+  @handle("standings_nav", "click")
+  def standings_nav_click(self, **event_args):
+    self._show_view("standings")
+
+  @handle("division_standings_picker", "change")
+  def division_standings_picker_change(self, **event_args):
+    self._load_division_standings()
+
+  @handle("round_two_nav", "click")
+  def round_two_nav_click(self, **event_args):
+    self._show_view("round_two")
 
   @handle("players_nav", "click")
   def players_nav_click(self, **event_args):
@@ -229,13 +317,22 @@ class Form1(Form1Template):
     self._load_event_data()
 
   @handle("score_rows", "x-save-entry-scores")
-  def score_rows_save_entry_scores(self, entry, division, handicap, gross, **event_args):
-    result = anvil.server.call("save_round_one_scores", entry, division, handicap, gross)
+  def score_rows_save_entry_scores(self, entry, gross, **event_args):
+    result = anvil.server.call("save_round_one_scores", entry, gross)
     if not result["ok"]:
-      self.event_status.text = result["message"]
+      self.round_one_status.text = result["message"]
       return
-    self.event_status.text = f"Round-one score saved for {entry['golfer']['name']}. Net: {result['net']}."
     self._load_event_data()
+    self.round_one_status.text = f"Round-one score saved for {entry['golfer']['name']}. Net: {result['net']}."
+
+  @handle("field_rows", "x-save-entry-details")
+  def field_rows_save_entry_details(self, entry, division, handicap, **event_args):
+    result = anvil.server.call("save_tournament_entry_details", entry, division, handicap)
+    if not result["ok"]:
+      self.field_status.text = result["message"]
+      return
+    self._load_event_data()
+    self.field_status.text = f"Division and handicap saved for {entry['golfer']['name']}."
 
   @handle("round_two_rows", "x-save-round-two-score")
   def round_two_rows_save_score(self, entry, score, **event_args):
