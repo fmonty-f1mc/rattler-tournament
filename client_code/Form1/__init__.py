@@ -130,7 +130,11 @@ class Form1(Form1Template):
       self.current_event_subtitle.text = "Add a year and course to get started."
       self.field_summary.text = "No players entered yet"
       self.division_options = []
+      self.division_choices = [("No division", "")]
       self.division_list_label.text = "Create or select a tournament first."
+      self.division_to_delete_dropdown.items = []
+      self.division_to_delete_dropdown.selected_value = None
+      self.delete_division_button.enabled = False
       self.standings_scope_picker.items = [("Overall", "overall")]
       self.standings_scope_picker.selected_value = "overall"
       self.field_rows.items = []
@@ -166,6 +170,19 @@ class Form1(Form1Template):
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
     self.division_list_label.text = ", ".join(self.division_options) or "No divisions created yet."
+    selected_division = self.division_to_delete_dropdown.selected_value
+    self.division_to_delete_dropdown.items = [
+      (division, division) for division in self.division_options
+    ]
+    self.division_to_delete_dropdown.selected_value = (
+      selected_division
+      if selected_division in self.division_options
+      else (self.division_options[0] if self.division_options else None)
+    )
+    self.delete_division_button.enabled = bool(self.division_options)
+    self.division_choices = [("No division", "")] + [
+      (division, division) for division in self.division_options
+    ]
     selected_scope = self.standings_scope_picker.selected_value or "overall"
     scopes = [("Overall", "overall")] + [
       ("Division: " + division, "division:" + division)
@@ -186,14 +203,14 @@ class Form1(Form1Template):
       entry_id = entry.get_id()
       draft = self._field_detail_drafts.get(entry_id)
       if draft is None:
-        division = entry["division"] or None
+        division = entry["division"] or ""
         handicap = "" if entry["handicap"] is None else str(entry["handicap"])
       else:
-        division = draft["division"]
+        division = draft["division"] or ""
         handicap = draft["handicap"]
       field_items.append({
         "entry": entry,
-        "division_options": self.division_options,
+        "division_options": self.division_choices,
         "division": division,
         "handicap": handicap,
       })
@@ -246,7 +263,7 @@ class Form1(Form1Template):
       )
       self.field_summary.text += f"  ·  {division_summary}"
     if missing_division_count:
-      self.field_summary.text += f"  ·  {missing_division_count} need a division"
+      self.field_summary.text += f"  ·  {missing_division_count} unassigned"
 
     self._overall_standings = anvil.server.call("get_net_standings", tournament)
     self._load_standings()
@@ -373,6 +390,40 @@ class Form1(Form1Template):
     self.new_division_name.text = ""
     self._load_event_data()
     self.division_status.text = f"{result['division_name']} created for this tournament."
+
+  @handle("delete_division_button", "click")
+  def delete_division_button_click(self, **event_args):
+    if self.current_event is None:
+      self.division_status.text = "Create or select a tournament first."
+      return
+    division = self.division_to_delete_dropdown.selected_value
+    if not division:
+      self.division_status.text = "Choose a division to delete."
+      return
+    confirmed = confirm(
+      f"Delete {division}? Players assigned to it will have no division, and their scores will be kept.",
+      title="Delete division",
+    )
+    if not confirmed:
+      return
+
+    self._capture_field_detail_drafts()
+    result = anvil.server.call(
+      "delete_tournament_division",
+      self.current_event,
+      division,
+    )
+    if not result["ok"]:
+      self.division_status.text = result["message"]
+      return
+
+    for draft in self._field_detail_drafts.values():
+      if draft["division"] == division:
+        draft["division"] = ""
+    self._load_event_data(capture_field_detail_drafts=False)
+    self.division_status.text = (
+      f"Deleted {result['division_name']}. Its players now have no division; their scores were kept."
+    )
 
   @handle("save_field_details_button", "click")
   def save_field_details_button_click(self, **event_args):

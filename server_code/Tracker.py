@@ -481,6 +481,47 @@ def create_tournament_division(tournament, name):
 
 
 @anvil.server.callable(require_user=True)
+def delete_tournament_division(tournament, name):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  if not isinstance(name, str) or not name.strip():
+    return _result("Choose a division to delete.")
+
+  division_name = next(
+    (
+      existing
+      for existing in _division_names(tournament)
+      if existing.casefold() == name.strip().casefold()
+    ),
+    None,
+  )
+  if division_name is None:
+    return _result("That division no longer exists for this tournament.")
+
+  division_key = division_name.casefold()
+  unassigned_count = 0
+  for entry in app_tables.tournament_entries.search(tournament=tournament):
+    assigned_division = entry["division"]
+    if (
+      _entry_is_player(entry)
+      and isinstance(assigned_division, str)
+      and assigned_division.strip().casefold() == division_key
+    ):
+      entry["division"] = ""
+      unassigned_count += 1
+
+  for division in app_tables.tournament_divisions.search(tournament=tournament):
+    stored_name = division["name"]
+    if (
+      isinstance(stored_name, str)
+      and stored_name.strip().casefold() == division_key
+    ):
+      division.delete()
+
+  return _result(division_name=division_name, unassigned_count=unassigned_count)
+
+
+@anvil.server.callable(require_user=True)
 def save_tournament_entry_details_batch(tournament, entry_details):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
@@ -507,8 +548,13 @@ def save_tournament_entry_details_batch(tournament, entry_details):
     seen_ids.add(entry_id)
 
     division = details.get("division")
-    if division not in divisions:
-      return _result("Choose a division created for this tournament.")
+    if division is None:
+      division = ""
+    if not isinstance(division, str):
+      return _result("Choose a valid division or leave it unassigned.")
+    division = division.strip()
+    if division and division not in divisions:
+      return _result("Choose a division created for this tournament or leave it unassigned.")
     handicap_value = _number(details.get("handicap"), "Handicap", allow_blank=True)
     if handicap_value is None:
       return _result("Enter a valid handicap for every tournament entry.")
@@ -538,8 +584,6 @@ def _round_one_score_values(entry, gross):
     return None, None, "Choose a tournament entry."
   if not _entry_is_player(entry):
     return None, None, "Only players can enter golf scores."
-  if entry["division"] not in _division_names(entry["tournament"]):
-    return None, None, "Assign a division on the Field page before saving this score."
   handicap_value = _number(entry["handicap"], "Handicap", allow_blank=True)
   if handicap_value is None:
     return None, None, "Assign a valid handicap on the Field page before saving this score."
@@ -608,7 +652,7 @@ def _net_standings(entries):
     {
       "rank": index + 1,
       "player_name": _entry_name(entry),
-      "division": entry["division"],
+      "division": entry["division"] or "No division",
       "gross": entry["gross_18"],
       "net": _entry_net_score(entry),
     }

@@ -62,7 +62,7 @@
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT FIELD</p>
         <h2>Divisions and player details</h2>
-        <p class="muted-copy">Create divisions for this tournament, then assign each player's division and handicap. Non-players are kept out of field and round setup.</p>
+        <p class="muted-copy">Create divisions for this tournament, then optionally assign each player's division and set their handicap. Non-players are kept out of field and round setup.</p>
       </div>
       <div class="tracker-card">
         <p class="eyebrow">DIVISIONS</p>
@@ -71,6 +71,11 @@
         <div class="inline-form">
           <anvil-component type="TextBox" name="new_division_name" prop:placeholder="Division name"></anvil-component>
           <anvil-component type="Button" name="create_division_button" prop:text="Create division"></anvil-component>
+        </div>
+        <div class="inline-form">
+          <label>Choose a division to delete</label>
+          <anvil-component type="DropDown" name="division_to_delete_dropdown"></anvil-component>
+          <anvil-component type="Button" name="delete_division_button" prop:text="Delete selected division" prop:role="danger-button"></anvil-component>
         </div>
         <anvil-component type="Label" name="division_status" prop:role="status-text"></anvil-component>
         <anvil-component type="Label" name="division_list_label" prop:role="muted-text"></anvil-component>

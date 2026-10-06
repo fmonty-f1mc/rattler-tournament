@@ -7,7 +7,7 @@ from anvil.google.drive import app_files
 class ScoreRow(ScoreRowTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
-    self.division_label.text = self.item["division"] or "Not assigned"
+    self.division_label.text = self.item["division"] or "No division"
     handicap = self.item["handicap"]
     self.handicap_label.text = "Not assigned" if handicap is None else "{:.10g}".format(handicap)
     self.gross_box.text = self._display_score(self.item["gross_18"])
@@ -19,10 +19,6 @@ class ScoreRow(ScoreRowTemplate):
     return "" if value is None or value <= 0 else str(value)
 
   def _update_net_preview(self):
-    if not self.item["division"]:
-      self.net_box.text = ""
-      return
-
     try:
       gross = float(self.gross_box.text)
     except (TypeError, ValueError):
