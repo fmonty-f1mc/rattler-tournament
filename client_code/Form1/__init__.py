@@ -31,6 +31,7 @@ class Form1(Form1Template):
     self.round_one_status.text = ""
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
+    self.email_status.text = ""
     self._show_view("event")
     self._load_players()
     self._load_events()
@@ -54,8 +55,9 @@ class Form1(Form1Template):
     self.round_two_section.visible = name == "round_two"
     self.player_section.visible = name == "players"
     self.budget_section.visible = name == "budget"
+    self.email_section.visible = name == "email"
     tournament_view = name in {
-      "event", "field", "round_one", "standings", "round_two", "budget"
+      "event", "field", "round_one", "standings", "round_two", "budget", "email"
     }
     self.tournament_subnav.visible = tournament_view
     for view_name, button in (
@@ -65,6 +67,7 @@ class Form1(Form1Template):
       ("standings", self.standings_nav),
       ("round_two", self.round_two_nav),
       ("budget", self.budget_nav),
+      ("email", self.email_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
@@ -122,11 +125,16 @@ class Form1(Form1Template):
     self.field_status.text = ""
     self.division_status.text = ""
     if self.current_event is None:
+      self.delete_tournament_button.visible = False
       self.current_event_title.text = "Create your first tournament"
       self.current_event_subtitle.text = "Add a year and course to get started."
       self.field_summary.text = "No players entered yet"
       self.division_options = []
+      self.division_choices = [("No division", "")]
       self.division_list_label.text = "Create or select a tournament first."
+      self.division_to_delete_dropdown.items = []
+      self.division_to_delete_dropdown.selected_value = None
+      self.delete_division_button.enabled = False
       self.standings_scope_picker.items = [("Overall", "overall")]
       self.standings_scope_picker.selected_value = "overall"
       self.field_rows.items = []
@@ -151,6 +159,7 @@ class Form1(Form1Template):
       return
 
     tournament = self.current_event
+    self.delete_tournament_button.visible = True
     self.current_event_title.text = f"{tournament['year']} · {tournament['course']}"
     event_date = tournament["event_date"]
     notes = tournament["notes"]
@@ -161,6 +170,19 @@ class Form1(Form1Template):
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
     self.division_list_label.text = ", ".join(self.division_options) or "No divisions created yet."
+    selected_division = self.division_to_delete_dropdown.selected_value
+    self.division_to_delete_dropdown.items = [
+      (division, division) for division in self.division_options
+    ]
+    self.division_to_delete_dropdown.selected_value = (
+      selected_division
+      if selected_division in self.division_options
+      else (self.division_options[0] if self.division_options else None)
+    )
+    self.delete_division_button.enabled = bool(self.division_options)
+    self.division_choices = [("No division", "")] + [
+      (division, division) for division in self.division_options
+    ]
     selected_scope = self.standings_scope_picker.selected_value or "overall"
     scopes = [("Overall", "overall")] + [
       ("Division: " + division, "division:" + division)
@@ -181,14 +203,14 @@ class Form1(Form1Template):
       entry_id = entry.get_id()
       draft = self._field_detail_drafts.get(entry_id)
       if draft is None:
-        division = entry["division"] or None
+        division = entry["division"] or ""
         handicap = "" if entry["handicap"] is None else str(entry["handicap"])
       else:
-        division = draft["division"]
+        division = draft["division"] or ""
         handicap = draft["handicap"]
       field_items.append({
         "entry": entry,
-        "division_options": self.division_options,
+        "division_options": self.division_choices,
         "division": division,
         "handicap": handicap,
       })
@@ -241,7 +263,7 @@ class Form1(Form1Template):
       )
       self.field_summary.text += f"  ·  {division_summary}"
     if missing_division_count:
-      self.field_summary.text += f"  ·  {missing_division_count} need a division"
+      self.field_summary.text += f"  ·  {missing_division_count} unassigned"
 
     self._overall_standings = anvil.server.call("get_net_standings", tournament)
     self._load_standings()
@@ -340,6 +362,10 @@ class Form1(Form1Template):
   def event_nav_click(self, **event_args):
     self._show_view("event")
 
+  @handle("email_nav", "click")
+  def email_nav_click(self, **event_args):
+    self._show_view("email")
+
   @handle("setup_nav", "click")
   def setup_nav_click(self, **event_args):
     self._show_view("event")
@@ -364,6 +390,40 @@ class Form1(Form1Template):
     self.new_division_name.text = ""
     self._load_event_data()
     self.division_status.text = f"{result['division_name']} created for this tournament."
+
+  @handle("delete_division_button", "click")
+  def delete_division_button_click(self, **event_args):
+    if self.current_event is None:
+      self.division_status.text = "Create or select a tournament first."
+      return
+    division = self.division_to_delete_dropdown.selected_value
+    if not division:
+      self.division_status.text = "Choose a division to delete."
+      return
+    confirmed = confirm(
+      f"Delete {division}? Players assigned to it will have no division, and their scores will be kept.",
+      title="Delete division",
+    )
+    if not confirmed:
+      return
+
+    self._capture_field_detail_drafts()
+    result = anvil.server.call(
+      "delete_tournament_division",
+      self.current_event,
+      division,
+    )
+    if not result["ok"]:
+      self.division_status.text = result["message"]
+      return
+
+    for draft in self._field_detail_drafts.values():
+      if draft["division"] == division:
+        draft["division"] = ""
+    self._load_event_data(capture_field_detail_drafts=False)
+    self.division_status.text = (
+      f"Deleted {result['division_name']}. Its players now have no division; their scores were kept."
+    )
 
   @handle("save_field_details_button", "click")
   def save_field_details_button_click(self, **event_args):
@@ -486,6 +546,67 @@ class Form1(Form1Template):
   def budget_nav_click(self, **event_args):
     self._show_view("budget")
 
+  @handle("send_tournament_email_button", "click")
+  def send_tournament_email_button_click(self, **event_args):
+    if self.current_event is None:
+      self.email_status.text = "Create or select a tournament first."
+      return
+
+    subject = (self.email_subject.text or "").strip()
+    body = (self.email_body.text or "").strip()
+    if not subject:
+      self.email_status.text = "Enter an email subject."
+      return
+    if not body:
+      self.email_status.text = "Enter a message."
+      return
+
+    self.send_tournament_email_button.enabled = False
+    try:
+      summary = anvil.server.call("get_tournament_email_summary", self.current_event)
+    finally:
+      self.send_tournament_email_button.enabled = True
+
+    if not summary["ok"]:
+      self.email_status.text = summary["message"]
+      return
+    recipient_count = summary["recipient_count"]
+    if not recipient_count:
+      self.email_status.text = "No participants have a usable email address."
+      return
+
+    skipped_details = []
+    if summary["missing_count"]:
+      skipped_details.append(f"{summary['missing_count']} without an email address")
+    if summary["invalid_count"]:
+      skipped_details.append(f"{summary['invalid_count']} with an invalid email address")
+    skipped_message = (
+      " Participants with " + " and ".join(skipped_details) + " will be skipped."
+      if skipped_details else ""
+    )
+    confirmed = confirm(
+      f"Send this message to {recipient_count} unique email addresses for "
+      f"{self.current_event['year']} · {self.current_event['course']}? "
+      f"Recipients will be BCCed.{skipped_message}",
+      title="Email tournament participants",
+    )
+    if not confirmed:
+      return
+
+    self.email_status.text = "Sending email…"
+    self.send_tournament_email_button.enabled = False
+    try:
+      result = anvil.server.call(
+        "send_tournament_email",
+        self.current_event,
+        subject,
+        body,
+      )
+    finally:
+      self.send_tournament_email_button.enabled = True
+
+    self.email_status.text = result["message"]
+
   @handle("save_budget_totals_button", "click")
   def save_budget_totals_button_click(self, **event_args):
     if self.current_event is None:
@@ -528,6 +649,31 @@ class Form1(Form1Template):
     self.event_date.date = None
     self.event_status.text = "Tournament created. Add this year's players below."
     self._load_events(selected=result["tournament"])
+
+  @handle("delete_tournament_button", "click")
+  def delete_tournament_button_click(self, **event_args):
+    tournament = self.current_event
+    if tournament is None:
+      return
+
+    title = f"{tournament['year']} · {tournament['course']}"
+    confirmed = confirm(
+      f"Delete {title}? This permanently removes the tournament, all player entries and budget details, divisions, scores, and pairings. It will also disappear from public standings.",
+      title="Delete tournament",
+    )
+    if not confirmed:
+      return
+
+    result = anvil.server.call("delete_tournament", tournament)
+    if not result["ok"]:
+      self.event_status.text = result["message"]
+      return
+
+    self._field_detail_drafts = {}
+    self.field_rows.items = []
+    self.current_event = None
+    self.event_status.text = f"Deleted tournament {title}."
+    self._load_events()
 
   def _add_selected_entries(self, is_player):
     if self.current_event is None:
@@ -616,12 +762,12 @@ class Form1(Form1Template):
     self._load_event_data()
 
   @handle("player_rows", "x-save-player")
-  def player_rows_save_player(self, golfer, email, phone, city, state, **event_args):
-    result = anvil.server.call("update_golfer", golfer, email, phone, city, state)
+  def player_rows_save_player(self, golfer, name, email, phone, city, state, **event_args):
+    result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state)
     if not result["ok"]:
       self.player_status.text = result["message"]
       return
-    self.player_status.text = "Roster contact details updated."
+    self.player_status.text = "Player name and details updated."
     self._load_players()
     self._load_event_data()
 

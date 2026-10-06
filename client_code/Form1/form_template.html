@@ -22,12 +22,16 @@
       <anvil-component type="Button" name="standings_nav" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="round_two_nav" prop:text="Round Two" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="budget_nav" prop:text="Budget" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="email_nav" prop:text="Email participants" prop:role="tournament-subtab"></anvil-component>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="event_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT</p>
         <h2>Setup and field</h2>
         <p class="muted-copy">Create a year and choose the players taking part.</p>
+      </div>
+      <div class="tournament-delete-actions">
+        <anvil-component type="Button" name="delete_tournament_button" prop:text="Delete selected tournament" prop:role="danger-button"></anvil-component>
       </div>
       <div class="tracker-card">
         <p class="eyebrow">NEW YEAR</p>
@@ -58,7 +62,7 @@
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT FIELD</p>
         <h2>Divisions and player details</h2>
-        <p class="muted-copy">Create divisions for this tournament, then assign each player's division and handicap. Non-players are kept out of field and round setup.</p>
+        <p class="muted-copy">Create divisions for this tournament, then optionally assign each player's division and set their handicap. Non-players are kept out of field and round setup.</p>
       </div>
       <div class="tracker-card">
         <p class="eyebrow">DIVISIONS</p>
@@ -67,6 +71,11 @@
         <div class="inline-form">
           <anvil-component type="TextBox" name="new_division_name" prop:placeholder="Division name"></anvil-component>
           <anvil-component type="Button" name="create_division_button" prop:text="Create division"></anvil-component>
+        </div>
+        <div class="inline-form">
+          <label>Choose a division to delete</label>
+          <anvil-component type="DropDown" name="division_to_delete_dropdown"></anvil-component>
+          <anvil-component type="Button" name="delete_division_button" prop:text="Delete selected division" prop:role="danger-button"></anvil-component>
         </div>
         <anvil-component type="Label" name="division_status" prop:role="status-text"></anvil-component>
         <anvil-component type="Label" name="division_list_label" prop:role="muted-text"></anvil-component>
@@ -182,6 +191,16 @@
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">PARTICIPANT SHARES</p><h2>Choose who shares each cost</h2></div><span class="muted-copy">Non-players can share all costs except golf.</span></div>
         <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="rattler_tournament.BudgetRow" prop:role="budget-list"></anvil-component>
+      </div>
+    </anvil-component>
+    <anvil-component type="ColumnPanel" name="email_section" prop:role="tracker-view">
+      <div class="view-heading"><p class="eyebrow">TOURNAMENT UPDATES</p><h2>Email participants</h2><p class="muted-copy">Send a message to everyone entered in the selected tournament, including players and non-players.</p></div>
+      <div class="tracker-card">
+        <p class="muted-copy">Participant addresses are sent as BCC. Entries without a usable email address are skipped.</p>
+        <div class="field-block"><label>Subject</label><anvil-component type="TextBox" name="email_subject" prop:placeholder="Tournament update"></anvil-component></div>
+        <div class="field-block"><label>Message</label><anvil-component type="TextArea" name="email_body" prop:placeholder="Write your message to tournament participants"></anvil-component></div>
+        <anvil-component type="Button" name="send_tournament_email_button" prop:text="Send email to participants"></anvil-component>
+        <anvil-component type="Label" name="email_status" prop:role="status-text"></anvil-component>
       </div>
     </anvil-component>
   </anvil-block>

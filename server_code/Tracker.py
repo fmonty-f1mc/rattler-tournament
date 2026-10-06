@@ -3,6 +3,7 @@ from anvil.google.drive import app_files
 import csv
 import io
 import math
+import re
 
 import anvil.server
 from anvil.tables import app_tables
@@ -27,6 +28,23 @@ def _valid_row(table, candidate):
     return False
   candidate_id = candidate.get_id()
   return any(row.get_id() == candidate_id for row in table.search())
+
+
+def _tournament_email_details(tournament):
+  recipient_by_address = {}
+  missing_count = 0
+  invalid_count = 0
+  for entry in app_tables.tournament_entries.search(tournament=tournament):
+    golfer = entry["golfer"]
+    address = (golfer["email"] or "").strip()
+    if not address:
+      missing_count += 1
+      continue
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", address):
+      invalid_count += 1
+      continue
+    recipient_by_address.setdefault(address.lower(), address)
+  return list(recipient_by_address.values()), missing_count, invalid_count
 
 
 def _entry_name(entry):
@@ -191,10 +209,22 @@ def set_golfer_active(golfer, active):
 
 
 @anvil.server.callable(require_user=True)
-def update_golfer(golfer, email, phone, city, state):
+def update_golfer(golfer, name, email, phone, city, state):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
+
+  name = (name or "").strip()
+  if not name:
+    return _result("Add a player name.")
+  if any(
+    other.get_id() != golfer.get_id()
+    and (other["name"] or "").strip().lower() == name.lower()
+    for other in app_tables.golfers.search()
+  ):
+    return _result("That player name is already on the roster.")
+
   golfer.update(
+    name=name,
     email=(email or "").strip(),
     phone=(phone or "").strip(),
     city=(city or "").strip(),
@@ -229,6 +259,75 @@ def delete_golfer(golfer):
 @anvil.server.callable(require_user=True)
 def list_tournaments():
   return sorted(app_tables.tournaments.search(), key=lambda tournament: tournament["year"], reverse=True)
+
+
+@anvil.server.callable(require_user=True)
+def delete_tournament(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament.")
+
+  rattler_pairings = list(app_tables.rattler_pairings.search(tournament=tournament))
+  round_two_pairings = list(app_tables.round_two_pairings.search(tournament=tournament))
+  entries = list(app_tables.tournament_entries.search(tournament=tournament))
+  divisions = list(app_tables.tournament_divisions.search(tournament=tournament))
+
+  for pairing in rattler_pairings + round_two_pairings:
+    pairing.delete()
+  for entry in entries:
+    entry.delete()
+  for division in divisions:
+    division.delete()
+  tournament.delete()
+
+  return _result(
+    removed_entry_count=len(entries),
+    removed_division_count=len(divisions),
+    removed_pairing_count=len(rattler_pairings) + len(round_two_pairings),
+  )
+
+
+@anvil.server.callable(require_user=True)
+def get_tournament_email_summary(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  recipients, missing_count, invalid_count = _tournament_email_details(tournament)
+  return _result(
+    recipient_count=len(recipients),
+    missing_count=missing_count,
+    invalid_count=invalid_count,
+  )
+
+
+@anvil.server.callable(require_user=True)
+def send_tournament_email(tournament, subject, body):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  subject = (subject or "").strip()
+  body = (body or "").strip()
+  if not subject:
+    return _result("Enter an email subject.")
+  if not body:
+    return _result("Enter a message.")
+
+  recipients, missing_count, invalid_count = _tournament_email_details(tournament)
+  if not recipients:
+    return _result("No participants have a usable email address.")
+
+  anvil.google.mail.send(
+    bcc=recipients,
+    subject=subject,
+    text=body,
+  )
+  skipped_count = missing_count + invalid_count
+  message = f"Email sent to {len(recipients)} unique email addresses."
+  if skipped_count:
+    message += f" Skipped {skipped_count} participant(s) without a usable email address."
+  return _result(
+    message,
+    sent_count=len(recipients),
+    missing_count=missing_count,
+    invalid_count=invalid_count,
+  )
 
 
 @anvil.server.callable(require_user=True)
@@ -382,6 +481,47 @@ def create_tournament_division(tournament, name):
 
 
 @anvil.server.callable(require_user=True)
+def delete_tournament_division(tournament, name):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  if not isinstance(name, str) or not name.strip():
+    return _result("Choose a division to delete.")
+
+  division_name = next(
+    (
+      existing
+      for existing in _division_names(tournament)
+      if existing.casefold() == name.strip().casefold()
+    ),
+    None,
+  )
+  if division_name is None:
+    return _result("That division no longer exists for this tournament.")
+
+  division_key = division_name.casefold()
+  unassigned_count = 0
+  for entry in app_tables.tournament_entries.search(tournament=tournament):
+    assigned_division = entry["division"]
+    if (
+      _entry_is_player(entry)
+      and isinstance(assigned_division, str)
+      and assigned_division.strip().casefold() == division_key
+    ):
+      entry["division"] = ""
+      unassigned_count += 1
+
+  for division in app_tables.tournament_divisions.search(tournament=tournament):
+    stored_name = division["name"]
+    if (
+      isinstance(stored_name, str)
+      and stored_name.strip().casefold() == division_key
+    ):
+      division.delete()
+
+  return _result(division_name=division_name, unassigned_count=unassigned_count)
+
+
+@anvil.server.callable(require_user=True)
 def save_tournament_entry_details_batch(tournament, entry_details):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
@@ -408,8 +548,13 @@ def save_tournament_entry_details_batch(tournament, entry_details):
     seen_ids.add(entry_id)
 
     division = details.get("division")
-    if division not in divisions:
-      return _result("Choose a division created for this tournament.")
+    if division is None:
+      division = ""
+    if not isinstance(division, str):
+      return _result("Choose a valid division or leave it unassigned.")
+    division = division.strip()
+    if division and division not in divisions:
+      return _result("Choose a division created for this tournament or leave it unassigned.")
     handicap_value = _number(details.get("handicap"), "Handicap", allow_blank=True)
     if handicap_value is None:
       return _result("Enter a valid handicap for every tournament entry.")
@@ -439,8 +584,6 @@ def _round_one_score_values(entry, gross):
     return None, None, "Choose a tournament entry."
   if not _entry_is_player(entry):
     return None, None, "Only players can enter golf scores."
-  if entry["division"] not in _division_names(entry["tournament"]):
-    return None, None, "Assign a division on the Field page before saving this score."
   handicap_value = _number(entry["handicap"], "Handicap", allow_blank=True)
   if handicap_value is None:
     return None, None, "Assign a valid handicap on the Field page before saving this score."
@@ -509,7 +652,7 @@ def _net_standings(entries):
     {
       "rank": index + 1,
       "player_name": _entry_name(entry),
-      "division": entry["division"],
+      "division": entry["division"] or "No division",
       "gross": entry["gross_18"],
       "net": _entry_net_score(entry),
     }

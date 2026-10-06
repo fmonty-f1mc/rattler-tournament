@@ -1,7 +1,7 @@
 <anvil-form container="ColumnPanel">
   <div class="player-row">
     <div>
-      <anvil-component type="Label" name="name_label" prop:role="row-title" bind:text="self.item['name']"></anvil-component>
+      <div class="player-edit-field"><label>Player name</label><anvil-component type="TextBox" name="name_box" prop:placeholder="Full name"></anvil-component></div>
       <anvil-component type="Label" name="active_label" prop:role="muted-text"></anvil-component>
     </div>
     <div class="player-edit-field"><label for="email_box">Email</label><anvil-component type="TextBox" name="email_box" prop:placeholder="name@example.com"></anvil-component></div>
