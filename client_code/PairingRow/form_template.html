@@ -1,0 +1,21 @@
+<anvil-form container="ColumnPanel">
+  <div class="pairing-row">
+    <div class="pairing-heading">
+      <anvil-component type="Label" name="pair_label" bind:text="self.item['pair_label']" prop:role="row-title"></anvil-component>
+      <anvil-component type="Label" name="best_ball_label" prop:role="accent-text"></anvil-component>
+    </div>
+    <p class="row-meta">Team best-ball strokes by hole</p>
+    <div class="hole-input-grid">
+      <label>1<anvil-component type="TextBox" name="hole_1" prop:placeholder="—"></anvil-component></label>
+      <label>2<anvil-component type="TextBox" name="hole_2" prop:placeholder="—"></anvil-component></label>
+      <label>3<anvil-component type="TextBox" name="hole_3" prop:placeholder="—"></anvil-component></label>
+      <label>4<anvil-component type="TextBox" name="hole_4" prop:placeholder="—"></anvil-component></label>
+      <label>5<anvil-component type="TextBox" name="hole_5" prop:placeholder="—"></anvil-component></label>
+      <label>6<anvil-component type="TextBox" name="hole_6" prop:placeholder="—"></anvil-component></label>
+      <label>7<anvil-component type="TextBox" name="hole_7" prop:placeholder="—"></anvil-component></label>
+      <label>8<anvil-component type="TextBox" name="hole_8" prop:placeholder="—"></anvil-component></label>
+      <label>9<anvil-component type="TextBox" name="hole_9" prop:placeholder="—"></anvil-component></label>
+    </div>
+    <anvil-component type="Button" name="save_button" prop:text="Save rattler card"></anvil-component>
+  </div>
+</anvil-form>

@@ -1,5 +1,171 @@
 allow_embedding: false
-name: Minimal Theme 1
+db_schema:
+  golfers:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: name
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: division
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: handicap
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: active
+      type: bool
+    indexes: []
+    server: full
+    title: Golfers
+  rattler_pairings:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: sequence
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: pair_label
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: first_entry
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: second_entry
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_1
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_2
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_3
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_4
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_5
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_6
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_7
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_8
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: hole_9
+      type: number
+    indexes: []
+    server: full
+    title: Rattler Pairings
+  tournament_entries:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: golfer
+      target: golfers
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: division
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: handicap
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: gross_18
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: net_18
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: accommodation
+      type: bool
+    - admin_ui: {}
+      client_hidden: null
+      name: lodging_cost
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: golf_cost
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: travel_cost
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: other_cost
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: amount_paid
+      type: number
+    indexes: []
+    server: full
+    title: Tournament Entries
+  tournaments:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: year
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: course
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: event_date
+      type: date
+    - admin_ui: {}
+      client_hidden: null
+      name: notes
+      type: string
+    indexes: []
+    server: full
+    title: Tournaments
+name: Annual Golf Weekend
 package_name: Minimal_Theme_1
 runtime_options:
   client_version: '3'

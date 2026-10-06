@@ -25,3 +25,29 @@ roles:
   display_in_toolbox: true
   name: card
   title: Card
+- components: [Label]
+  name: h2
+- components: [Label]
+  name: muted-text
+- components: [Label]
+  name: summary-strip
+- components: [Label]
+  name: status-text
+- components: [Label]
+  name: row-title
+- components: [Label]
+  name: accent-text
+- components: [ColumnPanel]
+  name: tracker-view
+- components: [ColumnPanel]
+  name: player-score-card
+- components: [RepeatingPanel]
+  name: score-list
+- components: [RepeatingPanel]
+  name: standing-list
+- components: [RepeatingPanel]
+  name: pairing-list
+- components: [RepeatingPanel]
+  name: player-list
+- components: [RepeatingPanel]
+  name: budget-list

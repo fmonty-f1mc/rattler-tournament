@@ -1,9 +1,89 @@
 <anvil-form layout="Minimal_Theme_1.Layouts.BaseLayout">
-    <anvil-block slot="actions"></anvil-block>
-    <anvil-block slot="content">
-        <anvil-component type="ColumnPanel" name="column_panel_1" prop:role="card" designer:placeholder="Add components here"></anvil-component>
-    </anvil-block>
-    <anvil-block slot="title">
-        <anvil-component type="Label" name="label_1" prop:role="h1" prop:text="Home"></anvil-component>
-    </anvil-block>
+  <anvil-block slot="actions">
+    <anvil-component type="Button" name="event_nav" prop:text="Tournament" prop:role="secondary-button"></anvil-component>
+    <anvil-component type="Button" name="players_nav" prop:text="Players" prop:role="secondary-button"></anvil-component>
+    <anvil-component type="Button" name="budget_nav" prop:text="Budget" prop:role="secondary-button"></anvil-component>
+  </anvil-block>
+  <anvil-block slot="content">
+    <div class="tracker-intro">
+      <p class="tracker-kicker">GOOD GOLF. GOOD COMPANY.</p>
+      <p class="tracker-lede">One place for the yearly field, the first-round leaderboard, rattler pairings, and the weekend budget.</p>
+    </div>
+    <anvil-component type="ColumnPanel" name="event_section" prop:role="tracker-view">
+      <div class="event-title-row">
+        <div>
+          <p class="eyebrow">SELECTED TOURNAMENT</p>
+          <anvil-component type="Label" name="current_event_title" prop:role="h2" prop:text="Create your first tournament"></anvil-component>
+          <anvil-component type="Label" name="current_event_subtitle" prop:role="muted-text" prop:text="Add a year and course to get started."></anvil-component>
+        </div>
+        <anvil-component type="DropDown" name="event_picker"></anvil-component>
+      </div>
+      <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
+      <div class="tracker-card">
+        <p class="eyebrow">NEW YEAR</p>
+        <h2>Set up a tournament</h2>
+        <p class="muted-copy">Each year keeps its own course, player list, handicaps, and scores.</p>
+        <div class="form-grid form-grid-four">
+          <div class="field-block"><label>Year</label><anvil-component type="TextBox" name="tournament_year" prop:placeholder="2026"></anvil-component></div>
+          <div class="field-block"><label>Course</label><anvil-component type="TextBox" name="course_name" prop:placeholder="Course name"></anvil-component></div>
+          <div class="field-block"><label>Date</label><anvil-component type="DatePicker" name="event_date"></anvil-component></div>
+          <div class="field-block"><label>Notes</label><anvil-component type="TextBox" name="tournament_notes" prop:placeholder="Optional details"></anvil-component></div>
+        </div>
+        <anvil-component type="Button" name="create_tournament_button" prop:text="Create tournament"></anvil-component>
+        <anvil-component type="Label" name="event_status" prop:role="status-text"></anvil-component>
+      </div>
+      <div class="tracker-card">
+        <p class="eyebrow">BUILD THE FIELD</p>
+        <h2>Add a player to this year</h2>
+        <div class="inline-form"><anvil-component type="DropDown" name="entry_picker"></anvil-component><anvil-component type="Button" name="add_entry_button" prop:text="Add player" prop:role="secondary-button"></anvil-component></div>
+        <anvil-component type="Label" name="entry_status" prop:role="status-text"></anvil-component>
+      </div>
+      <div class="tracker-card">
+        <div class="section-heading"><div><p class="eyebrow">ROUND ONE · 18 HOLES</p><h2>Gross and net scores</h2></div><span class="muted-copy">Enter the net result used for rattler seeding.</span></div>
+        <anvil-component type="RepeatingPanel" name="score_rows" prop:item_template="Minimal_Theme_1.ScoreRow" prop:role="score-list"></anvil-component>
+      </div>
+      <div class="tracker-card">
+        <div class="section-heading"><div><p class="eyebrow">NET LEADERBOARD</p><h2>First-round standings</h2></div><span class="muted-copy">All three divisions are shown together.</span></div>
+        <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
+        <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="Minimal_Theme_1.StandingRow" prop:role="standing-list"></anvil-component>
+      </div>
+      <div class="tracker-card rattler-card">
+        <div class="section-heading"><div><p class="eyebrow">ROUND TWO · 9 HOLES</p><h2>The Rattler</h2></div><anvil-component type="Button" name="build_pairings_button" prop:text="Build pairings from net order" prop:role="secondary-button"></anvil-component></div>
+        <p class="muted-copy">Pairs are seeded first-to-last, second-to-second-last. Enter the pair's best-ball score on each hole. An odd field gets a solo card. Rebuilding pairings clears saved rattler scores.</p>
+        <anvil-component type="Label" name="pair_status" prop:role="status-text"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="pairings_rows" prop:item_template="Minimal_Theme_1.PairingRow" prop:role="pairing-list"></anvil-component>
+      </div>
+    </anvil-component>
+    <anvil-component type="ColumnPanel" name="player_section" prop:role="tracker-view">
+      <div class="view-heading"><p class="eyebrow">ROSTER</p><h2>Players and handicaps</h2><p class="muted-copy">Keep one roster across years. Inactive players stay available for past and future tournaments.</p></div>
+      <div class="tracker-card">
+        <div class="form-grid form-grid-three">
+          <div class="field-block"><label>Player name</label><anvil-component type="TextBox" name="player_name" prop:placeholder="Full name"></anvil-component></div>
+          <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="player_division"></anvil-component></div>
+          <div class="field-block"><label>Handicap</label><anvil-component type="TextBox" name="player_handicap" prop:placeholder="e.g. 12.4"></anvil-component></div>
+        </div>
+        <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
+        <anvil-component type="Label" name="player_status" prop:role="status-text"></anvil-component>
+      </div>
+      <div class="tracker-card">
+        <div class="section-heading"><div><p class="eyebrow">EVERY SEASON</p><h2>Player roster</h2></div><span class="muted-copy">Tournament entries save a handicap snapshot.</span></div>
+        <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="Minimal_Theme_1.PlayerRow" prop:role="player-list"></anvil-component>
+      </div>
+    </anvil-component>
+    <anvil-component type="ColumnPanel" name="budget_section" prop:role="tracker-view">
+      <div class="view-heading"><p class="eyebrow">WEEKEND COSTS</p><h2>Participant budget</h2><p class="muted-copy">Track accommodation, golf, travel, other costs, and payments for the selected year.</p></div>
+      <div class="budget-summary">
+        <div><span>Estimated total</span><anvil-component type="Label" name="budget_total" prop:text="$0.00"></anvil-component></div>
+        <div><span>Paid</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00"></anvil-component></div>
+        <div><span>Balance</span><anvil-component type="Label" name="budget_balance" prop:text="$0.00"></anvil-component></div>
+        <div><span>Staying overnight</span><anvil-component type="Label" name="budget_accommodated" prop:text="0 players"></anvil-component></div>
+      </div>
+      <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
+      <div class="tracker-card">
+        <div class="section-heading"><div><p class="eyebrow">PER PLAYER</p><h2>Costs and payments</h2></div><span class="muted-copy">Blank amounts count as $0.</span></div>
+        <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="Minimal_Theme_1.BudgetRow" prop:role="budget-list"></anvil-component>
+      </div>
+    </anvil-component>
+  </anvil-block>
+  <anvil-block slot="title"><anvil-component type="Label" name="page_title" prop:role="h1" prop:text="Annual Golf"></anvil-component></anvil-block>
 </anvil-form>

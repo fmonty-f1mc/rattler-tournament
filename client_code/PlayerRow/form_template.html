@@ -1,0 +1,12 @@
+<anvil-form container="ColumnPanel">
+  <div class="player-row">
+    <div>
+      <anvil-component type="Label" name="name_label" bind:text="self.item['name']" prop:role="row-title"></anvil-component>
+      <anvil-component type="Label" name="active_label" prop:role="muted-text"></anvil-component>
+    </div>
+    <div class="player-edit-field"><span class="row-meta">Division</span><anvil-component type="DropDown" name="division_dropdown"></anvil-component></div>
+    <div class="player-edit-field"><label for="handicap_box">Handicap</label><anvil-component type="TextBox" name="handicap_box"></anvil-component></div>
+    <anvil-component type="Button" name="save_button" prop:text="Save details" prop:role="secondary-button"></anvil-component>
+    <anvil-component type="Button" name="toggle_button" prop:role="secondary-button"></anvil-component>
+  </div>
+</anvil-form>
