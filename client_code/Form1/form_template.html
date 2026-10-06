@@ -1,12 +1,7 @@
 <anvil-form layout="Minimal_Theme_1.Layouts.BaseLayout">
   <anvil-block slot="actions">
     <anvil-component type="Button" name="event_nav" prop:text="Tournament" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="Button" name="field_nav" prop:text="Field" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="Button" name="round_one_nav" prop:text="Round One" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="Button" name="standings_nav" prop:text="Standings" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="Button" name="round_two_nav" prop:text="Round Two" prop:role="secondary-button"></anvil-component>
     <anvil-component type="Button" name="players_nav" prop:text="Players" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="Button" name="budget_nav" prop:text="Budget" prop:role="secondary-button"></anvil-component>
   </anvil-block>
   <anvil-block slot="content">
     <div class="event-title-row">
@@ -18,6 +13,15 @@
       <anvil-component type="DropDown" name="event_picker"></anvil-component>
     </div>
     <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
+
+    <anvil-component type="FlowPanel" name="tournament_subnav" prop:role="tournament-subnav">
+      <anvil-component type="Button" name="setup_nav" prop:text="Setup" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="field_nav" prop:text="Field" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="round_one_nav" prop:text="Round One" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="standings_nav" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="round_two_nav" prop:text="Round Two" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="budget_nav" prop:text="Budget" prop:role="tournament-subtab"></anvil-component>
+    </anvil-component>
 
     <anvil-component type="ColumnPanel" name="event_section" prop:role="tracker-view">
       <div class="view-heading">

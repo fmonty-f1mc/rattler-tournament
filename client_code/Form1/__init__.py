@@ -21,6 +21,7 @@ class Form1(Form1Template):
     self._load_events()
 
   def _show_view(self, name):
+    self.event_picker.visible = name != "players"
     self.event_section.visible = name == "event"
     self.field_section.visible = name == "field"
     self.round_one_section.visible = name == "round_one"
@@ -28,6 +29,21 @@ class Form1(Form1Template):
     self.round_two_section.visible = name == "round_two"
     self.player_section.visible = name == "players"
     self.budget_section.visible = name == "budget"
+    tournament_view = name in {
+      "event", "field", "round_one", "standings", "round_two", "budget"
+    }
+    self.tournament_subnav.visible = tournament_view
+    for view_name, button in (
+      ("event", self.setup_nav),
+      ("field", self.field_nav),
+      ("round_one", self.round_one_nav),
+      ("standings", self.standings_nav),
+      ("round_two", self.round_two_nav),
+      ("budget", self.budget_nav),
+    ):
+      button.role = (
+        "tournament-subtab-active" if name == view_name else "tournament-subtab"
+      )
 
   def _load_players(self):
     self.golfers = anvil.server.call("list_golfers")
@@ -192,6 +208,10 @@ class Form1(Form1Template):
 
   @handle("event_nav", "click")
   def event_nav_click(self, **event_args):
+    self._show_view("event")
+
+  @handle("setup_nav", "click")
+  def setup_nav_click(self, **event_args):
     self._show_view("event")
 
   @handle("field_nav", "click")

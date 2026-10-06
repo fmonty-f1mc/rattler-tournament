@@ -136,6 +136,23 @@ a:focus {
   color: var(--blank-primary-dark);
 }
 
+.anvil-role-tournament-subnav {
+  width: 100%;
+  margin: 18px 0 26px;
+}
+
+.anvil-role-tournament-subtab > button {
+  border-color: var(--blank-border);
+  background: var(--blank-surface);
+  color: var(--blank-primary-dark);
+}
+
+.anvil-role-tournament-subtab-active > button {
+  border-color: var(--blank-primary);
+  background: var(--blank-primary);
+  color: white;
+}
+
 .anvil-role-card {
   padding: 24px;
   border: 1px solid var(--blank-border);
