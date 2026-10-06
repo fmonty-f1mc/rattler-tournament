@@ -31,6 +31,7 @@ class Form1(Form1Template):
     self.round_one_status.text = ""
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
+    self.email_status.text = ""
     self._show_view("event")
     self._load_players()
     self._load_events()
@@ -54,8 +55,9 @@ class Form1(Form1Template):
     self.round_two_section.visible = name == "round_two"
     self.player_section.visible = name == "players"
     self.budget_section.visible = name == "budget"
+    self.email_section.visible = name == "email"
     tournament_view = name in {
-      "event", "field", "round_one", "standings", "round_two", "budget"
+      "event", "field", "round_one", "standings", "round_two", "budget", "email"
     }
     self.tournament_subnav.visible = tournament_view
     for view_name, button in (
@@ -65,6 +67,7 @@ class Form1(Form1Template):
       ("standings", self.standings_nav),
       ("round_two", self.round_two_nav),
       ("budget", self.budget_nav),
+      ("email", self.email_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
@@ -340,6 +343,10 @@ class Form1(Form1Template):
   def event_nav_click(self, **event_args):
     self._show_view("event")
 
+  @handle("email_nav", "click")
+  def email_nav_click(self, **event_args):
+    self._show_view("email")
+
   @handle("setup_nav", "click")
   def setup_nav_click(self, **event_args):
     self._show_view("event")
@@ -485,6 +492,67 @@ class Form1(Form1Template):
   @handle("budget_nav", "click")
   def budget_nav_click(self, **event_args):
     self._show_view("budget")
+
+  @handle("send_tournament_email_button", "click")
+  def send_tournament_email_button_click(self, **event_args):
+    if self.current_event is None:
+      self.email_status.text = "Create or select a tournament first."
+      return
+
+    subject = (self.email_subject.text or "").strip()
+    body = (self.email_body.text or "").strip()
+    if not subject:
+      self.email_status.text = "Enter an email subject."
+      return
+    if not body:
+      self.email_status.text = "Enter a message."
+      return
+
+    self.send_tournament_email_button.enabled = False
+    try:
+      summary = anvil.server.call("get_tournament_email_summary", self.current_event)
+    finally:
+      self.send_tournament_email_button.enabled = True
+
+    if not summary["ok"]:
+      self.email_status.text = summary["message"]
+      return
+    recipient_count = summary["recipient_count"]
+    if not recipient_count:
+      self.email_status.text = "No participants have a usable email address."
+      return
+
+    skipped_details = []
+    if summary["missing_count"]:
+      skipped_details.append(f"{summary['missing_count']} without an email address")
+    if summary["invalid_count"]:
+      skipped_details.append(f"{summary['invalid_count']} with an invalid email address")
+    skipped_message = (
+      " Participants with " + " and ".join(skipped_details) + " will be skipped."
+      if skipped_details else ""
+    )
+    confirmed = confirm(
+      f"Send this message to {recipient_count} unique email addresses for "
+      f"{self.current_event['year']} · {self.current_event['course']}? "
+      f"Recipients will be BCCed.{skipped_message}",
+      title="Email tournament participants",
+    )
+    if not confirmed:
+      return
+
+    self.email_status.text = "Sending email…"
+    self.send_tournament_email_button.enabled = False
+    try:
+      result = anvil.server.call(
+        "send_tournament_email",
+        self.current_event,
+        subject,
+        body,
+      )
+    finally:
+      self.send_tournament_email_button.enabled = True
+
+    self.email_status.text = result["message"]
 
   @handle("save_budget_totals_button", "click")
   def save_budget_totals_button_click(self, **event_args):

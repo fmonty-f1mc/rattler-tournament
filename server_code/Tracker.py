@@ -3,7 +3,9 @@ from anvil.google.drive import app_files
 import csv
 import io
 import math
+import re
 
+import anvil.email
 import anvil.server
 from anvil.tables import app_tables
 
@@ -27,6 +29,23 @@ def _valid_row(table, candidate):
     return False
   candidate_id = candidate.get_id()
   return any(row.get_id() == candidate_id for row in table.search())
+
+
+def _tournament_email_details(tournament):
+  recipient_by_address = {}
+  missing_count = 0
+  invalid_count = 0
+  for entry in app_tables.tournament_entries.search(tournament=tournament):
+    golfer = entry["golfer"]
+    address = (golfer["email"] or "").strip()
+    if not address:
+      missing_count += 1
+      continue
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", address):
+      invalid_count += 1
+      continue
+    recipient_by_address.setdefault(address.lower(), address)
+  return list(recipient_by_address.values()), missing_count, invalid_count
 
 
 def _entry_name(entry):
@@ -241,6 +260,51 @@ def delete_golfer(golfer):
 @anvil.server.callable(require_user=True)
 def list_tournaments():
   return sorted(app_tables.tournaments.search(), key=lambda tournament: tournament["year"], reverse=True)
+
+
+@anvil.server.callable(require_user=True)
+def get_tournament_email_summary(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  recipients, missing_count, invalid_count = _tournament_email_details(tournament)
+  return _result(
+    recipient_count=len(recipients),
+    missing_count=missing_count,
+    invalid_count=invalid_count,
+  )
+
+
+@anvil.server.callable(require_user=True)
+def send_tournament_email(tournament, subject, body):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  subject = (subject or "").strip()
+  body = (body or "").strip()
+  if not subject:
+    return _result("Enter an email subject.")
+  if not body:
+    return _result("Enter a message.")
+
+  recipients, missing_count, invalid_count = _tournament_email_details(tournament)
+  if not recipients:
+    return _result("No participants have a usable email address.")
+
+  anvil.email.send(
+    bcc=recipients,
+    subject=subject,
+    text=body,
+    from_name="The Rattler Invitational",
+  )
+  skipped_count = missing_count + invalid_count
+  message = f"Email sent to {len(recipients)} unique email addresses."
+  if skipped_count:
+    message += f" Skipped {skipped_count} participant(s) without a usable email address."
+  return _result(
+    message,
+    sent_count=len(recipients),
+    missing_count=missing_count,
+    invalid_count=invalid_count,
+  )
 
 
 @anvil.server.callable(require_user=True)
