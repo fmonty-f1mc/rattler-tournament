@@ -12,7 +12,7 @@ class Form1(Form1Template):
     self.event_status.text = ""
     self.entry_status.text = ""
     self.player_status.text = ""
-    self.pair_status.text = ""
+    self.round_two_status.text = ""
     self.budget_status.text = ""
     self._show_view("event")
     self._load_players()
@@ -24,14 +24,34 @@ class Form1(Form1Template):
     self.budget_section.visible = name == "budget"
 
   def _load_players(self):
-    golfers = anvil.server.call("list_golfers")
-    self.player_rows.items = golfers
-    self.entry_picker.items = [
-      (f"{golfer['name']} · {golfer['division']}" + (" · inactive" if not golfer["active"] else ""), golfer)
-      for golfer in golfers
+    self.golfers = anvil.server.call("list_golfers")
+    self.player_rows.items = self.golfers
+
+  def _load_entry_options(self, entries):
+    if self.current_event is None:
+      self.entry_options.items = []
+      self.entry_status.text = "Create or select a tournament before adding players."
+      return
+
+    entered_ids = {entry["golfer"].get_id() for entry in entries}
+    self._entry_options = [
+      {
+        "golfer": golfer,
+        "label": f"{golfer['name']} · {golfer['division']}" + (" · inactive" if not golfer["active"] else ""),
+        "selected": False,
+      }
+      for golfer in self.golfers
+      if golfer.get_id() not in entered_ids
     ]
-    if golfers and self.entry_picker.selected_value is None:
-      self.entry_picker.selected_value = golfers[0]
+    self.entry_options.items = self._entry_options
+    if not self._entry_options:
+      self.entry_status.text = (
+        "Add players to the roster first."
+        if not self.golfers
+        else "All roster players are already entered in this tournament."
+      )
+    else:
+      self.entry_status.text = ""
 
   def _load_events(self, selected=None):
     tournaments = anvil.server.call("list_tournaments")
@@ -56,13 +76,14 @@ class Form1(Form1Template):
       self.field_summary.text = "No players entered yet"
       self.score_rows.items = []
       self.standings_rows.items = []
-      self.pairings_rows.items = []
+      self.round_two_rows.items = []
       self.budget_rows.items = []
       self.budget_total.text = "$0.00"
       self.budget_paid.text = "$0.00"
       self.budget_balance.text = "$0.00"
       self.budget_accommodated.text = "0 players"
-      self.pair_status.text = ""
+      self.round_two_status.text = ""
+      self._load_entry_options([])
       return
 
     tournament = self.current_event
@@ -75,7 +96,9 @@ class Form1(Form1Template):
     self.current_event_subtitle.text = details
 
     entries = anvil.server.call("list_tournament_entries", tournament)
+    self._load_entry_options(entries)
     self.score_rows.items = entries
+    self.round_two_rows.items = entries
     self.budget_rows.items = entries
     division_counts = {"Division 1": 0, "Division 2": 0, "Division 3": 0}
     for entry in entries:
@@ -86,12 +109,7 @@ class Form1(Form1Template):
     ) if entries else "No players entered yet"
 
     self.standings_rows.items = anvil.server.call("get_net_standings", tournament)
-    pairings = anvil.server.call("list_rattler_pairings", tournament)
-    self.pairings_rows.items = pairings
-    if not pairings:
-      self.pair_status.text = "Add first-round net scores, then build the pairings."
-    else:
-      self.pair_status.text = f"{len(pairings)} rattler cards · Rebuilding pairings clears saved hole scores."
+    self.round_two_status.text = ""
 
     summary = anvil.server.call("get_budget_summary", tournament)
     self.budget_total.text = self._money(summary["total"])
@@ -144,16 +162,24 @@ class Form1(Form1Template):
     if self.current_event is None:
       self.entry_status.text = "Create or select a tournament first."
       return
+    selected_golfers = [option["golfer"] for option in self._entry_options if option["selected"]]
     result = anvil.server.call(
-      "add_golfer_to_tournament",
+      "add_golfers_to_tournament",
       self.current_event,
-      self.entry_picker.selected_value,
+      selected_golfers,
     )
     if not result["ok"]:
       self.entry_status.text = result["message"]
       return
-    self.entry_status.text = "Player added to this year's field."
     self._load_event_data()
+    added_count = result["added_count"]
+    if added_count == 1:
+      self.entry_status.text = "Player added to this year's field."
+    else:
+      self.entry_status.text = f"{added_count} players added to this year's field."
+    skipped_count = result.get("already_entered_count", 0)
+    if skipped_count:
+      self.entry_status.text += f" {skipped_count} already entered were skipped."
 
   @handle("create_player_button", "click")
   def create_player_button_click(self, **event_args):
@@ -170,6 +196,7 @@ class Form1(Form1Template):
     self.player_handicap.text = ""
     self.player_status.text = "Player added to the roster."
     self._load_players()
+    self._load_event_data()
 
   @handle("player_rows", "x-toggle-player")
   def player_rows_toggle_player(self, golfer, active, **event_args):
@@ -179,6 +206,7 @@ class Form1(Form1Template):
       return
     self.player_status.text = "Roster updated."
     self._load_players()
+    self._load_event_data()
 
   @handle("player_rows", "x-save-player")
   def player_rows_save_player(self, golfer, division, handicap, **event_args):
@@ -188,36 +216,25 @@ class Form1(Form1Template):
       return
     self.player_status.text = "Roster details updated. Existing tournament handicap snapshots were kept."
     self._load_players()
+    self._load_event_data()
 
   @handle("score_rows", "x-save-entry-scores")
-  def score_rows_save_entry_scores(self, entry, gross, net, **event_args):
-    result = anvil.server.call("save_round_one_scores", entry, gross, net)
+  def score_rows_save_entry_scores(self, entry, gross, **event_args):
+    result = anvil.server.call("save_round_one_scores", entry, gross)
     if not result["ok"]:
       self.event_status.text = result["message"]
       return
-    self.event_status.text = f"Round-one score saved for {entry['golfer']['name']}."
+    self.event_status.text = f"Round-one score saved for {entry['golfer']['name']}. Net: {result['net']}."
     self._load_event_data()
 
-  @handle("build_pairings_button", "click")
-  def build_pairings_button_click(self, **event_args):
-    if self.current_event is None:
-      self.pair_status.text = "Create or select a tournament first."
-      return
-    result = anvil.server.call("build_rattler_pairings", self.current_event)
+  @handle("round_two_rows", "x-save-round-two-score")
+  def round_two_rows_save_score(self, entry, score, **event_args):
+    result = anvil.server.call("save_round_two_score", entry, score)
     if not result["ok"]:
-      self.pair_status.text = result["message"]
+      self.round_two_status.text = result["message"]
       return
     self._load_event_data()
-    self.pair_status.text = f"Built {result['pair_count']} rattler cards. Existing hole scores were cleared."
-
-  @handle("pairings_rows", "x-save-rattler-card")
-  def pairings_rows_save_rattler_card(self, pairing, scores, **event_args):
-    result = anvil.server.call("save_rattler_card", pairing, scores)
-    if not result["ok"]:
-      self.pair_status.text = result["message"]
-      return
-    self._load_event_data()
-    self.pair_status.text = f"Saved {pairing['pair_label']}."
+    self.round_two_status.text = f"Second-round score saved for {entry['golfer']['name']}."
 
   @handle("budget_rows", "x-save-entry-budget")
   def budget_rows_save_entry_budget(

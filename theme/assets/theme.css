@@ -427,6 +427,10 @@ textarea.anvil-text-area:disabled,
   gap: 14px;
 }
 
+.round-two-score-row {
+  grid-template-columns: minmax(180px, 1.5fr) minmax(90px, 0.7fr) auto;
+}
+
 .score-player {
   display: flex;
   align-items: baseline;

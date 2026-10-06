@@ -118,6 +118,10 @@ db_schema:
       type: number
     - admin_ui: {}
       client_hidden: null
+      name: gross_9
+      type: number
+    - admin_ui: {}
+      client_hidden: null
       name: accommodation
       type: bool
     - admin_ui: {}
@@ -165,6 +169,7 @@ db_schema:
     indexes: []
     server: full
     title: Tournaments
+metadata: {title: Rattler Invitational}
 name: Annual Golf Weekend
 package_name: Minimal_Theme_1
 runtime_options:

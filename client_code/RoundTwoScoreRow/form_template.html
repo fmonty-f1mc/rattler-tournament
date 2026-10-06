@@ -1,19 +1,13 @@
 <anvil-form container="ColumnPanel">
-  <div class="score-row">
+  <div class="score-row round-two-score-row">
     <div class="score-player">
       <anvil-component type="Label" name="player_name" bind:text="self.item['golfer']['name']" prop:role="row-title"></anvil-component>
       <span class="row-meta">Division</span>
       <anvil-component type="Label" name="division_label" bind:text="self.item['division']" prop:role="muted-text"></anvil-component>
-      <span class="row-meta">Handicap</span>
-      <anvil-component type="Label" name="handicap_label" bind:text="self.item['handicap']" prop:role="muted-text"></anvil-component>
     </div>
     <div class="score-input-block">
-      <label for="gross_box">Gross</label>
-      <anvil-component type="TextBox" name="gross_box" prop:placeholder="Gross"></anvil-component>
-    </div>
-    <div class="score-input-block">
-      <label for="net_box">Net (gross − handicap)</label>
-      <anvil-component type="TextBox" name="net_box" prop:placeholder="Calculated" prop:enabled="false"></anvil-component>
+      <label for="score_box">Round two score</label>
+      <anvil-component type="TextBox" name="score_box" prop:placeholder="Score"></anvil-component>
     </div>
     <anvil-component type="Button" name="save_button" prop:text="Save score" prop:role="secondary-button"></anvil-component>
   </div>

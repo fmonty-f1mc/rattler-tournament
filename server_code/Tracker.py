@@ -35,6 +35,14 @@ def _entry_sort_key(entry):
   return (entry["division"], _entry_name(entry).lower())
 
 
+def _entry_net_score(entry):
+  gross = entry["gross_18"]
+  handicap = entry["handicap"]
+  if gross is None or gross <= 0 or handicap is None:
+    return None
+  return round(gross - handicap, 10)
+
+
 def _clear_pairings(tournament):
   for pairing in app_tables.rattler_pairings.search(tournament=tournament):
     pairing.delete()
@@ -120,13 +128,19 @@ def add_golfer_to_tournament(tournament, golfer):
     return _result("Select a player from the roster.")
   if any(app_tables.tournament_entries.search(tournament=tournament, golfer=golfer)):
     return _result("That player is already entered in this tournament.")
-  entry = app_tables.tournament_entries.add_row(
+  entry = _create_tournament_entry(tournament, golfer)
+  return _result(entry=entry)
+
+
+def _create_tournament_entry(tournament, golfer):
+  return app_tables.tournament_entries.add_row(
     tournament=tournament,
     golfer=golfer,
     division=golfer["division"],
     handicap=golfer["handicap"],
     gross_18=0,
     net_18=0,
+    gross_9=0,
     accommodation=False,
     lodging_cost=0,
     golf_cost=0,
@@ -134,44 +148,100 @@ def add_golfer_to_tournament(tournament, golfer):
     other_cost=0,
     amount_paid=0,
   )
-  return _result(entry=entry)
+
+
+@anvil.server.callable
+def add_golfers_to_tournament(tournament, golfers):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament.")
+  if not isinstance(golfers, (list, tuple)) or not golfers:
+    return _result("Select one or more players from the roster.")
+
+  unique_golfers = []
+  seen_ids = set()
+  for golfer in golfers:
+    if not _valid_row(app_tables.golfers, golfer):
+      return _result("Choose players from the roster.")
+    golfer_id = golfer.get_id()
+    if golfer_id not in seen_ids:
+      unique_golfers.append(golfer)
+      seen_ids.add(golfer_id)
+
+  entered_ids = {
+    entry["golfer"].get_id()
+    for entry in app_tables.tournament_entries.search(tournament=tournament)
+  }
+  new_golfers = [golfer for golfer in unique_golfers if golfer.get_id() not in entered_ids]
+  for golfer in new_golfers:
+    _create_tournament_entry(tournament, golfer)
+
+  already_entered_count = len(unique_golfers) - len(new_golfers)
+  if not new_golfers:
+    return _result("All selected players are already entered in this tournament.", added_count=0)
+  return _result(added_count=len(new_golfers), already_entered_count=already_entered_count)
 
 
 @anvil.server.callable
 def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
-  return sorted(app_tables.tournament_entries.search(tournament=tournament), key=_entry_sort_key)
+  entries = list(app_tables.tournament_entries.search(tournament=tournament))
+  for entry in entries:
+    net_score = _entry_net_score(entry)
+    if net_score is not None and entry["net_18"] != net_score:
+      entry["net_18"] = net_score
+  return sorted(entries, key=_entry_sort_key)
 
 
 @anvil.server.callable
-def save_round_one_scores(entry, gross, net):
+def save_round_one_scores(entry, gross):
   if not _valid_row(app_tables.tournament_entries, entry):
     return _result("Choose a tournament entry.")
   gross_value = _number(gross, "Gross score", allow_blank=True)
-  net_value = _number(net, "Net score", allow_blank=True)
-  if gross_value is None or net_value is None:
-    return _result("Enter valid gross and net scores.")
-  if int(gross_value) != gross_value or int(net_value) != net_value:
-    return _result("Round-one gross and net scores must be whole numbers.")
-  if gross_value < 1 or net_value < 1:
-    return _result("Golf scores must be positive whole numbers.")
-  entry.update(gross_18=int(gross_value), net_18=int(net_value))
-  return _result()
+  if gross_value is None:
+    return _result("Enter a valid gross score.")
+  if int(gross_value) != gross_value:
+    return _result("Round-one gross scores must be whole numbers.")
+  if gross_value < 1:
+    return _result("Gross scores must be positive whole numbers.")
+
+  handicap = _number(entry["handicap"], "Handicap", allow_blank=True)
+  if handicap is None:
+    return _result("Enter a valid handicap for this tournament entry.")
+  net_value = round(gross_value - handicap, 10)
+  if net_value < 1:
+    return _result("Gross score minus handicap must be a positive score.")
+  entry.update(gross_18=int(gross_value), net_18=net_value)
+  return _result(net=net_value)
+
+
+@anvil.server.callable
+def save_round_two_score(entry, score):
+  if not _valid_row(app_tables.tournament_entries, entry):
+    return _result("Choose a tournament entry.")
+  score_value = _number(score, "Second-round score", allow_blank=True)
+  if score_value is None:
+    return _result("Enter a valid second-round score.")
+  if int(score_value) != score_value:
+    return _result("Second-round scores must be whole numbers.")
+  if score_value < 1:
+    return _result("Second-round scores must be positive whole numbers.")
+  entry["gross_9"] = int(score_value)
+  return _result(score=int(score_value))
 
 
 @anvil.server.callable
 def get_net_standings(tournament):
   entries = list_tournament_entries(tournament)
-  scored = [entry for entry in entries if entry["net_18"] > 0]
-  scored.sort(key=lambda entry: (entry["net_18"], entry["gross_18"] if entry["gross_18"] is not None else 999, _entry_name(entry).lower()))
+  scored = [entry for entry in entries if (_entry_net_score(entry) or 0) > 0]
+  scored.sort(key=lambda entry: (_entry_net_score(entry), entry["gross_18"], _entry_name(entry).lower()))
   return [
     {
       "rank": index + 1,
       "player_name": _entry_name(entry),
       "division": entry["division"],
       "gross": entry["gross_18"],
-      "net": entry["net_18"],
+      "net": _entry_net_score(entry),
     }
     for index, entry in enumerate(scored)
   ]
@@ -184,9 +254,9 @@ def build_rattler_pairings(tournament):
   entries = list_tournament_entries(tournament)
   if not entries:
     return _result("Add players to this tournament before building pairings.")
-  if any(entry["net_18"] <= 0 for entry in entries):
+  if any((_entry_net_score(entry) or 0) <= 0 for entry in entries):
     return _result("Enter a first-round net score for every player before building pairings.")
-  entries.sort(key=lambda entry: (entry["net_18"], _entry_name(entry).lower()))
+  entries.sort(key=lambda entry: (_entry_net_score(entry), _entry_name(entry).lower()))
   _clear_pairings(tournament)
   pair_count = (len(entries) + 1) // 2
   for index in range(pair_count):
