@@ -202,7 +202,7 @@ class Form1(Form1Template):
     self.budget_accommodated.text = f"{summary['accommodated']} of {summary['participants']} players"
 
   def _capture_field_detail_drafts(self):
-    for item in self.field_rows.items:
+    for item in (self.field_rows.items or []):
       entry = item.get("entry")
       if entry is None:
         continue
