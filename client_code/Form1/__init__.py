@@ -616,12 +616,12 @@ class Form1(Form1Template):
     self._load_event_data()
 
   @handle("player_rows", "x-save-player")
-  def player_rows_save_player(self, golfer, email, phone, city, state, **event_args):
-    result = anvil.server.call("update_golfer", golfer, email, phone, city, state)
+  def player_rows_save_player(self, golfer, name, email, phone, city, state, **event_args):
+    result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state)
     if not result["ok"]:
       self.player_status.text = result["message"]
       return
-    self.player_status.text = "Roster contact details updated."
+    self.player_status.text = "Player name and details updated."
     self._load_players()
     self._load_event_data()
 

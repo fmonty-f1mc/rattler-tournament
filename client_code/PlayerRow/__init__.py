@@ -7,6 +7,7 @@ from anvil.google.drive import app_files
 class PlayerRow(PlayerRowTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
+    self.name_box.text = self.item["name"] or ""
     self.email_box.text = self.item["email"] or ""
     self.phone_box.text = self.item["phone"] or ""
     self.city_box.text = self.item["city"] or ""
@@ -19,6 +20,7 @@ class PlayerRow(PlayerRowTemplate):
     self.parent.raise_event(
       "x-save-player",
       golfer=self.item,
+      name=self.name_box.text,
       email=self.email_box.text,
       phone=self.phone_box.text,
       city=self.city_box.text,

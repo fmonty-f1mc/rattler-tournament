@@ -191,10 +191,22 @@ def set_golfer_active(golfer, active):
 
 
 @anvil.server.callable(require_user=True)
-def update_golfer(golfer, email, phone, city, state):
+def update_golfer(golfer, name, email, phone, city, state):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
+
+  name = (name or "").strip()
+  if not name:
+    return _result("Add a player name.")
+  if any(
+    other.get_id() != golfer.get_id()
+    and (other["name"] or "").strip().lower() == name.lower()
+    for other in app_tables.golfers.search()
+  ):
+    return _result("That player name is already on the roster.")
+
   golfer.update(
+    name=name,
     email=(email or "").strip(),
     phone=(phone or "").strip(),
     city=(city or "").strip(),
