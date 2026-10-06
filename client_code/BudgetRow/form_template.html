@@ -1,8 +1,8 @@
 <anvil-form container="ColumnPanel">
   <div class="budget-row">
     <div class="budget-player">
-      <anvil-component type="Label" name="player_label" bind:text="self.item['entry']['golfer']['name']" prop:role="row-title"></anvil-component>
-      <anvil-component type="Label" name="division_label" bind:text="self.item['participant_label']" prop:role="muted-text"></anvil-component>
+      <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+      <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
       <anvil-component type="Label" name="share_total" prop:role="muted-text"></anvil-component>
       <div class="budget-category-grid">
         <anvil-component type="CheckBox" name="accommodation_check" prop:text="Accommodation"></anvil-component>

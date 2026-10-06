@@ -1,3 +1,5 @@
+import anvil.google.auth, anvil.google.drive, anvil.google.mail
+from anvil.google.drive import app_files
 import csv
 import io
 import math
@@ -529,6 +531,11 @@ def get_public_tournament_standings():
       for entry in app_tables.tournament_entries.search(tournament=tournament)
       if _entry_is_player(entry)
     ]
+    budget_summary = _budget_summary(tournament)
+    round_two_pairs = sorted(
+      app_tables.round_two_pairings.search(tournament=tournament),
+      key=lambda pairing: pairing["sequence"],
+    )
     divisions = [
       {
         "name": name,
@@ -542,6 +549,32 @@ def get_public_tournament_standings():
       "title": f"{tournament['year']} · {tournament['course']}",
       "standings": _net_standings(player_entries),
       "divisions": divisions,
+      "round_two_pairs": [
+        {
+          "pair_label": pairing["pair_label"],
+          "score_display": (
+            f"Shared 9-hole score · {pairing['score_9']}"
+            if pairing["score_9"] is not None and pairing["score_9"] > 0
+            else "Shared 9-hole score not posted"
+          ),
+        }
+        for pairing in round_two_pairs
+      ],
+      "budget_summary": {
+        "total": budget_summary["total"],
+        "paid": budget_summary["paid"],
+        "balance": budget_summary["balance"],
+        "participants": [
+          {
+            "name": row["entry"]["golfer"]["name"],
+            "participant_label": row["participant_label"],
+            "estimated_share": row["estimated_share"],
+            "paid": row["entry"]["amount_paid"] or 0,
+            "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
+          }
+          for row in budget_summary["rows"]
+        ],
+      },
     })
   return public_standings
 
@@ -852,8 +885,7 @@ def save_entry_budget(entry, accommodation, golf, travel, other, paid):
   return _result()
 
 
-@anvil.server.callable(require_user=True)
-def get_budget_summary(tournament):
+def _budget_summary(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return {
       "participants": 0,
@@ -955,3 +987,8 @@ def get_budget_summary(tournament):
     "category_counts": category_counts,
     "rows": rows,
   }
+
+
+@anvil.server.callable(require_user=True)
+def get_budget_summary(tournament):
+  return _budget_summary(tournament)

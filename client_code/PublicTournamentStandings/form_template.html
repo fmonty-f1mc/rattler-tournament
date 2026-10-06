@@ -20,5 +20,25 @@
       <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.StandingRow" prop:role="standing-list"></anvil-component>
       <anvil-component type="Label" name="no_scores_state" prop:role="muted-text"></anvil-component>
     </section>
+    <section class="public-leaderboard-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">SECOND ROUND</p><h3>Pairs</h3></div>
+      </div>
+      <anvil-component type="RepeatingPanel" name="round_two_pair_rows" prop:item_template="rattler_tournament.PublicRoundTwoPair" prop:role="public-round-two-pair-list"></anvil-component>
+      <anvil-component type="Label" name="no_round_two_pairs_state" prop:role="muted-text" prop:text="Second round pairs have not been posted yet."></anvil-component>
+    </section>
+    <section class="public-leaderboard-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">TOURNAMENT BUDGET</p><h3>Expenses left</h3></div>
+      </div>
+      <div class="public-budget-summary">
+        <div><span>Estimated expenses</span><anvil-component type="Label" name="budget_total" prop:text="$0.00"></anvil-component></div>
+        <div><span>Paid so far</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00"></anvil-component></div>
+        <div><span>Left to cover</span><anvil-component type="Label" name="budget_balance" prop:text="$0.00"></anvil-component></div>
+      </div>
+      <h4>Participant balances</h4>
+      <anvil-component type="RepeatingPanel" name="budget_participant_rows" prop:item_template="rattler_tournament.PublicBudgetRow" prop:role="public-budget-participant-list"></anvil-component>
+      <anvil-component type="Label" name="no_budget_participants_state" prop:role="muted-text" prop:text="No participant budget details have been added."></anvil-component>
+    </section>
   </section>
 </anvil-form>

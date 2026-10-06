@@ -1,5 +1,7 @@
 from ._anvil_designer import RoundTwoScoreRowTemplate
 from anvil import *
+import anvil.google.auth, anvil.google.drive
+from anvil.google.drive import app_files
 
 
 class RoundTwoScoreRow(RoundTwoScoreRowTemplate):

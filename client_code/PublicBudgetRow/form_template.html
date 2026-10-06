@@ -1,0 +1,11 @@
+<anvil-form container="ColumnPanel">
+  <div class="public-budget-row">
+    <div class="public-budget-player">
+      <anvil-component type="Label" name="participant_name" prop:role="row-title" bind:text="self.item['name']"></anvil-component>
+      <anvil-component type="Label" name="participant_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
+    </div>
+    <div class="public-budget-value"><span>Estimated share</span><anvil-component type="Label" name="estimated_share_label"></anvil-component></div>
+    <div class="public-budget-value"><span>Paid</span><anvil-component type="Label" name="paid_label"></anvil-component></div>
+    <div class="public-budget-value"><span>Left to pay</span><anvil-component type="Label" name="balance_label" prop:role="accent-text"></anvil-component></div>
+  </div>
+</anvil-form>

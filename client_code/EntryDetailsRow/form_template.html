@@ -1,7 +1,7 @@
 <anvil-form container="ColumnPanel">
   <div class="entry-details-row">
     <div class="field-player">
-      <anvil-component type="Label" name="player_label" bind:text="self.item['entry']['golfer']['name']" prop:role="row-title"></anvil-component>
+      <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
     </div>
     <div class="score-input-block">
       <label>Division</label>
@@ -9,7 +9,7 @@
     </div>
     <div class="score-input-block">
       <label>Handicap</label>
-      <anvil-component type="TextBox" name="handicap_box" writeback:text="self.item['handicap']" prop:placeholder="e.g. 12.4"></anvil-component>
+      <anvil-component type="TextBox" name="handicap_box" prop:placeholder="e.g. 12.4" writeback:text="self.item['handicap']"></anvil-component>
     </div>
     <anvil-component type="Button" name="remove_button" prop:text="Remove from tournament" prop:role="secondary-button"></anvil-component>
   </div>

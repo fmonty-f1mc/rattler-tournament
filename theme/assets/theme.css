@@ -621,6 +621,70 @@ textarea.anvil-text-area:disabled,
   min-height: 38px;
 }
 
+.public-round-two-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.public-round-two-row .anvil-role-accent-text {
+  text-align: right;
+}
+
+.public-budget-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.public-budget-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 6px;
+  background: var(--blank-surface-muted);
+}
+
+.public-budget-summary span,
+.public-budget-value > span {
+  color: var(--blank-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.public-budget-summary .anvil-label {
+  color: var(--blank-text);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.public-budget-summary > div:last-child .anvil-label {
+  color: var(--blank-primary-dark);
+}
+
+.public-budget-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.5fr) repeat(3, minmax(95px, 0.8fr));
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--blank-border);
+}
+
+.public-budget-player,
+.public-budget-value {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.public-budget-value .anvil-label {
+  font-weight: 700;
+}
+
 .standing-row .anvil-role-accent-text,
 .anvil-role-accent-text {
   color: var(--blank-primary-dark);
@@ -808,6 +872,18 @@ textarea.anvil-text-area:disabled,
 
   .public-tournament-card {
     padding: 16px;
+  }
+
+  .public-budget-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .public-budget-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .public-budget-player {
+    grid-column: 1 / -1;
   }
 
   .hole-input-grid {

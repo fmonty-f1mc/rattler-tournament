@@ -1,8 +1,8 @@
 <anvil-form container="ColumnPanel">
   <div class="round-two-pairing-row">
     <div class="round-two-pairing-labels">
-      <anvil-component type="Label" name="pairing_number" bind:text="self.item['pairing_number']" prop:role="row-title"></anvil-component>
-      <anvil-component type="Label" name="pair_label" bind:text="self.item['pair_label']" prop:role="muted-text"></anvil-component>
+      <anvil-component type="Label" name="pairing_number" prop:role="row-title" bind:text="self.item['pairing_number']"></anvil-component>
+      <anvil-component type="Label" name="pair_label" prop:role="muted-text" bind:text="self.item['pair_label']"></anvil-component>
     </div>
     <div class="round-two-pairing-players">
       <label>First player<anvil-component type="DropDown" name="first_player"></anvil-component></label>

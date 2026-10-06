@@ -1,9 +1,9 @@
 <anvil-form container="ColumnPanel">
   <div class="standing-row">
-    <anvil-component type="Label" name="rank_label" bind:text="self.item['rank']" prop:role="row-title"></anvil-component>
+    <anvil-component type="Label" name="rank_label" prop:role="row-title" bind:text="self.item['rank']"></anvil-component>
     <anvil-component type="Label" name="player_label" bind:text="self.item['player_name']"></anvil-component>
-    <anvil-component type="Label" name="division_label" bind:text="self.item['division']" prop:role="muted-text"></anvil-component>
+    <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['division']"></anvil-component>
     <anvil-component type="Label" name="gross_label" bind:text="self.item['gross']"></anvil-component>
-    <anvil-component type="Label" name="net_label" bind:text="self.item['net']" prop:role="row-title"></anvil-component>
+    <anvil-component type="Label" name="net_label" prop:role="row-title" bind:text="self.item['net']"></anvil-component>
   </div>
 </anvil-form>

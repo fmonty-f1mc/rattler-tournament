@@ -284,6 +284,14 @@ db_schema:
       client_hidden: null
       name: remembered_logins
       type: simpleObject
+    - admin_ui: {order: 6, width: 200}
+      client_hidden: true
+      name: last_login
+      type: datetime
+    - admin_ui: {order: 7, width: 200}
+      client_hidden: true
+      name: n_password_failures
+      type: number
     indexes: []
     server: full
     title: Users
@@ -298,7 +306,10 @@ services:
 - client_config: {enable_v2: true}
   server_config: {}
   source: /runtime/services/tables.yml
-- client_config: {allow_signup: true, confirm_email: false, enable_automatically: true, require_secure_passwords: true, use_email: true}
+- client_config: {allow_signup: false, confirm_email: false, enable_automatically: false, require_secure_passwords: true, use_email: true, use_google: true}
   server_config: {user_table: users}
   source: /runtime/services/anvil/users.yml
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/google.yml
 startup: {module: Form1, type: form}

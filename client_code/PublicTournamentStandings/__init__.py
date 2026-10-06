@@ -1,5 +1,7 @@
 from ._anvil_designer import PublicTournamentStandingsTemplate
 from anvil import *
+import anvil.google.auth, anvil.google.drive
+from anvil.google.drive import app_files
 
 
 class PublicTournamentStandings(PublicTournamentStandingsTemplate):
@@ -13,7 +15,21 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
     self.standings_scope_picker.selected_value = "overall"
     self.standings_sort_by.items = [("Net", "net"), ("Gross", "gross")]
     self.standings_sort_by.selected_value = "net"
+    round_two_pairs = self.item["round_two_pairs"]
+    self.round_two_pair_rows.items = round_two_pairs
+    self.no_round_two_pairs_state.visible = not round_two_pairs
+    budget = self.item["budget_summary"]
+    self.budget_total.text = self._money(budget["total"])
+    self.budget_paid.text = self._money(budget["paid"])
+    self.budget_balance.text = self._money(budget["balance"])
+    participants = budget["participants"]
+    self.budget_participant_rows.items = participants
+    self.no_budget_participants_state.visible = not participants
     self._show_selected_standings()
+
+  @staticmethod
+  def _money(value):
+    return "${:,.2f}".format(value or 0)
 
   def _show_selected_standings(self):
     scope = self.standings_scope_picker.selected_value or "overall"
