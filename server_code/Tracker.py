@@ -31,8 +31,13 @@ def _entry_name(entry):
   return entry["golfer"]["name"]
 
 
+def _entry_is_player(entry):
+  # Treat entries created before this field existed as players.
+  return entry["is_player"] is not False
+
+
 def _entry_sort_key(entry):
-  return (entry["division"] or "", _entry_name(entry).lower())
+  return (not _entry_is_player(entry), entry["division"] or "", _entry_name(entry).lower())
 
 
 def _division_names(tournament):
@@ -44,7 +49,7 @@ def _division_names(tournament):
   names.update(
     entry["division"].strip()
     for entry in app_tables.tournament_entries.search(tournament=tournament)
-    if entry["division"] and entry["division"].strip()
+    if _entry_is_player(entry) and entry["division"] and entry["division"].strip()
   )
   return sorted(names, key=str.lower)
 
@@ -249,21 +254,22 @@ def create_tournament(year, course, event_date, notes):
 
 
 @anvil.server.callable
-def add_golfer_to_tournament(tournament, golfer):
+def add_golfer_to_tournament(tournament, golfer, is_player=True):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Select a player from the roster.")
   if any(app_tables.tournament_entries.search(tournament=tournament, golfer=golfer)):
     return _result("That player is already entered in this tournament.")
-  entry = _create_tournament_entry(tournament, golfer)
+  entry = _create_tournament_entry(tournament, golfer, is_player)
   return _result(entry=entry)
 
 
-def _create_tournament_entry(tournament, golfer):
+def _create_tournament_entry(tournament, golfer, is_player=True):
   return app_tables.tournament_entries.add_row(
     tournament=tournament,
     golfer=golfer,
+    is_player=bool(is_player),
     division="",
     handicap=0,
     gross_18=0,
@@ -282,17 +288,17 @@ def _create_tournament_entry(tournament, golfer):
 
 
 @anvil.server.callable
-def add_golfers_to_tournament(tournament, golfers):
+def add_golfers_to_tournament(tournament, golfers, is_player=True):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
   if not isinstance(golfers, (list, tuple)) or not golfers:
-    return _result("Select one or more players from the roster.")
+    return _result("Select one or more golfers from the roster.")
 
   unique_golfers = []
   seen_ids = set()
   for golfer in golfers:
     if not _valid_row(app_tables.golfers, golfer):
-      return _result("Choose players from the roster.")
+      return _result("Choose golfers from the roster.")
     golfer_id = golfer.get_id()
     if golfer_id not in seen_ids:
       unique_golfers.append(golfer)
@@ -304,11 +310,11 @@ def add_golfers_to_tournament(tournament, golfers):
   }
   new_golfers = [golfer for golfer in unique_golfers if golfer.get_id() not in entered_ids]
   for golfer in new_golfers:
-    _create_tournament_entry(tournament, golfer)
+    _create_tournament_entry(tournament, golfer, is_player)
 
   already_entered_count = len(unique_golfers) - len(new_golfers)
   if not new_golfers:
-    return _result("All selected players are already entered in this tournament.", added_count=0)
+    return _result("All selected golfers are already entered in this tournament.", added_count=0)
   return _result(added_count=len(new_golfers), already_entered_count=already_entered_count)
 
 
@@ -318,6 +324,8 @@ def list_tournament_entries(tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
   for entry in entries:
+    if not _entry_is_player(entry):
+      continue
     net_score = _entry_net_score(entry)
     if net_score is not None and entry["net_18"] != net_score:
       entry["net_18"] = net_score
@@ -364,6 +372,8 @@ def save_tournament_entry_details_batch(tournament, entry_details):
     entry_tournament = entry["tournament"]
     if entry_tournament is None or entry_tournament.get_id() != tournament.get_id():
       return _result("Choose entries from the selected tournament.")
+    if not _entry_is_player(entry):
+      return _result("Only players can have field details.")
     entry_id = entry.get_id()
     if entry_id in seen_ids:
       return _result("Each tournament entry can only be saved once.")
@@ -386,6 +396,8 @@ def save_tournament_entry_details_batch(tournament, entry_details):
 def save_round_one_scores(entry, gross):
   if not _valid_row(app_tables.tournament_entries, entry):
     return _result("Choose a tournament entry.")
+  if not _entry_is_player(entry):
+    return _result("Only players can enter golf scores.")
   if entry["division"] not in _division_names(entry["tournament"]):
     return _result("Assign a division on the Field page before saving this score.")
   handicap_value = _number(entry["handicap"], "Handicap", allow_blank=True)
@@ -411,7 +423,8 @@ def save_round_one_scores(entry, gross):
 
 @anvil.server.callable
 def get_net_standings(tournament):
-  return _net_standings(list_tournament_entries(tournament))
+  entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
+  return _net_standings(entries)
 
 
 def _net_standings(entries):
@@ -459,7 +472,7 @@ def _entry_id_or_none(entry):
 def build_round_two_pairings(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
-  entries = list_tournament_entries(tournament)
+  entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
   if not entries:
     return _result("Add players to this tournament before building Round Two pairs.")
   if any((_entry_net_score(entry) or 0) <= 0 for entry in entries):
@@ -522,7 +535,7 @@ def list_round_two_pairings(tournament):
 def save_round_two_pairings(tournament, assignments):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
-  entries = list_tournament_entries(tournament)
+  entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
   if not entries:
     return _result("Add players to this tournament before saving Round Two pairs.")
   if not isinstance(assignments, (list, tuple)):
@@ -637,7 +650,7 @@ def get_division_standings(tournament, division):
   entries = [
     entry
     for entry in list_tournament_entries(tournament)
-    if entry["division"] == division
+    if _entry_is_player(entry) and entry["division"] == division
   ]
   return _net_standings(entries)
 
@@ -646,7 +659,7 @@ def get_division_standings(tournament, division):
 def build_rattler_pairings(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
-  entries = list_tournament_entries(tournament)
+  entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
   if not entries:
     return _result("Add players to this tournament before building pairings.")
   if any((_entry_net_score(entry) or 0) <= 0 for entry in entries):
@@ -727,7 +740,7 @@ def save_entry_budget(entry, accommodation, golf, travel, other, paid):
     return _result("Enter a valid non-negative value for amount paid.")
   entry.update(
     accommodation=bool(accommodation),
-    shares_golf=bool(golf),
+    shares_golf=_entry_is_player(entry) and bool(golf),
     shares_travel=bool(travel),
     shares_other=bool(other),
     amount_paid=amount_paid,
@@ -768,9 +781,12 @@ def get_budget_summary(tournament):
     selections = {
       "accommodation": bool(entry["accommodation"]) or (entry["lodging_cost"] or 0) > 0,
       "golf": (
-        bool(entry["shares_golf"])
-        if entry["shares_golf"] is not None
-        else (entry["golf_cost"] or 0) > 0
+        _entry_is_player(entry)
+        and (
+          bool(entry["shares_golf"])
+          if entry["shares_golf"] is not None
+          else (entry["golf_cost"] or 0) > 0
+        )
       ),
       "travel": (
         bool(entry["shares_travel"])
@@ -795,8 +811,14 @@ def get_budget_summary(tournament):
   rows = []
   for entry in entries:
     selections = entry_selections[entry.get_id()]
+    participant_label = (
+      (entry["division"] or "Player")
+      if _entry_is_player(entry)
+      else "Non-player · budget participant"
+    )
     rows.append({
       "entry": entry,
+      "participant_label": participant_label,
       "shares_accommodation": selections["accommodation"],
       "shares_golf": selections["golf"],
       "shares_travel": selections["travel"],

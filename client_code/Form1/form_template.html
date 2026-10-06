@@ -45,9 +45,12 @@
       <div class="tracker-card">
         <p class="eyebrow">BUILD THE FIELD</p>
         <h2>Add players to this year</h2>
-        <p class="muted-copy">Select one or more roster players who are not already in this tournament.</p>
+        <p class="muted-copy">Select roster golfers who are not already in this tournament. Add them as players to include them in divisions and golf rounds, or as non-players to include them in the budget only.</p>
         <anvil-component type="RepeatingPanel" name="entry_options" prop:item_template="Minimal_Theme_1.EntryPlayerChoice" prop:role="entry-options"></anvil-component>
-        <div class="inline-form"><anvil-component type="Button" name="add_entry_button" prop:text="Add selected players" prop:role="secondary-button"></anvil-component></div>
+        <div class="inline-form">
+          <anvil-component type="Button" name="add_players_button" prop:text="Add selected as players" prop:role="secondary-button"></anvil-component>
+          <anvil-component type="Button" name="add_non_players_button" prop:text="Add selected as non-players" prop:role="secondary-button"></anvil-component>
+        </div>
         <anvil-component type="Label" name="entry_status" prop:role="status-text"></anvil-component>
       </div>
     </anvil-component>
@@ -56,7 +59,7 @@
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT FIELD</p>
         <h2>Divisions and player details</h2>
-        <p class="muted-copy">Create divisions for this tournament, then assign each player's division and handicap.</p>
+        <p class="muted-copy">Create divisions for this tournament, then assign each player's division and handicap. Non-players are kept out of field and round setup.</p>
       </div>
       <div class="tracker-card">
         <p class="eyebrow">DIVISIONS</p>
@@ -168,9 +171,9 @@
     </anvil-component>
 
     <anvil-component type="ColumnPanel" name="budget_section" prop:role="tracker-view">
-      <div class="view-heading"><p class="eyebrow">WEEKEND COSTS</p><h2>Participant budget</h2><p class="muted-copy">Enter each category total once, then choose which players share each cost.</p></div>
+      <div class="view-heading"><p class="eyebrow">WEEKEND COSTS</p><h2>Participant budget</h2><p class="muted-copy">Players and non-players can share accommodation, travel, and other costs. Golf costs can be shared by players.</p></div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">TOURNAMENT TOTALS</p><h2>Set category totals</h2></div><span class="muted-copy">Each total is divided equally among players selected for that category.</span></div>
+        <div class="section-heading"><div><p class="eyebrow">TOURNAMENT TOTALS</p><h2>Set category totals</h2></div><span class="muted-copy">Each total is divided equally among participants selected for that category.</span></div>
         <div class="budget-total-grid">
           <label>Accommodation total $<anvil-component type="TextBox" name="budget_accommodation_total" prop:placeholder="0"></anvil-component></label>
           <label>Golf total $<anvil-component type="TextBox" name="budget_golf_total" prop:placeholder="0"></anvil-component></label>
@@ -187,7 +190,7 @@
       </div>
       <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">PLAYER SHARES</p><h2>Choose who shares each cost</h2></div><span class="muted-copy">The amount beside each category is that player's share if selected.</span></div>
+        <div class="section-heading"><div><p class="eyebrow">PARTICIPANT SHARES</p><h2>Choose who shares each cost</h2></div><span class="muted-copy">Non-players can share all costs except golf.</span></div>
         <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="Minimal_Theme_1.BudgetRow" prop:role="budget-list"></anvil-component>
       </div>
     </anvil-component>

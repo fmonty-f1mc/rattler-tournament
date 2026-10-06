@@ -58,7 +58,7 @@ class Form1(Form1Template):
   def _load_entry_options(self, entries):
     if self.current_event is None:
       self.entry_options.items = []
-      self.entry_status.text = "Create or select a tournament before adding players."
+      self.entry_status.text = "Create or select a tournament before adding participants."
       return
 
     entered_ids = {entry["golfer"].get_id() for entry in entries}
@@ -74,9 +74,9 @@ class Form1(Form1Template):
     self.entry_options.items = self._entry_options
     if not self._entry_options:
       self.entry_status.text = (
-        "Add players to the roster first."
+        "Add golfers to the roster first."
         if not self.golfers
-        else "All roster players are already entered in this tournament."
+        else "All roster golfers are already entered in this tournament."
       )
     else:
       self.entry_status.text = ""
@@ -123,7 +123,7 @@ class Form1(Form1Template):
       self.budget_total.text = "$0.00"
       self.budget_paid.text = "$0.00"
       self.budget_balance.text = "$0.00"
-      self.budget_accommodated.text = "0 players"
+      self.budget_accommodated.text = "0 participants"
       self.round_one_status.text = ""
       self.round_two_pairing_status.text = ""
       self._load_entry_options([])
@@ -147,9 +147,10 @@ class Form1(Form1Template):
     self.division_standings_picker.selected_value = selected_division
     entries = anvil.server.call("list_tournament_entries", tournament)
     self._load_entry_options(entries)
+    player_entries = [entry for entry in entries if entry["is_player"] is not False]
     self.field_rows.items = []
     field_items = []
-    for entry in entries:
+    for entry in player_entries:
       entry_id = entry.get_id()
       draft = self._field_detail_drafts.get(entry_id)
       if draft is None:
@@ -165,9 +166,9 @@ class Form1(Form1Template):
         "handicap": handicap,
       })
     self.field_rows.items = field_items
-    self.score_rows.items = entries
+    self.score_rows.items = player_entries
     round_two_pairings = anvil.server.call("list_round_two_pairings", tournament)
-    entry_options = [(entry["golfer"]["name"], entry) for entry in entries]
+    entry_options = [(entry["golfer"]["name"], entry) for entry in player_entries]
     self.round_two_pairing_rows.items = [
       {
         "sequence": pairing["sequence"],
@@ -193,13 +194,20 @@ class Form1(Form1Template):
     )
     division_counts = {division: 0 for division in self.division_options}
     missing_division_count = 0
-    for entry in entries:
+    for entry in player_entries:
       division = entry["division"]
       if division in division_counts:
         division_counts[division] += 1
       else:
         missing_division_count += 1
-    self.field_summary.text = f"{len(entries)} players" if entries else "No players entered yet"
+    non_player_count = len(entries) - len(player_entries)
+    player_label = "player" if len(player_entries) == 1 else "players"
+    non_player_label = "non-player" if non_player_count == 1 else "non-players"
+    self.field_summary.text = (
+      f"{len(player_entries)} {player_label} · {non_player_count} {non_player_label}"
+      if entries
+      else "No players entered yet"
+    )
     if division_counts:
       division_summary = "  ·  ".join(
         f"{division}: {count}" for division, count in division_counts.items()
@@ -222,7 +230,7 @@ class Form1(Form1Template):
     self.budget_total.text = self._money(summary["total"])
     self.budget_paid.text = self._money(summary["paid"])
     self.budget_balance.text = self._money(summary["balance"])
-    self.budget_accommodated.text = f"{summary['accommodated']} of {summary['participants']} players"
+    self.budget_accommodated.text = f"{summary['accommodated']} of {summary['participants']} participants"
 
   def _capture_field_detail_drafts(self):
     for item in (self.field_rows.items or []):
@@ -426,8 +434,7 @@ class Form1(Form1Template):
     self.event_status.text = "Tournament created. Add this year's players below."
     self._load_events(selected=result["tournament"])
 
-  @handle("add_entry_button", "click")
-  def add_entry_button_click(self, **event_args):
+  def _add_selected_entries(self, is_player):
     if self.current_event is None:
       self.entry_status.text = "Create or select a tournament first."
       return
@@ -436,19 +443,29 @@ class Form1(Form1Template):
       "add_golfers_to_tournament",
       self.current_event,
       selected_golfers,
+      is_player,
     )
     if not result["ok"]:
       self.entry_status.text = result["message"]
       return
     self._load_event_data()
     added_count = result["added_count"]
+    participant_label = "player" if is_player else "non-player"
     if added_count == 1:
-      self.entry_status.text = "Player added to this year's field."
+      self.entry_status.text = f"{participant_label.capitalize()} added to this year's tournament."
     else:
-      self.entry_status.text = f"{added_count} players added to this year's field."
+      self.entry_status.text = f"{added_count} {participant_label}s added to this year's tournament."
     skipped_count = result.get("already_entered_count", 0)
     if skipped_count:
       self.entry_status.text += f" {skipped_count} already entered were skipped."
+
+  @handle("add_players_button", "click")
+  def add_players_button_click(self, **event_args):
+    self._add_selected_entries(True)
+
+  @handle("add_non_players_button", "click")
+  def add_non_players_button_click(self, **event_args):
+    self._add_selected_entries(False)
 
   @handle("create_player_button", "click")
   def create_player_button_click(self, **event_args):

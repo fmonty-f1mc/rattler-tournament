@@ -158,6 +158,10 @@ db_schema:
       type: link_single
     - admin_ui: {}
       client_hidden: null
+      name: is_player
+      type: bool
+    - admin_ui: {}
+      client_hidden: null
       name: division
       type: string
     - admin_ui: {}
