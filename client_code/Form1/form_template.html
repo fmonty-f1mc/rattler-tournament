@@ -6,7 +6,7 @@
   <anvil-block slot="content">
     <div class="event-title-row">
       <div>
-        <p class="eyebrow">SELECTED TOURNAMENT</p>
+        <anvil-component type="Label" name="selected_tournament_eyebrow" prop:role="eyebrow" prop:text="SELECTED TOURNAMENT"></anvil-component>
         <anvil-component type="Label" name="current_event_title" prop:role="h2" prop:text="Create your first tournament"></anvil-component>
         <anvil-component type="Label" name="current_event_subtitle" prop:role="muted-text" prop:text="Add a year and course to get started."></anvil-component>
       </div>
@@ -56,7 +56,7 @@
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT FIELD</p>
         <h2>Divisions and player details</h2>
-        <p class="muted-copy">Create divisions for this tournament, then assign each player a division and handicap.</p>
+        <p class="muted-copy">Create divisions for this tournament, then assign each player's division and handicap.</p>
       </div>
       <div class="tracker-card">
         <p class="eyebrow">DIVISIONS</p>
@@ -70,9 +70,10 @@
         <anvil-component type="Label" name="division_list_label" prop:role="muted-text"></anvil-component>
       </div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div></div>
+        <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and handicaps together.</span></div>
         <anvil-component type="Label" name="field_status" prop:role="status-text"></anvil-component>
         <anvil-component type="RepeatingPanel" name="field_rows" prop:item_template="Minimal_Theme_1.EntryDetailsRow"></anvil-component>
+        <anvil-component type="Button" name="save_field_details_button" prop:text="Save all player details" prop:role="secondary-button"></anvil-component>
       </div>
     </anvil-component>
 

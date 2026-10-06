@@ -5,12 +5,11 @@
     </div>
     <div class="score-input-block">
       <label>Division</label>
-      <anvil-component type="DropDown" name="division_dropdown"></anvil-component>
+      <anvil-component type="DropDown" name="division_dropdown" writeback:selected_value="self.item['division']"></anvil-component>
     </div>
     <div class="score-input-block">
       <label>Handicap</label>
-      <anvil-component type="TextBox" name="handicap_box" prop:placeholder="e.g. 12.4"></anvil-component>
+      <anvil-component type="TextBox" name="handicap_box" writeback:text="self.item['handicap']" prop:placeholder="e.g. 12.4"></anvil-component>
     </div>
-    <anvil-component type="Button" name="save_button" prop:text="Save field details" prop:role="secondary-button"></anvil-component>
   </div>
 </anvil-form>

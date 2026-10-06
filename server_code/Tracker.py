@@ -230,17 +230,40 @@ def create_tournament_division(tournament, name):
 
 
 @anvil.server.callable
-def save_tournament_entry_details(entry, division, handicap):
-  if not _valid_row(app_tables.tournament_entries, entry):
-    return _result("Choose a tournament entry.")
-  if division not in _division_names(entry["tournament"]):
-    return _result("Choose a division created for this tournament.")
-  handicap_value = _number(handicap, "Handicap", allow_blank=True)
-  if handicap_value is None:
-    return _result("Enter a valid handicap for this tournament entry.")
+def save_tournament_entry_details_batch(tournament, entry_details):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament.")
+  if not isinstance(entry_details, (list, tuple)) or not entry_details:
+    return _result("Add players to this tournament before saving field details.")
 
-  entry.update(division=division, handicap=handicap_value)
-  return _result()
+  divisions = _division_names(tournament)
+  updates = []
+  seen_ids = set()
+  for details in entry_details:
+    if not isinstance(details, dict):
+      return _result("Choose valid tournament entries.")
+    entry = details.get("entry")
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose valid tournament entries.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament.get_id():
+      return _result("Choose entries from the selected tournament.")
+    entry_id = entry.get_id()
+    if entry_id in seen_ids:
+      return _result("Each tournament entry can only be saved once.")
+    seen_ids.add(entry_id)
+
+    division = details.get("division")
+    if division not in divisions:
+      return _result("Choose a division created for this tournament.")
+    handicap_value = _number(details.get("handicap"), "Handicap", allow_blank=True)
+    if handicap_value is None:
+      return _result("Enter a valid handicap for every tournament entry.")
+    updates.append((entry, division, handicap_value))
+
+  for entry, division, handicap in updates:
+    entry.update(division=division, handicap=handicap)
+  return _result(saved_count=len(updates))
 
 
 @anvil.server.callable
