@@ -233,14 +233,22 @@ class Form1(Form1Template):
     self.budget_accommodated.text = f"{summary['accommodated']} of {summary['participants']} participants"
 
   def _capture_field_detail_drafts(self):
-    for item in (self.field_rows.items or []):
-      entry = item.get("entry")
-      if entry is None:
-        continue
+    for item in self._current_field_detail_values():
+      entry = item["entry"]
       self._field_detail_drafts[entry.get_id()] = {
         "division": item.get("division"),
         "handicap": item.get("handicap"),
       }
+
+  def _current_field_detail_values(self):
+    return [
+      {
+        "entry": getattr(row, "item")["entry"],
+        "division": getattr(row, "division_dropdown").selected_value,
+        "handicap": getattr(row, "handicap_box").text,
+      }
+      for row in self.field_rows.get_components()
+    ]
 
   def _load_division_standings(self):
     division = self.division_standings_picker.selected_value
@@ -302,14 +310,7 @@ class Form1(Form1Template):
     if self.current_event is None:
       self.field_status.text = "Create or select a tournament first."
       return
-    entry_details = [
-      {
-        "entry": item["entry"],
-        "division": item["division"],
-        "handicap": item["handicap"],
-      }
-      for item in self.field_rows.items
-    ]
+    entry_details = self._current_field_detail_values()
     if not entry_details:
       self.field_status.text = "Add players to this tournament before saving field details."
       return
