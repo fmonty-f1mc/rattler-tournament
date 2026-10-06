@@ -97,8 +97,9 @@ class Form1(Form1Template):
     self.event_picker.selected_value = self.current_event
     self._load_event_data()
 
-  def _load_event_data(self):
-    self._capture_field_detail_drafts()
+  def _load_event_data(self, capture_field_detail_drafts=True):
+    if capture_field_detail_drafts:
+      self._capture_field_detail_drafts()
     self.field_status.text = ""
     self.division_status.text = ""
     if self.current_event is None:
@@ -336,13 +337,15 @@ class Form1(Form1Template):
     if not confirmed:
       return
 
+    entry_id = entry.get_id()
+    self._capture_field_detail_drafts()
     result = anvil.server.call("remove_tournament_entry", tournament, entry)
     if not result["ok"]:
       self.field_status.text = result["message"]
       return
 
-    self._load_event_data()
-    self._field_detail_drafts.pop(entry.get_id(), None)
+    self._field_detail_drafts.pop(entry_id, None)
+    self._load_event_data(capture_field_detail_drafts=False)
     pairing_count = result["removed_pairing_count"]
     if pairing_count:
       pairing_label = "pairing" if pairing_count == 1 else "pairings"
