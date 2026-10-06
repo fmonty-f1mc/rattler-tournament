@@ -30,3 +30,7 @@ class PlayerRow(PlayerRowTemplate):
       golfer=self.item,
       active=not self.item["active"],
     )
+
+  @handle("delete_button", "click")
+  def delete_button_click(self, **event_args):
+    self.parent.raise_event("x-delete-player", golfer=self.item)

@@ -153,6 +153,12 @@
           <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
         </div>
         <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
+        <div class="section-heading"><div><p class="eyebrow">BULK ADD</p><h2>Import from CSV</h2></div></div>
+        <p class="muted-copy">Choose a CSV with a <code>name</code> header. Optional headers: <code>email</code>, <code>phone</code>, <code>city</code>, and <code>state</code>. Existing names and rows without a name are skipped.</p>
+        <div class="inline-form">
+          <anvil-component type="FileLoader" name="player_csv_file" prop:text="Choose CSV" prop:file_types=".csv"></anvil-component>
+          <anvil-component type="Button" name="import_players_button" prop:text="Import players" prop:role="secondary-button"></anvil-component>
+        </div>
         <anvil-component type="Label" name="player_status" prop:role="status-text"></anvil-component>
       </div>
       <div class="tracker-card">

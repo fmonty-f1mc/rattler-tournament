@@ -1,6 +1,9 @@
+import csv
+import io
+import math
+
 import anvil.server
 from anvil.tables import app_tables
-import math
 
 
 def _result(message=None, **values):
@@ -70,9 +73,88 @@ def _clear_pairings(tournament):
     pairing.delete()
 
 
+def _delete_pairings_for_entries(pairing_table, entries):
+  pairings = {}
+  for entry in entries:
+    for pairing in pairing_table.search(first_entry=entry):
+      pairings[pairing.get_id()] = pairing
+    for pairing in pairing_table.search(second_entry=entry):
+      pairings[pairing.get_id()] = pairing
+  for pairing in pairings.values():
+    pairing.delete()
+  return len(pairings)
+
+
 @anvil.server.callable
 def list_golfers():
   return sorted(app_tables.golfers.search(), key=lambda golfer: (not golfer["active"], golfer["name"].lower()))
+
+
+@anvil.server.callable
+def import_golfers_from_csv(csv_file):
+  if csv_file is None:
+    return _result("Choose a CSV file first.")
+
+  content = csv_file.get_bytes()
+  if not content:
+    return _result("The selected CSV file is empty.")
+  try:
+    csv_text = content.decode("utf-8-sig")
+  except UnicodeDecodeError:
+    return _result("Save the CSV as UTF-8 and try again.")
+
+  try:
+    reader = csv.DictReader(io.StringIO(csv_text), strict=True)
+    headers = reader.fieldnames or []
+    rows = list(reader)
+  except csv.Error:
+    return _result("The selected file is not valid CSV.")
+
+  header_map = {
+    header.strip().lower(): header
+    for header in headers
+    if header and header.strip()
+  }
+  name_header = header_map.get("name")
+  if name_header is None:
+    return _result("The CSV needs a header row with a 'name' column.")
+  if not rows:
+    return _result("The CSV has a header but no player rows.")
+
+  def csv_value(row, field):
+    header = header_map.get(field)
+    return (row.get(header) or "").strip() if header is not None else ""
+
+  existing_names = {
+    (golfer["name"] or "").strip().lower()
+    for golfer in app_tables.golfers.search()
+  }
+  imported_count = 0
+  skipped_count = 0
+  for row in rows:
+    name = (row.get(name_header) or "").strip()
+    name_key = name.lower()
+    if not name or name_key in existing_names:
+      skipped_count += 1
+      continue
+
+    app_tables.golfers.add_row(
+      name=name,
+      email=csv_value(row, "email"),
+      phone=csv_value(row, "phone"),
+      city=csv_value(row, "city"),
+      state=csv_value(row, "state"),
+      active=True,
+    )
+    existing_names.add(name_key)
+    imported_count += 1
+
+  return {
+    "ok": True,
+    "message": f"Imported {imported_count} players; skipped {skipped_count} duplicate or blank-name rows.",
+    "imported_count": imported_count,
+    "skipped_count": skipped_count,
+  }
 
 
 @anvil.server.callable
@@ -112,6 +194,29 @@ def update_golfer(golfer, email, phone, city, state):
     state=(state or "").strip(),
   )
   return _result()
+
+
+@anvil.server.callable
+def delete_golfer(golfer):
+  if not _valid_row(app_tables.golfers, golfer):
+    return _result("Choose a player from the roster.")
+
+  entries = list(app_tables.tournament_entries.search(golfer=golfer))
+  rattler_pairing_count = _delete_pairings_for_entries(
+    app_tables.rattler_pairings,
+    entries,
+  )
+  round_two_pairing_count = _delete_pairings_for_entries(
+    app_tables.round_two_pairings,
+    entries,
+  )
+  for entry in entries:
+    entry.delete()
+  golfer.delete()
+  return _result(
+    removed_entry_count=len(entries),
+    removed_pairing_count=rattler_pairing_count + round_two_pairing_count,
+  )
 
 
 @anvil.server.callable

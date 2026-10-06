@@ -472,6 +472,27 @@ class Form1(Form1Template):
     self._load_players()
     self._load_event_data()
 
+  @handle("import_players_button", "click")
+  def import_players_button_click(self, **event_args):
+    csv_file = self.player_csv_file.file
+    if csv_file is None:
+      self.player_status.text = "Choose a CSV file first."
+      return
+
+    self.import_players_button.enabled = False
+    try:
+      result = anvil.server.call("import_golfers_from_csv", csv_file)
+    finally:
+      self.import_players_button.enabled = True
+
+    if not result["ok"]:
+      self.player_status.text = result["message"]
+      return
+
+    self.player_status.text = result["message"]
+    self._load_players()
+    self._load_event_data()
+
   @handle("player_rows", "x-toggle-player")
   def player_rows_toggle_player(self, golfer, active, **event_args):
     result = anvil.server.call("set_golfer_active", golfer, active)
@@ -489,6 +510,27 @@ class Form1(Form1Template):
       self.player_status.text = result["message"]
       return
     self.player_status.text = "Roster contact details updated."
+    self._load_players()
+    self._load_event_data()
+
+  @handle("player_rows", "x-delete-player")
+  def player_rows_delete_player(self, golfer, **event_args):
+    name = golfer["name"]
+    confirmed = confirm(
+      f"Delete {name} from the roster and all tournaments? This permanently removes their scores, budget details, and tournament pairings. Shared pairing scores for other players in those pairings will also be removed.",
+      title="Delete player",
+    )
+    if not confirmed:
+      return
+
+    result = anvil.server.call("delete_golfer", golfer)
+    if not result["ok"]:
+      self.player_status.text = result["message"]
+      return
+
+    entry_count = result["removed_entry_count"]
+    entry_label = "tournament entry" if entry_count == 1 else "tournament entries"
+    self.player_status.text = f"Deleted {name} and removed {entry_count} {entry_label}."
     self._load_players()
     self._load_event_data()
 

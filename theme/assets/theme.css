@@ -601,9 +601,15 @@ textarea.anvil-text-area:disabled,
 
 .player-row {
   display: grid;
-  grid-template-columns: minmax(140px, 1.2fr) minmax(150px, 1.3fr) minmax(120px, 1fr) minmax(100px, 0.8fr) minmax(65px, 0.5fr) auto auto;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(150px, 1.3fr) minmax(120px, 1fr) minmax(100px, 0.8fr) minmax(65px, 0.5fr) auto;
   align-items: center;
   gap: 14px;
+}
+
+.player-row > .player-row-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .player-row > div,
