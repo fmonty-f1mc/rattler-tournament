@@ -618,10 +618,12 @@ class Form1(Form1Template):
   def _current_round_one_scores(self):
     scores = []
     for group in self.foursome_group_rows.get_components():
-      score_panel = getattr(group, "score_rows")
-      for row in score_panel.get_components():
-        gross = getattr(row, "gross_box").text
-        entry = getattr(row, "item")["entry"]
+      group_item = getattr(group, "item")
+      for slot in range(1, 5):
+        entry = group_item[f"player_{slot}"]
+        if entry is None:
+          continue
+        gross = getattr(group, f"gross_score_{slot}").text
         self._round_one_score_drafts[entry.get_id()] = gross
         if gross is not None and str(gross).strip():
           scores.append({"entry": entry, "gross": gross})
@@ -939,6 +941,42 @@ class Form1(Form1Template):
   def foursome_group_rows_round_one_score_changed(self, entry, gross, **event_args):
     self._round_one_score_drafts[entry.get_id()] = gross
     self.round_one_status.text = "Tee time or score changes are not saved yet."
+
+  @handle("foursome_group_rows", "x-save-round-one-group")
+  def foursome_group_rows_save_round_one_group(self, group_label, scores, **event_args):
+    if self.current_event is None:
+      self.round_one_status.text = "Create or select a tournament first."
+      return
+
+    self._current_round_one_scores()
+    grouping_result = anvil.server.call(
+      "save_tournament_foursomes",
+      self.current_event,
+      self._current_foursome_assignments(),
+    )
+    if not grouping_result["ok"]:
+      self.round_one_status.text = grouping_result["message"]
+      return
+
+    if not scores:
+      self.round_one_status.text = (
+        f"Tee times saved. Enter gross scores in {group_label} when ready."
+      )
+      return
+
+    result = anvil.server.call(
+      "save_round_one_scores_batch",
+      self.current_event,
+      scores,
+    )
+    if not result["ok"]:
+      self.round_one_status.text = result["message"]
+      return
+    count = result["saved_count"]
+    player_word = "player" if count == 1 else "players"
+    self.round_one_status.text = (
+      f"Tee times and {group_label} scores saved for {count} {player_word}."
+    )
 
   @handle("players_nav", "click")
   def players_nav_click(self, **event_args):
@@ -1403,40 +1441,6 @@ class Form1(Form1Template):
     self.player_status.text = f"Deleted {name} and removed {entry_count} {entry_label}."
     self._load_players()
     self._load_event_data()
-
-  @handle("save_round_one_scores_button", "click")
-  def save_round_one_scores_button_click(self, **event_args):
-    if self.current_event is None:
-      self.round_one_status.text = "Create or select a tournament first."
-      return
-    grouping_result = anvil.server.call(
-      "save_tournament_foursomes",
-      self.current_event,
-      self._current_foursome_assignments(),
-    )
-    if not grouping_result["ok"]:
-      self.round_one_status.text = grouping_result["message"]
-      return
-
-    scores = self._current_round_one_scores()
-    saved_score_count = 0
-    if scores:
-      result = anvil.server.call(
-        "save_round_one_scores_batch",
-        self.current_event,
-        scores,
-      )
-      if not result["ok"]:
-        self.round_one_status.text = result["message"]
-        return
-      saved_score_count = result["saved_count"]
-    self._load_event_data()
-    if scores:
-      self.round_one_status.text = (
-        f"Tee times and Round One scores saved for {saved_score_count} players."
-      )
-    else:
-      self.round_one_status.text = "Tee times saved. Enter gross scores in the groups when ready."
 
   @handle("save_budget_payments_button", "click")
   def save_budget_payments_button_click(self, **event_args):

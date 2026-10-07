@@ -95,7 +95,7 @@
       <div class="view-heading">
         <p class="eyebrow">ROUND ONE · TEE TIMES AND SCORES</p>
         <h2>Round one</h2>
-        <p class="muted-copy">Players are shown by tee time. Generate or edit groups, then enter each player's gross score within their group. Net is calculated automatically.</p>
+        <p class="muted-copy">Generate or edit tee time groups, enter each player's gross score under their name, then save that group.</p>
       </div>
       <div class="tracker-card">
         <div class="section-heading">
@@ -105,9 +105,6 @@
           </div>
         </div>
         <anvil-component type="RepeatingPanel" name="foursome_group_rows" prop:item_template="rattler_tournament.FoursomeRow" prop:role="foursome-group-list"></anvil-component>
-        <div class="round-one-save-actions">
-          <anvil-component type="Button" name="save_round_one_scores_button" prop:text="Save tee times and scores" prop:role="round-one-save-button"></anvil-component>
-        </div>
         <anvil-component type="Label" name="round_one_status" prop:role="status-text"></anvil-component>
       </div>
     </anvil-component>

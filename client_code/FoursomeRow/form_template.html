@@ -1,12 +1,26 @@
 <anvil-form container="ColumnPanel">
   <div class="foursome-row">
-    <anvil-component type="Label" name="group_label" prop:role="row-title" bind:text="self.item['group_label']"></anvil-component>
+    <div class="foursome-heading">
+      <anvil-component type="Label" name="group_label" prop:role="row-title" bind:text="self.item['group_label']"></anvil-component>
+      <anvil-component type="Button" name="save_group_button" prop:text="Save group" prop:role="round-one-save-button"></anvil-component>
+    </div>
     <div class="foursome-players">
-      <label>Player 1<anvil-component type="DropDown" name="player_1"></anvil-component></label>
-      <label>Player 2<anvil-component type="DropDown" name="player_2"></anvil-component></label>
-      <label>Player 3<anvil-component type="DropDown" name="player_3"></anvil-component></label>
-      <label>Player 4<anvil-component type="DropDown" name="player_4"></anvil-component></label>
+      <div class="foursome-player">
+        <label>Player 1<anvil-component type="DropDown" name="player_1"></anvil-component></label>
+        <label>Gross score<anvil-component type="TextBox" name="gross_score_1" prop:placeholder="Enter gross score"></anvil-component></label>
+      </div>
+      <div class="foursome-player">
+        <label>Player 2<anvil-component type="DropDown" name="player_2"></anvil-component></label>
+        <label>Gross score<anvil-component type="TextBox" name="gross_score_2" prop:placeholder="Enter gross score"></anvil-component></label>
+      </div>
+      <div class="foursome-player">
+        <label>Player 3<anvil-component type="DropDown" name="player_3"></anvil-component></label>
+        <label>Gross score<anvil-component type="TextBox" name="gross_score_3" prop:placeholder="Enter gross score"></anvil-component></label>
+      </div>
+      <div class="foursome-player">
+        <label>Player 4<anvil-component type="DropDown" name="player_4"></anvil-component></label>
+        <label>Gross score<anvil-component type="TextBox" name="gross_score_4" prop:placeholder="Enter gross score"></anvil-component></label>
+      </div>
     </div>
   </div>
-  <anvil-component type="RepeatingPanel" name="score_rows" prop:item_template="rattler_tournament.ScoreRow" prop:role="score-list"></anvil-component>
 </anvil-form>
