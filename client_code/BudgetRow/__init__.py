@@ -8,17 +8,10 @@ class BudgetRow(BudgetRowTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
     self.payment_selection_checkbox.checked = self.item["payment_selected"]
-    self.paid_box.text = self._display_amount(
-      self.item.get("draft_paid", self.item["entry"]["amount_paid"])
-    )
+    self.paid_box.text = self._display_amount(self.item["entry"]["amount_paid"])
     self.paid_box.enabled = False
     saved_paid = self.item["entry"]["amount_paid"] or 0
-    paid_amount = self.item.get("draft_paid", saved_paid)
-    try:
-      paid_amount = float(paid_amount)
-    except (TypeError, ValueError):
-      paid_amount = saved_paid
-    amount_owed = self.item["estimated_share"] - paid_amount
+    amount_owed = self.item["estimated_share"] - saved_paid
     self.amount_owed_label.text = "Amount owed: ${:,.2f}".format(amount_owed)
     self.amount_owed_label.role = (
       "budget-settled" if amount_owed <= 0 else "budget-owed"

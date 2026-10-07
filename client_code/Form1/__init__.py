@@ -37,6 +37,7 @@ class Form1(Form1Template):
     self.budget_status.text = ""
     self.email_status.text = ""
     self._show_view("event")
+    self._show_budget_tab("categories")
     self._load_players()
     self._load_events()
 
@@ -75,6 +76,17 @@ class Form1(Form1Template):
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
+      )
+
+  def _show_budget_tab(self, name):
+    for tab_name, panel, button in (
+      ("categories", self.budget_categories_tab, self.budget_categories_tab_button),
+      ("assign", self.budget_assignments_tab, self.budget_assignments_tab_button),
+      ("payments", self.budget_payments_tab, self.budget_payments_tab_button),
+    ):
+      panel.visible = name == tab_name
+      button.role = (
+        "tournament-subtab-active" if name == tab_name else "tournament-subtab"
       )
 
   def _load_players(self):
@@ -379,14 +391,7 @@ class Form1(Form1Template):
       matches.append(item)
     return matches
 
-  def _capture_budget_cost_drafts(self):
-    for row_component in self.budget_rows.get_components():
-      item = getattr(row_component, "item")
-      item["draft_paid"] = getattr(row_component, "paid_box").text
-
-  def _refresh_budget_cost_rows(self, capture_drafts=True):
-    if capture_drafts:
-      self._capture_budget_cost_drafts()
+  def _refresh_budget_cost_rows(self):
     matching_items = self._matching_budget_cost_items()
     self.budget_rows.items = matching_items
     count = len(self._budget_cost_items)
@@ -409,40 +414,6 @@ class Form1(Form1Template):
     for item in items:
       item["payment_selected"] = selected
     self._refresh_budget_cost_rows()
-
-  def _set_budget_paid_for_selected(self):
-    self._capture_budget_cost_drafts()
-    selected_items = [
-      item for item in self._budget_cost_items if item["payment_selected"]
-    ]
-    if not selected_items:
-      self.budget_status.text = "Select at least one participant first."
-      return
-
-    try:
-      amount = float(self.budget_bulk_paid_amount.text)
-    except (TypeError, ValueError):
-      self.budget_status.text = "Enter a valid payment amount greater than $0."
-      return
-    if not 0 < amount < float("inf"):
-      self.budget_status.text = "Enter a valid payment amount greater than $0."
-      return
-
-    for item in selected_items:
-      saved_paid = item["entry"]["amount_paid"] or 0
-      current_paid = item.get("draft_paid", saved_paid)
-      try:
-        current_paid = float(current_paid or 0)
-      except (TypeError, ValueError):
-        current_paid = saved_paid
-      item["draft_paid"] = current_paid + amount
-      item["draft_payment"] = item.get("draft_payment", 0) + amount
-    self.budget_bulk_paid_amount.text = ""
-    self._refresh_budget_cost_rows(capture_drafts=False)
-    self.budget_status.text = (
-      f"Payment added to the pending total for {len(selected_items)} participant(s). "
-      "Click Save Payments to save it."
-    )
 
   def _load_budget_target_items(self, rows, tournament):
     tournament_id = tournament.get_id()
@@ -791,6 +762,18 @@ class Form1(Form1Template):
   def budget_nav_click(self, **event_args):
     self._show_view("budget")
 
+  @handle("budget_categories_tab_button", "click")
+  def budget_categories_tab_button_click(self, **event_args):
+    self._show_budget_tab("categories")
+
+  @handle("budget_assignments_tab_button", "click")
+  def budget_assignments_tab_button_click(self, **event_args):
+    self._show_budget_tab("assign")
+
+  @handle("budget_payments_tab_button", "click")
+  def budget_payments_tab_button_click(self, **event_args):
+    self._show_budget_tab("payments")
+
   @handle("send_tournament_email_button", "click")
   def send_tournament_email_button_click(self, **event_args):
     if self.current_event is None:
@@ -933,10 +916,6 @@ class Form1(Form1Template):
   def budget_rows_payment_selection_changed(self, **event_args):
     self._update_budget_payment_selection_status()
 
-  @handle("select_all_budget_payments_button", "click")
-  def select_all_budget_payments_button_click(self, **event_args):
-    self._select_budget_payment_items(self._budget_cost_items, True)
-
   @handle("select_matching_budget_payments_button", "click")
   def select_matching_budget_payments_button_click(self, **event_args):
     self._select_budget_payment_items(self._matching_budget_cost_items(), True)
@@ -944,10 +923,6 @@ class Form1(Form1Template):
   @handle("clear_budget_payment_selection_button", "click")
   def clear_budget_payment_selection_button_click(self, **event_args):
     self._select_budget_payment_items(self._budget_cost_items, False)
-
-  @handle("apply_budget_paid_amount_button", "click")
-  def apply_budget_paid_amount_button_click(self, **event_args):
-    self._set_budget_paid_for_selected()
 
   @handle("budget_target_rows", "x-budget-target-selection-changed")
   def budget_target_rows_selection_changed(self, **event_args):
@@ -1229,17 +1204,21 @@ class Form1(Form1Template):
       self.budget_status.text = "Create or select a tournament first."
       return
 
+    selected_items = [
+      item for item in self._budget_cost_items if item["payment_selected"]
+    ]
+    if not selected_items:
+      self.budget_status.text = "Select at least one participant first."
+      return
+
+    amount = self.budget_bulk_paid_amount.text
     payments = [
       {
         "entry": item["entry"],
-        "payment_amount": item["draft_payment"],
+        "payment_amount": amount,
       }
-      for item in self._budget_cost_items
-      if item.get("draft_payment", 0) > 0
+      for item in selected_items
     ]
-    if not payments:
-      self.budget_status.text = "There are no pending payments to save."
-      return
 
     result = anvil.server.call(
       "add_entry_payments",
@@ -1249,6 +1228,7 @@ class Form1(Form1Template):
     if not result["ok"]:
       self.budget_status.text = result["message"]
       return
+    self.budget_bulk_paid_amount.text = ""
     self._load_event_data()
     count = result["saved_count"]
     self.budget_status.text = f"Payments added to Amount Paid totals for {count} participant(s)."
