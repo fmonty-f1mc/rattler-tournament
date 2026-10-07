@@ -630,6 +630,23 @@ textarea.anvil-text-area:disabled,
   margin-bottom: 12px;
 }
 
+.foursome-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+}
+
+.foursome-details label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--blank-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .foursome-players {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

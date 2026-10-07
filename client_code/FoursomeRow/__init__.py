@@ -39,8 +39,14 @@ class FoursomeRow(FoursomeRowTemplate):
           self, f"gross_score_{slot}"
         ).text
 
+  def _capture_group_details(self):
+    group_name = (self.group_name_box.text or "").strip()
+    self.item["group_label"] = group_name or f"Group {self.item['sequence']}"
+    self.item["tee_time"] = (self.tee_time_box.text or "").strip()
+
   def _grouping_changed(self, slot):
     self._capture_score_drafts()
+    self._capture_group_details()
     self.item[f"player_{slot}"] = getattr(self, f"player_{slot}").selected_value
     self._refresh_gross_score(slot)
     self.parent.raise_event(
@@ -63,6 +69,7 @@ class FoursomeRow(FoursomeRowTemplate):
   @handle("save_group_button", "click")
   def save_group_button_click(self, **event_args):
     self._capture_score_drafts()
+    self._capture_group_details()
     scores = []
     for slot in range(1, 5):
       entry = self.item[f"player_{slot}"]
@@ -72,6 +79,7 @@ class FoursomeRow(FoursomeRowTemplate):
     self.parent.raise_event(
       "x-save-round-one-group",
       group_label=self.item["group_label"],
+      tee_time=self.item["tee_time"],
       scores=scores,
     )
 

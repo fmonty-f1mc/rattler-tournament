@@ -303,6 +303,10 @@ db_schema:
       type: string
     - admin_ui: {}
       client_hidden: null
+      name: tee_time
+      type: string
+    - admin_ui: {}
+      client_hidden: null
       name: grouping_basis
       type: string
     - admin_ui: {}

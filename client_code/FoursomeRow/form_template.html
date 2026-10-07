@@ -1,7 +1,10 @@
 <anvil-form container="ColumnPanel">
   <div class="foursome-row">
     <div class="foursome-heading">
-      <anvil-component type="Label" name="group_label" prop:role="row-title" bind:text="self.item['group_label']"></anvil-component>
+      <div class="foursome-details">
+        <label>Group name<anvil-component type="TextBox" name="group_name_box" prop:placeholder="Group name" writeback:text="self.item['group_label']"></anvil-component></label>
+        <label>Tee time<anvil-component type="TextBox" name="tee_time_box" prop:placeholder="e.g. 8:00 AM" writeback:text="self.item['tee_time']"></anvil-component></label>
+      </div>
       <anvil-component type="Button" name="save_group_button" prop:text="Save group" prop:role="round-one-save-button"></anvil-component>
     </div>
     <div class="foursome-players">
