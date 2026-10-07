@@ -465,12 +465,6 @@ def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
-  for entry in entries:
-    if not _entry_is_player(entry):
-      continue
-    net_score = _entry_net_score(entry)
-    if net_score is not None and entry["net_18"] != net_score:
-      entry["net_18"] = net_score
   return sorted(entries, key=_entry_sort_key)
 
 
