@@ -165,6 +165,7 @@ class Form1(Form1Template):
       self.budget_cost_division_filter.selected_value = "all"
       self.budget_cost_search.text = ""
       self.budget_cost_match_status.text = "0 participants"
+      self.budget_payment_selection_status.text = "0 participants selected."
       self._budget_target_items = []
       self._budget_selected_entry_ids = set()
       self._budget_selection_tournament_id = None
@@ -330,6 +331,7 @@ class Form1(Form1Template):
         divisions.add(division)
       row["_is_player"] = is_player
       row["_division"] = division
+      row["payment_selected"] = False
       self._budget_cost_items.append(row)
 
     type_options = [
@@ -382,8 +384,9 @@ class Form1(Form1Template):
       item = getattr(row_component, "item")
       item["draft_paid"] = getattr(row_component, "paid_box").text
 
-  def _refresh_budget_cost_rows(self):
-    self._capture_budget_cost_drafts()
+  def _refresh_budget_cost_rows(self, capture_drafts=True):
+    if capture_drafts:
+      self._capture_budget_cost_drafts()
     matching_items = self._matching_budget_cost_items()
     self.budget_rows.items = matching_items
     count = len(self._budget_cost_items)
@@ -391,6 +394,38 @@ class Form1(Form1Template):
     self.budget_cost_match_status.text = (
       f"{visible_count} matching participant" + ("s" if visible_count != 1 else "")
       + f" · {count} total"
+    )
+    self._update_budget_payment_selection_status()
+
+  def _update_budget_payment_selection_status(self):
+    selected_count = sum(
+      1 for item in self._budget_cost_items if item["payment_selected"]
+    )
+    self.budget_payment_selection_status.text = (
+      f"{selected_count} participant" + ("s" if selected_count != 1 else "") + " selected."
+    )
+
+  def _select_budget_payment_items(self, items, selected):
+    for item in items:
+      item["payment_selected"] = selected
+    self._refresh_budget_cost_rows()
+
+  def _set_budget_paid_for_selected(self):
+    self._capture_budget_cost_drafts()
+    selected_items = [
+      item for item in self._budget_cost_items if item["payment_selected"]
+    ]
+    if not selected_items:
+      self.budget_status.text = "Select at least one participant first."
+      return
+
+    amount = self.budget_bulk_paid_amount.text
+    for item in selected_items:
+      item["draft_paid"] = amount
+    self._refresh_budget_cost_rows(capture_drafts=False)
+    self.budget_status.text = (
+      f"Amount applied to {len(selected_items)} participant(s). "
+      "Click Save Amount Paid to save the changes."
     )
 
   def _load_budget_target_items(self, rows, tournament):
@@ -878,6 +913,26 @@ class Form1(Form1Template):
   def budget_cost_search_change(self, **event_args):
     self._refresh_budget_cost_rows()
 
+  @handle("budget_rows", "x-budget-payment-selection-changed")
+  def budget_rows_payment_selection_changed(self, **event_args):
+    self._update_budget_payment_selection_status()
+
+  @handle("select_all_budget_payments_button", "click")
+  def select_all_budget_payments_button_click(self, **event_args):
+    self._select_budget_payment_items(self._budget_cost_items, True)
+
+  @handle("select_matching_budget_payments_button", "click")
+  def select_matching_budget_payments_button_click(self, **event_args):
+    self._select_budget_payment_items(self._matching_budget_cost_items(), True)
+
+  @handle("clear_budget_payment_selection_button", "click")
+  def clear_budget_payment_selection_button_click(self, **event_args):
+    self._select_budget_payment_items(self._budget_cost_items, False)
+
+  @handle("apply_budget_paid_amount_button", "click")
+  def apply_budget_paid_amount_button_click(self, **event_args):
+    self._set_budget_paid_for_selected()
+
   @handle("budget_target_rows", "x-budget-target-selection-changed")
   def budget_target_rows_selection_changed(self, **event_args):
     self._update_budget_target_selection_status()
@@ -1152,20 +1207,32 @@ class Form1(Form1Template):
       f"Round-one scores saved for {result['saved_count']} players."
     )
 
-  @handle("budget_rows", "x-save-entry-payment")
-  def budget_rows_save_entry_payment(
-    self,
-    entry,
-    amount_paid,
-    **event_args,
-  ):
+  @handle("save_budget_payments_button", "click")
+  def save_budget_payments_button_click(self, **event_args):
+    if self.current_event is None:
+      self.budget_status.text = "Create or select a tournament first."
+      return
+
+    self._capture_budget_cost_drafts()
+    payments = [
+      {
+        "entry": item["entry"],
+        "amount_paid": item.get("draft_paid", item["entry"]["amount_paid"]),
+      }
+      for item in self._budget_cost_items
+    ]
+    if not payments:
+      self.budget_status.text = "There are no participant payments to save."
+      return
+
     result = anvil.server.call(
-      "save_entry_payment",
-      entry,
-      amount_paid,
+      "save_entry_payments",
+      self.current_event,
+      payments,
     )
     if not result["ok"]:
       self.budget_status.text = result["message"]
       return
-    self.budget_status.text = f"Payment updated for {entry['golfer']['name']}."
     self._load_event_data()
+    count = result["saved_count"]
+    self.budget_status.text = f"Amount paid saved for {count} participant(s)."

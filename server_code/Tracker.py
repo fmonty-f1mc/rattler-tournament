@@ -1131,14 +1131,38 @@ def delete_budget_category(category):
 
 
 @anvil.server.callable(require_user=True)
-def save_entry_payment(entry, paid):
-  if not _valid_row(app_tables.tournament_entries, entry):
-    return _result("Choose a tournament entry.")
-  amount_paid = _number(paid, "Amount paid", allow_blank=False)
-  if amount_paid is None or amount_paid < 0:
-    return _result("Enter a valid non-negative value for amount paid.")
-  entry["amount_paid"] = amount_paid
-  return _result()
+def save_entry_payments(tournament, payments):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not isinstance(payments, (list, tuple)):
+    return _result("Choose valid participant payments.")
+
+  tournament_id = tournament.get_id()
+  seen_entry_ids = set()
+  validated_payments = []
+  for payment in payments:
+    if not isinstance(payment, dict) or "entry" not in payment or "amount_paid" not in payment:
+      return _result("Choose valid participant payments.")
+    entry = payment["entry"]
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose a valid tournament entry.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament_id:
+      return _result("Choose participants from this tournament.")
+    entry_id = entry.get_id()
+    if entry_id in seen_entry_ids:
+      return _result("Each participant can appear only once.")
+    amount_paid = _number(payment["amount_paid"], "Amount paid", allow_blank=False)
+    if amount_paid is None or amount_paid < 0:
+      return _result(
+        "Enter a valid non-negative amount paid for {}.".format(_entry_name(entry))
+      )
+    seen_entry_ids.add(entry_id)
+    validated_payments.append((entry, amount_paid))
+
+  for entry, amount_paid in validated_payments:
+    entry["amount_paid"] = amount_paid
+  return _result(saved_count=len(validated_payments))
 
 
 @anvil.server.callable(require_user=True)
