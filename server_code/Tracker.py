@@ -726,6 +726,12 @@ def get_public_tournament_standings():
           {
             "name": row["entry"]["golfer"]["name"],
             "participant_label": row["participant_label"],
+            "is_player": _entry_is_player(row["entry"]),
+            "division": (
+              (row["entry"]["division"] or "")
+              if _entry_is_player(row["entry"])
+              else ""
+            ),
             "estimated_share": row["estimated_share"],
             "paid": row["entry"]["amount_paid"] or 0,
             "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
@@ -1102,7 +1108,7 @@ def add_budget_category(tournament, name):
 @anvil.server.callable(require_user=True)
 def save_budget_category(category, name, total):
   if not _valid_row(app_tables.budget_categories, category):
-    return _result("Choose a budget category.")
+    return _result("Choose an expense category.")
   name = (name or "").strip()
   if not name:
     return _result("Enter a category name.")
@@ -1123,7 +1129,7 @@ def save_budget_category(category, name, total):
 @anvil.server.callable(require_user=True)
 def delete_budget_category(category):
   if not _valid_row(app_tables.budget_categories, category):
-    return _result("Choose a budget category.")
+    return _result("Choose an expense category.")
   for share in app_tables.budget_shares.search(category=category):
     share.delete()
   category.delete()
@@ -1330,7 +1336,7 @@ def _budget_summary(tournament, migrate_legacy=False):
     participant_label = (
       (entry["division"] or "Player")
       if _entry_is_player(entry)
-      else "Non-player · budget participant"
+      else "Non-player · included in expenses"
     )
     category_shares = [
       {

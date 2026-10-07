@@ -21,7 +21,7 @@
       <anvil-component type="Button" name="round_one_nav" prop:text="Round One" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="standings_nav" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="round_two_nav" prop:text="Round Two" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="budget_nav" prop:text="Budget" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="budget_nav" prop:text="Expenses" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="email_nav" prop:text="Email participants" prop:role="tournament-subtab"></anvil-component>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="event_section" prop:role="tracker-view">
@@ -49,7 +49,7 @@
       <div class="tracker-card">
         <p class="eyebrow">BUILD THE FIELD</p>
         <h2>Add players to this year</h2>
-        <p class="muted-copy">Select roster golfers who are not already in this tournament. Add them as players to include them in divisions and golf rounds, or as non-players to include them in the budget only.</p>
+        <p class="muted-copy">Select roster golfers who are not already in this tournament. Add them as players to include them in divisions and golf rounds, or as non-players to include them in expenses only.</p>
         <anvil-component type="RepeatingPanel" name="entry_options" prop:item_template="rattler_tournament.EntryPlayerChoice" prop:role="entry-options"></anvil-component>
         <div class="inline-form">
           <anvil-component type="Button" name="add_players_button" prop:text="Add selected as players" prop:role="secondary-button"></anvil-component>
@@ -170,9 +170,9 @@
       </div>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="budget_section" prop:role="tracker-view">
-      <div class="view-heading"><p class="eyebrow">WEEKEND COSTS</p><h2>Participant budget</h2><p class="muted-copy">Create the expense categories you need, set their totals, and choose who shares each cost.</p></div>
+      <div class="view-heading"><p class="eyebrow">Rattler purse</p><h2>Tournament Expenses</h2><p class="muted-copy">Create the expense categories you need, set their totals, and choose who shares each cost.</p></div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">TOURNAMENT TOTALS</p><h2>Manage expense categories</h2></div><span class="muted-copy">Each category total is divided among the participants selected for it.</span></div>
+        <div class="section-heading"><div><p anvil:designer-editable-text class="eyebrow"></p><h2>Manage expense categories</h2></div><span class="muted-copy">Each category total is divided among the participants selected for it.</span></div>
         <anvil-component type="RepeatingPanel" name="budget_category_rows" prop:item_template="rattler_tournament.BudgetCategoryRow" prop:role="budget-category-list"></anvil-component>
         <div class="inline-form budget-category-add-form">
           <anvil-component type="TextBox" name="new_budget_category_name" prop:placeholder="New category name"></anvil-component>
@@ -180,7 +180,7 @@
         </div>
       </div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">BULK PARTICIPANT SHARES</p><h2>Assign a category</h2></div><span class="muted-copy">Choose participants individually or select everyone matching the filters.</span></div>
+        <div class="section-heading"><div><p class="eyebrow">PARTICIPANT SHARES</p><h2>Assign Expenses</h2></div><span class="muted-copy">Choose participants individually or select everyone matching the filters.</span></div>
         <div class="budget-bulk-controls">
           <div class="field-block"><label>Expense category</label><anvil-component type="DropDown" name="budget_bulk_category_picker"></anvil-component></div>
           <div class="field-block"><label>Participant type</label><anvil-component type="DropDown" name="budget_target_filter"></anvil-component></div>
@@ -205,7 +205,7 @@
       <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
       <div class="tracker-card">
         <div class="budget-cost-header">
-          <div class="section-heading"><div><p class="eyebrow">PARTICIPANT COSTS</p><h2>Expense details and payments</h2></div><span class="muted-copy">Each participant’s assigned categories show their per-person share. Save Amount Paid saves all participant rows, including those hidden by filters.</span></div>
+          <div class="section-heading"><div><p class="eyebrow">Payements</p><h2>Expense details and payments</h2></div><span class="muted-copy">Each participant’s assigned categories show their per-person share. Save Amount Paid saves all participant rows, including those hidden by filters.</span></div>
           <anvil-component type="Button" name="save_budget_payments_button" prop:text="Save Amount Paid" prop:role="budget-save-button"></anvil-component>
         </div>
         <div class="budget-bulk-controls">

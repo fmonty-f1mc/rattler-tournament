@@ -679,7 +679,7 @@ class Form1(Form1Template):
     name = entry["golfer"]["name"]
     tournament = self.current_event
     confirmed = confirm(
-      f"Remove {name} from this tournament? Their scores and budget details for this tournament will be deleted. Any pairings containing them will also be removed, including shared pairing scores for the other player.",
+      f"Remove {name} from this tournament? Their scores and expense details for this tournament will be deleted. Any pairings containing them will also be removed, including shared pairing scores for the other player.",
       title="Remove player from tournament",
     )
     if not confirmed:
@@ -852,7 +852,7 @@ class Form1(Form1Template):
     self.new_budget_category_name.text = ""
     self._load_event_data()
     self.budget_bulk_category_picker.selected_value = result["category"]
-    self.budget_status.text = "Budget category added."
+    self.budget_status.text = "Expense category added."
 
   @handle("budget_category_rows", "x-save-budget-category")
   def budget_category_rows_save_budget_category(
@@ -877,8 +877,8 @@ class Form1(Form1Template):
   @handle("budget_category_rows", "x-delete-budget-category")
   def budget_category_rows_delete_budget_category(self, category, **event_args):
     confirmed = confirm(
-      f"Delete {category['name']} from this tournament budget? Participant selections for this category will also be removed.",
-      title="Delete budget category",
+      f"Delete {category['name']} from this tournament's expenses? Participant selections for this category will also be removed.",
+      title="Delete expense category",
     )
     if not confirmed:
       return
@@ -887,7 +887,7 @@ class Form1(Form1Template):
       self.budget_status.text = result["message"]
       return
     self._load_event_data()
-    self.budget_status.text = "Budget category deleted."
+    self.budget_status.text = "Expense category deleted."
 
   @handle("budget_target_filter", "change")
   def budget_target_filter_change(self, **event_args):
@@ -1051,7 +1051,7 @@ class Form1(Form1Template):
 
     title = f"{tournament['year']} · {tournament['course']}"
     confirmed = confirm(
-      f"Delete {title}? This permanently removes the tournament, all player entries and budget details, divisions, scores, and pairings. It will also disappear from public standings.",
+      f"Delete {title}? This permanently removes the tournament, all player entries and expense details, divisions, scores, and pairings. It will also disappear from public standings.",
       title="Delete tournament",
     )
     if not confirmed:
@@ -1168,7 +1168,7 @@ class Form1(Form1Template):
   def player_rows_delete_player(self, golfer, **event_args):
     name = golfer["name"]
     confirmed = confirm(
-      f"Delete {name} from the roster and all tournaments? This permanently removes their scores, budget details, and tournament pairings. Shared pairing scores for other players in those pairings will also be removed.",
+      f"Delete {name} from the roster and all tournaments? This permanently removes their scores, expense details, and tournament pairings. Shared pairing scores for other players in those pairings will also be removed.",
       title="Delete player",
     )
     if not confirmed:
