@@ -15,101 +15,25 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
     self.standings_scope_picker.selected_value = "overall"
     self.standings_sort_by.items = [("Net", "net"), ("Gross", "gross")]
     self.standings_sort_by.selected_value = "net"
+    round_one_groups = self.item["round_one_groups"]
+    self.round_one_group_rows.items = round_one_groups
+    self.no_round_one_groups_state.visible = not round_one_groups
     round_two_pairs = self.item["round_two_pairs"]
     self.round_two_pair_rows.items = round_two_pairs
     self.no_round_two_pairs_state.visible = not round_two_pairs
-    budget = self.item["budget_summary"]
-    self.budget_total.text = self._money(budget["total"])
-    self.budget_paid.text = self._money(budget["paid"])
-    self.budget_balance.text = self._money(budget["balance"])
-    self._expense_participants = budget["participants"]
-    self.expense_search.text = ""
-    self.expense_participant_type_filter.items = [
-      ("Everyone", "all"),
-      ("Players", "players"),
-      ("Non-players", "non_players"),
-    ]
-    self.expense_participant_type_filter.selected_value = "all"
-    divisions = sorted(
-      {
-        participant["division"]
-        for participant in self._expense_participants
-        if participant["is_player"] and participant["division"]
-      },
-      key=lambda value: value.lower(),
-    )
-    self.expense_division_filter.items = [
-      ("All divisions", "all"),
-      ("Players without division", "unassigned"),
-    ] + [(division, "division:" + division) for division in divisions]
-    self.expense_division_filter.selected_value = "all"
-    self.expense_payment_filter.items = [
-      ("Any payment status", "all"),
-      ("Balance due", "owing"),
-      ("Paid in full", "paid"),
-    ]
-    self.expense_payment_filter.selected_value = "all"
-    self._refresh_expense_participants()
     self._show_selected_standings()
     self._show_public_tab("standings")
 
   def _show_public_tab(self, name):
     for tab_name, panel, button in (
+      ("round_one", self.round_one_tab, self.round_one_tab_button),
       ("standings", self.standings_tab, self.standings_tab_button),
       ("pairs", self.pairs_tab, self.pairs_tab_button),
-      ("expenses", self.expenses_tab, self.expenses_tab_button),
     ):
       panel.visible = name == tab_name
       button.role = (
         "tournament-subtab-active" if name == tab_name else "tournament-subtab"
       )
-
-  @staticmethod
-  def _money(value):
-    return "${:,.2f}".format(value or 0)
-
-  def _matching_expense_participants(self):
-    query = (self.expense_search.text or "").strip().lower()
-    participant_type = self.expense_participant_type_filter.selected_value or "all"
-    division_filter = self.expense_division_filter.selected_value or "all"
-    payment_filter = self.expense_payment_filter.selected_value or "all"
-    matches = []
-    for participant in self._expense_participants:
-      if query and query not in (participant["name"] or "").lower():
-        continue
-      if participant_type == "players" and not participant["is_player"]:
-        continue
-      if participant_type == "non_players" and participant["is_player"]:
-        continue
-      if division_filter == "unassigned" and (
-        not participant["is_player"] or participant["division"]
-      ):
-        continue
-      if division_filter.startswith("division:") and participant["division"] != division_filter[len("division:"):]:
-        continue
-      balance = participant["balance"] or 0
-      if payment_filter == "owing" and balance <= 0:
-        continue
-      if payment_filter == "paid" and balance > 0:
-        continue
-      matches.append(participant)
-    return matches
-
-  def _refresh_expense_participants(self):
-    matches = self._matching_expense_participants()
-    self.budget_participant_rows.items = matches
-    total_count = len(self._expense_participants)
-    visible_count = len(matches)
-    participant_word = "participant" if total_count == 1 else "participants"
-    self.expense_filter_status.text = (
-      f"Showing {visible_count} of {total_count} {participant_word}"
-    )
-    self.no_budget_participants_state.visible = not matches
-    self.no_budget_participants_state.text = (
-      "No participant expense details have been added."
-      if not total_count
-      else "No participants match these filters."
-    )
 
   def _show_selected_standings(self):
     scope = self.standings_scope_picker.selected_value or "overall"
@@ -156,26 +80,10 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
   def standings_tab_button_click(self, **event_args):
     self._show_public_tab("standings")
 
+  @handle("round_one_tab_button", "click")
+  def round_one_tab_button_click(self, **event_args):
+    self._show_public_tab("round_one")
+
   @handle("pairs_tab_button", "click")
   def pairs_tab_button_click(self, **event_args):
     self._show_public_tab("pairs")
-
-  @handle("expenses_tab_button", "click")
-  def expenses_tab_button_click(self, **event_args):
-    self._show_public_tab("expenses")
-
-  @handle("expense_search", "change")
-  def expense_search_change(self, **event_args):
-    self._refresh_expense_participants()
-
-  @handle("expense_participant_type_filter", "change")
-  def expense_participant_type_filter_change(self, **event_args):
-    self._refresh_expense_participants()
-
-  @handle("expense_division_filter", "change")
-  def expense_division_filter_change(self, **event_args):
-    self._refresh_expense_participants()
-
-  @handle("expense_payment_filter", "change")
-  def expense_payment_filter_change(self, **event_args):
-    self._refresh_expense_participants()

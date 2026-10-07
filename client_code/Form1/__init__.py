@@ -15,6 +15,8 @@ class Form1(Form1Template):
       return
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
+    self._player_entries = []
+    self._round_one_score_drafts = {}
     self._field_detail_drafts = {}
     self._overall_standings = []
     self._active_standings = []
@@ -49,6 +51,13 @@ class Form1(Form1Template):
 
   def _show_view(self, name):
     show_tournament_context = name != "players"
+    field_scoring_views = {"event", "field", "round_one", "standings", "round_two"}
+    communication_views = {"email", "news"}
+    active_group = (
+      "field_scoring" if name in field_scoring_views else
+      "expenses" if name == "budget" else
+      "communication" if name in communication_views else None
+    )
     self.selected_tournament_eyebrow.visible = show_tournament_context
     self.current_event_title.visible = show_tournament_context
     self.current_event_subtitle.visible = show_tournament_context
@@ -63,22 +72,29 @@ class Form1(Form1Template):
     self.budget_section.visible = name == "budget"
     self.email_section.visible = name == "email"
     self.news_section.visible = name == "news"
-    tournament_view = name in {
-      "event", "field", "round_one", "standings", "round_two", "budget", "email", "news"
-    }
+    tournament_view = active_group is not None
     self.tournament_subnav.visible = tournament_view
+    self.field_scoring_page_nav.visible = name in field_scoring_views
+    self.communication_page_nav.visible = name in communication_views
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
       ("round_one", self.round_one_nav),
       ("standings", self.standings_nav),
       ("round_two", self.round_two_nav),
-      ("budget", self.budget_nav),
       ("email", self.email_nav),
       ("news", self.news_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
+      )
+    for group_name, button in (
+      ("field_scoring", self.field_scoring_nav),
+      ("expenses", self.expenses_nav),
+      ("communication", self.communication_nav),
+    ):
+      button.role = (
+        "tournament-subtab-active" if active_group == group_name else "tournament-subtab"
       )
 
   def _show_budget_tab(self, name):
@@ -188,12 +204,14 @@ class Form1(Form1Template):
       self.standings_scope_picker.items = [("Overall", "overall")]
       self.standings_scope_picker.selected_value = "overall"
       self.field_rows.items = []
-      self.score_rows.items = []
+      self._player_entries = []
+      self._round_one_score_drafts = {}
       self._overall_standings = []
       self._active_standings = []
       self.standings_rows.items = []
       self.standings_status.text = "Create or select a tournament to see standings."
       self.round_two_pairing_rows.items = []
+      self.foursome_group_rows.items = []
       self.budget_rows.items = []
       self._budget_cost_items = []
       self.budget_category_rows.items = []
@@ -265,6 +283,14 @@ class Form1(Form1Template):
     entries = anvil.server.call("list_tournament_entries", tournament)
     self._load_entry_options(entries)
     player_entries = [entry for entry in entries if entry["is_player"] is not False]
+    self._player_entries = player_entries
+    self._round_one_score_drafts = {
+      entry.get_id(): (
+        "" if entry["gross_18"] is None or entry["gross_18"] <= 0
+        else str(entry["gross_18"])
+      )
+      for entry in player_entries
+    }
     self.field_rows.items = []
     field_items = []
     for entry in player_entries:
@@ -283,7 +309,6 @@ class Form1(Form1Template):
         "handicap": handicap,
       })
     self.field_rows.items = field_items
-    self.score_rows.items = player_entries
     round_two_pairings = anvil.server.call("list_round_two_pairings", tournament)
     self.round_two_pairing_rows.items = self._round_two_pairing_items(
       round_two_pairings,
@@ -298,6 +323,11 @@ class Form1(Form1Template):
       self.round_two_pairing_status.text = (
         "Enter Round One scores first. Net pairing also requires a handicap for every player."
       )
+    foursomes = anvil.server.call("get_or_create_tournament_foursomes", tournament)
+    self.foursome_group_rows.items = self._foursome_group_items(
+      foursomes,
+      player_entries,
+    )
     division_counts = {division: 0 for division in self.division_options}
     missing_division_count = 0
     for entry in player_entries:
@@ -324,7 +354,11 @@ class Form1(Form1Template):
 
     self._overall_standings = anvil.server.call("get_net_standings", tournament)
     self._load_standings()
-    self.round_one_status.text = ""
+    self.round_one_status.text = (
+      "Tee times are ready. Enter gross scores in each group."
+      if self.foursome_group_rows.items
+      else "Add players to this tournament to create tee time groups."
+    )
 
     summary = anvil.server.call("get_budget_summary", tournament)
     self.budget_category_rows.items = summary["categories"]
@@ -373,6 +407,38 @@ class Form1(Form1Template):
       }
       for pairing in pairings
     ]
+
+  def _foursome_group_items(self, foursomes, player_entries):
+    entry_options = [(entry["golfer"]["name"], entry) for entry in player_entries]
+    entry_options = [("Open slot", None)] + entry_options
+    items = []
+    for group in foursomes:
+      entries = [
+        group[f"player_{slot}"]
+        for slot in range(1, 5)
+        if group[f"player_{slot}"] is not None
+      ]
+      items.append(self._foursome_group_item(
+        group["sequence"],
+        group["group_label"] or f"Group {group['sequence']}",
+        entries,
+        entry_options,
+        group["tee_time"] or "",
+      ))
+    return items
+
+  def _foursome_group_item(self, sequence, label, entries, entry_options, tee_time=""):
+    item = {
+      "sequence": sequence,
+      "group_label": label,
+      "tee_time": tee_time,
+      "entry_options": entry_options,
+      "score_entries": entries,
+      "score_drafts": self._round_one_score_drafts,
+    }
+    for slot in range(1, 5):
+      item[f"player_{slot}"] = entries[slot - 1] if len(entries) >= slot else None
+    return item
 
   @staticmethod
   def _round_two_pairing_key(pairing):
@@ -567,11 +633,31 @@ class Form1(Form1Template):
 
   def _current_round_one_scores(self):
     scores = []
-    for row in self.score_rows.get_components():
-      gross = getattr(row, "gross_box").text
-      if gross is not None and str(gross).strip():
-        scores.append({"entry": getattr(row, "item"), "gross": gross})
+    for group in self.foursome_group_rows.get_components():
+      group_item = getattr(group, "item")
+      for slot in range(1, 5):
+        entry = group_item[f"player_{slot}"]
+        if entry is None:
+          continue
+        gross = getattr(group, f"gross_score_{slot}").text
+        self._round_one_score_drafts[entry.get_id()] = gross
+        if gross is not None and str(gross).strip():
+          scores.append({"entry": entry, "gross": gross})
     return scores
+
+  def _current_foursome_assignments(self):
+    assignments = []
+    for group in self.foursome_group_rows.items or []:
+      assignments.append({
+        "group_label": group.get("group_label", ""),
+        "tee_time": group.get("tee_time", ""),
+        "entries": [
+          group[f"player_{slot}"]
+          for slot in range(1, 5)
+          if group[f"player_{slot}"] is not None
+        ],
+      })
+    return assignments
 
   def _load_standings(self):
     if self.current_event is None:
@@ -627,6 +713,18 @@ class Form1(Form1Template):
   @handle("event_nav", "click")
   def event_nav_click(self, **event_args):
     self._show_view("event")
+
+  @handle("field_scoring_nav", "click")
+  def field_scoring_nav_click(self, **event_args):
+    self._show_view("event")
+
+  @handle("expenses_nav", "click")
+  def expenses_nav_click(self, **event_args):
+    self._show_view("budget")
+
+  @handle("communication_nav", "click")
+  def communication_nav_click(self, **event_args):
+    self._show_view("email")
 
   @handle("email_nav", "click")
   def email_nav_click(self, **event_args):
@@ -792,7 +890,7 @@ class Form1(Form1Template):
       if existing is not None:
         pairing["score_9"] = existing["score_9"]
         pairing["score_changed"] = existing["score_changed"]
-    player_entries = self.score_rows.items or []
+    player_entries = self._player_entries
     self.round_two_pairing_rows.items = self._round_two_pairing_items(
       pairings,
       player_entries,
@@ -831,6 +929,115 @@ class Form1(Form1Template):
       return
     self._load_event_data()
     self.round_two_pairing_status.text = "Round Two pairs and shared scores saved."
+
+  @handle("generate_foursomes_button", "click")
+  def generate_foursomes_button_click(self, **event_args):
+    if self.current_event is None:
+      self.round_one_status.text = "Create or select a tournament first."
+      return
+    result = anvil.server.call(
+      "build_tournament_foursomes",
+      self.current_event,
+    )
+    if not result["ok"]:
+      self.round_one_status.text = result["message"]
+      return
+
+    self._current_round_one_scores()
+    existing_groups = {
+      group["sequence"]: group
+      for group in self.foursome_group_rows.items or []
+    }
+    entry_options = [("Open slot", None)] + [
+      (entry["golfer"]["name"], entry) for entry in self._player_entries
+    ]
+    group_items = []
+    for grouping in result["groupings"]:
+      existing_group = existing_groups.get(grouping["sequence"], {})
+      group_items.append(self._foursome_group_item(
+        grouping["sequence"],
+        existing_group.get("group_label") or grouping["group_label"],
+        grouping["entries"],
+        entry_options,
+        existing_group.get("tee_time") or "",
+      ))
+    self.foursome_group_rows.items = group_items
+    self.round_one_status.text = (
+      f"Preview: {result['group_count']} tee time groups generated. "
+      "Edit players as needed, then save tee times and scores."
+    )
+
+  @handle("add_foursome_group_button", "click")
+  def add_foursome_group_button_click(self, **event_args):
+    if self.current_event is None:
+      self.round_one_status.text = "Create or select a tournament first."
+      return
+    if not self._player_entries:
+      self.round_one_status.text = "Add players to this tournament before adding groups."
+      return
+
+    self._current_round_one_scores()
+    group_items = list(self.foursome_group_rows.items or [])
+    entry_options = [("Open slot", None)] + [
+      (entry["golfer"]["name"], entry) for entry in self._player_entries
+    ]
+    group_items.append(self._foursome_group_item(
+      len(group_items) + 1,
+      f"Group {len(group_items) + 1}",
+      [],
+      entry_options,
+    ))
+    self.foursome_group_rows.items = group_items
+    self.round_one_status.text = (
+      "Group added. Assign 1–4 players to every group, then save."
+    )
+
+  @handle("foursome_group_rows", "x-grouping-changed")
+  def foursome_group_rows_grouping_changed(self, **event_args):
+    for entry_id, gross in event_args.get("score_drafts", {}).items():
+      self._round_one_score_drafts[entry_id] = gross
+    self.round_one_status.text = "Tee time or score changes are not saved yet."
+
+  @handle("foursome_group_rows", "x-round-one-score-changed")
+  def foursome_group_rows_round_one_score_changed(self, entry, gross, **event_args):
+    self._round_one_score_drafts[entry.get_id()] = gross
+    self.round_one_status.text = "Tee time or score changes are not saved yet."
+
+  @handle("foursome_group_rows", "x-save-round-one-group")
+  def foursome_group_rows_save_round_one_group(self, group_label, scores, **event_args):
+    if self.current_event is None:
+      self.round_one_status.text = "Create or select a tournament first."
+      return
+
+    self._current_round_one_scores()
+    grouping_result = anvil.server.call(
+      "save_tournament_foursomes",
+      self.current_event,
+      self._current_foursome_assignments(),
+    )
+    if not grouping_result["ok"]:
+      self.round_one_status.text = grouping_result["message"]
+      return
+
+    if not scores:
+      self.round_one_status.text = (
+        f"Tee times saved. Enter gross scores in {group_label} when ready."
+      )
+      return
+
+    result = anvil.server.call(
+      "save_round_one_scores_batch",
+      self.current_event,
+      scores,
+    )
+    if not result["ok"]:
+      self.round_one_status.text = result["message"]
+      return
+    count = result["saved_count"]
+    player_word = "player" if count == 1 else "players"
+    self.round_one_status.text = (
+      f"Tee times and {group_label} scores saved for {count} {player_word}."
+    )
 
   @handle("players_nav", "click")
   def players_nav_click(self, **event_args):
@@ -877,10 +1084,6 @@ class Form1(Form1Template):
   @handle("public_view_nav", "click")
   def public_view_nav_click(self, **event_args):
     open_form("PublicStandings")
-
-  @handle("budget_nav", "click")
-  def budget_nav_click(self, **event_args):
-    self._show_view("budget")
 
   @handle("budget_categories_tab_button", "click")
   def budget_categories_tab_button_click(self, **event_args):
@@ -1295,28 +1498,6 @@ class Form1(Form1Template):
     self.player_status.text = f"Deleted {name} and removed {entry_count} {entry_label}."
     self._load_players()
     self._load_event_data()
-
-  @handle("save_round_one_scores_button", "click")
-  def save_round_one_scores_button_click(self, **event_args):
-    if self.current_event is None:
-      self.round_one_status.text = "Create or select a tournament first."
-      return
-    scores = self._current_round_one_scores()
-    if not scores:
-      self.round_one_status.text = "Enter at least one gross score before saving."
-      return
-    result = anvil.server.call(
-      "save_round_one_scores_batch",
-      self.current_event,
-      scores,
-    )
-    if not result["ok"]:
-      self.round_one_status.text = result["message"]
-      return
-    self._load_event_data()
-    self.round_one_status.text = (
-      f"Round-one scores saved for {result['saved_count']} players."
-    )
 
   @handle("save_budget_payments_button", "click")
   def save_budget_payments_button_click(self, **event_args):
