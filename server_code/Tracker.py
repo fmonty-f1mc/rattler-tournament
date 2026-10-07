@@ -761,6 +761,21 @@ def _net_standings(entries):
   ]
 
 
+def _public_round_one_group(group):
+  public_group = {
+    "group_label": group["group_label"] or f"Group {group['sequence']}",
+    "tee_time": group["tee_time"] or "Tee time not posted",
+  }
+  for slot in range(1, 5):
+    entry = group[f"player_{slot}"]
+    public_group[f"player_{slot}_name"] = _entry_name(entry) if entry else "—"
+    gross = entry["gross_18"] if entry else None
+    public_group[f"player_{slot}_score"] = (
+      str(gross) if gross and gross > 0 else "Not posted"
+    ) if entry else "—"
+  return public_group
+
+
 @anvil.server.callable
 def get_public_tournament_standings():
   tournaments = sorted(
@@ -776,6 +791,10 @@ def get_public_tournament_standings():
       if _entry_is_player(entry)
     ]
     budget_summary = _budget_summary(tournament)
+    round_one_groups = sorted(
+      app_tables.tournament_foursomes.search(tournament=tournament),
+      key=lambda group: group["sequence"],
+    )
     round_two_pairs = sorted(
       app_tables.round_two_pairings.search(tournament=tournament),
       key=lambda pairing: pairing["sequence"],
@@ -801,6 +820,9 @@ def get_public_tournament_standings():
       ],
       "standings": _net_standings(player_entries),
       "divisions": divisions,
+      "round_one_groups": [
+        _public_round_one_group(group) for group in round_one_groups
+      ],
       "round_two_pairs": [
         {
           "pair_label": pairing["pair_label"],

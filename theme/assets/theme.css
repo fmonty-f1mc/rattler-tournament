@@ -151,6 +151,8 @@ a:focus {
 .anvil-role-tournament-subnav {
   width: 100%;
   margin: 18px 0 26px;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .anvil-role-tournament-subtab > button {
@@ -247,6 +249,52 @@ a:focus {
 .public-tournament-heading .anvil-role-h2 {
   display: block;
   font-size: 22px;
+}
+
+.public-round-one-group-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.public-round-one-card {
+  padding: 16px;
+  border: 1px solid var(--blank-border);
+  border-radius: 6px;
+  background: var(--blank-surface);
+}
+
+.public-round-one-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.public-round-one-players {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.public-round-one-players > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.public-round-one-players > div > span,
+.public-round-one-players small {
+  color: var(--blank-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.public-round-one-players small .anvil-label {
+  display: inline;
+  color: inherit;
 }
 
 .public-leaderboard-section .section-heading h3 {
@@ -1225,6 +1273,10 @@ input.anvil-role-budget-paid-input:disabled {
 
   .public-budget-summary {
     grid-template-columns: 1fr;
+  }
+
+  .public-round-one-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .public-budget-row {

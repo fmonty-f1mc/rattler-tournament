@@ -5,9 +5,18 @@
       <anvil-component type="Label" name="tournament_title" prop:role="h2"></anvil-component>
     </div>
     <anvil-component type="FlowPanel" name="public_tab_nav" prop:role="tournament-subnav">
+      <anvil-component type="Button" name="round_one_tab_button" prop:text="Round One" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="standings_tab_button" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="pairs_tab_button" prop:text="Pairs" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="expenses_tab_button" prop:text="Expenses" prop:role="tournament-subtab"></anvil-component>
+    </anvil-component>
+    <anvil-component type="ColumnPanel" name="round_one_tab">
+      <section class="public-leaderboard-section">
+        <div class="section-heading">
+          <div><p class="eyebrow">FIRST ROUND</p><h3>Round One</h3></div>
+        </div>
+        <anvil-component type="RepeatingPanel" name="round_one_group_rows" prop:item_template="rattler_tournament.PublicRoundOneGroup" prop:role="public-round-one-group-list"></anvil-component>
+        <anvil-component type="Label" name="no_round_one_groups_state" prop:role="muted-text" prop:text="Round One groups have not been posted yet."></anvil-component>
+      </section>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="standings_tab">
       <section class="public-leaderboard-section">
@@ -34,28 +43,6 @@
         </div>
         <anvil-component type="RepeatingPanel" name="round_two_pair_rows" prop:item_template="rattler_tournament.PublicRoundTwoPair" prop:role="public-round-two-pair-list"></anvil-component>
         <anvil-component type="Label" name="no_round_two_pairs_state" prop:role="muted-text" prop:text="Second round pairs have not been posted yet."></anvil-component>
-      </section>
-    </anvil-component>
-    <anvil-component type="ColumnPanel" name="expenses_tab">
-      <section class="public-leaderboard-section">
-        <div class="section-heading">
-          <div><p class="eyebrow">TOURNAMENT EXPENSES</p><h3>Expense summary</h3></div>
-        </div>
-        <div class="public-budget-summary">
-          <div><span>Estimated expenses</span><anvil-component type="Label" name="budget_total" prop:text="$0.00"></anvil-component></div>
-          <div><span>Paid so far</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00"></anvil-component></div>
-          <div><span>Left to cover</span><anvil-component type="Label" name="budget_balance" prop:text="$0.00"></anvil-component></div>
-        </div>
-        <h4>Participant balances</h4>
-        <div class="public-expense-filters">
-          <div class="field-block"><label>Search by name</label><anvil-component type="TextBox" name="expense_search" prop:placeholder="Search participants"></anvil-component></div>
-          <div class="field-block"><label>Participant type</label><anvil-component type="DropDown" name="expense_participant_type_filter"></anvil-component></div>
-          <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="expense_division_filter"></anvil-component></div>
-          <div class="field-block"><label>Payment status</label><anvil-component type="DropDown" name="expense_payment_filter"></anvil-component></div>
-        </div>
-        <anvil-component type="Label" name="expense_filter_status" prop:role="muted-text"></anvil-component>
-        <anvil-component type="RepeatingPanel" name="budget_participant_rows" prop:item_template="rattler_tournament.PublicBudgetRow" prop:role="public-budget-participant-list"></anvil-component>
-        <anvil-component type="Label" name="no_budget_participants_state" prop:role="muted-text" prop:text="No participant expense details have been added."></anvil-component>
       </section>
     </anvil-component>
   </section>
