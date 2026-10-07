@@ -961,9 +961,9 @@ input.anvil-role-budget-paid-input:disabled {
   color: white;
 }
 
-.anvil-role-player-details-save-button {
-  display: block;
-  text-align: right;
+.player-details-save-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .anvil-role-budget-save-button > button:hover,
