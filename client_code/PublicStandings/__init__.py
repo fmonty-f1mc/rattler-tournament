@@ -9,6 +9,8 @@ import anvil.users
 class PublicStandings(PublicStandingsTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
+    if anvil.users.get_user() is not None:
+      self.sign_in_button.text = "Committee dashboard"
     self.tournaments = anvil.server.call("get_public_tournament_standings")
     self.tournament_picker.items = [
       (tournament["title"], tournament)
@@ -32,6 +34,9 @@ class PublicStandings(PublicStandingsTemplate):
 
   @handle("sign_in_button", "click")
   def sign_in_button_click(self, **event_args):
+    if anvil.users.get_user() is not None:
+      open_form("Form1")
+      return
     user = anvil.users.login_with_form(
       show_signup_option=True,
       allow_cancel=True,

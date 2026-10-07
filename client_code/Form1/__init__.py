@@ -758,6 +758,10 @@ class Form1(Form1Template):
   def players_nav_click(self, **event_args):
     self._show_view("players")
 
+  @handle("public_view_nav", "click")
+  def public_view_nav_click(self, **event_args):
+    open_form("PublicStandings")
+
   @handle("budget_nav", "click")
   def budget_nav_click(self, **event_args):
     self._show_view("budget")

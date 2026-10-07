@@ -51,6 +51,18 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
     self.expense_payment_filter.selected_value = "all"
     self._refresh_expense_participants()
     self._show_selected_standings()
+    self._show_public_tab("standings")
+
+  def _show_public_tab(self, name):
+    for tab_name, panel, button in (
+      ("standings", self.standings_tab, self.standings_tab_button),
+      ("pairs", self.pairs_tab, self.pairs_tab_button),
+      ("expenses", self.expenses_tab, self.expenses_tab_button),
+    ):
+      panel.visible = name == tab_name
+      button.role = (
+        "tournament-subtab-active" if name == tab_name else "tournament-subtab"
+      )
 
   @staticmethod
   def _money(value):
@@ -139,6 +151,18 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
   @handle("standings_sort_by", "change")
   def standings_sort_by_change(self, **event_args):
     self._show_selected_standings()
+
+  @handle("standings_tab_button", "click")
+  def standings_tab_button_click(self, **event_args):
+    self._show_public_tab("standings")
+
+  @handle("pairs_tab_button", "click")
+  def pairs_tab_button_click(self, **event_args):
+    self._show_public_tab("pairs")
+
+  @handle("expenses_tab_button", "click")
+  def expenses_tab_button_click(self, **event_args):
+    self._show_public_tab("expenses")
 
   @handle("expense_search", "change")
   def expense_search_change(self, **event_args):
