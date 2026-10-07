@@ -11,7 +11,15 @@ class BudgetRow(BudgetRowTemplate):
     self.paid_box.text = self._display_amount(
       self.item.get("draft_paid", self.item["entry"]["amount_paid"])
     )
-    self.amount_owed_label.text = "Amount owed: ${:,.2f}".format(self.item["estimated_share"])
+    self.paid_box.enabled = False
+    saved_paid = self.item["entry"]["amount_paid"] or 0
+    paid_amount = self.item.get("draft_paid", saved_paid)
+    try:
+      paid_amount = float(paid_amount)
+    except (TypeError, ValueError):
+      paid_amount = saved_paid
+    amount_owed = self.item["estimated_share"] - paid_amount
+    self.amount_owed_label.text = "Amount owed: ${:,.2f}".format(amount_owed)
     expense_details = [
       category for category in self.item["categories"] if category["selected"]
     ]

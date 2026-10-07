@@ -419,13 +419,29 @@ class Form1(Form1Template):
       self.budget_status.text = "Select at least one participant first."
       return
 
-    amount = self.budget_bulk_paid_amount.text
+    try:
+      amount = float(self.budget_bulk_paid_amount.text)
+    except (TypeError, ValueError):
+      self.budget_status.text = "Enter a valid payment amount greater than $0."
+      return
+    if not 0 < amount < float("inf"):
+      self.budget_status.text = "Enter a valid payment amount greater than $0."
+      return
+
     for item in selected_items:
-      item["draft_paid"] = amount
+      saved_paid = item["entry"]["amount_paid"] or 0
+      current_paid = item.get("draft_paid", saved_paid)
+      try:
+        current_paid = float(current_paid or 0)
+      except (TypeError, ValueError):
+        current_paid = saved_paid
+      item["draft_paid"] = current_paid + amount
+      item["draft_payment"] = item.get("draft_payment", 0) + amount
+    self.budget_bulk_paid_amount.text = ""
     self._refresh_budget_cost_rows(capture_drafts=False)
     self.budget_status.text = (
-      f"Amount applied to {len(selected_items)} participant(s). "
-      "Click Save Amount Paid to save the changes."
+      f"Payment added to the pending total for {len(selected_items)} participant(s). "
+      "Click Save Payments to save it."
     )
 
   def _load_budget_target_items(self, rows, tournament):
@@ -1213,20 +1229,20 @@ class Form1(Form1Template):
       self.budget_status.text = "Create or select a tournament first."
       return
 
-    self._capture_budget_cost_drafts()
     payments = [
       {
         "entry": item["entry"],
-        "amount_paid": item.get("draft_paid", item["entry"]["amount_paid"]),
+        "payment_amount": item["draft_payment"],
       }
       for item in self._budget_cost_items
+      if item.get("draft_payment", 0) > 0
     ]
     if not payments:
-      self.budget_status.text = "There are no participant payments to save."
+      self.budget_status.text = "There are no pending payments to save."
       return
 
     result = anvil.server.call(
-      "save_entry_payments",
+      "add_entry_payments",
       self.current_event,
       payments,
     )
@@ -1235,4 +1251,4 @@ class Form1(Form1Template):
       return
     self._load_event_data()
     count = result["saved_count"]
-    self.budget_status.text = f"Amount paid saved for {count} participant(s)."
+    self.budget_status.text = f"Payments added to Amount Paid totals for {count} participant(s)."

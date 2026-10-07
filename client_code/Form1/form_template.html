@@ -197,16 +197,16 @@
         <anvil-component type="RepeatingPanel" name="budget_target_rows" prop:item_template="rattler_tournament.BudgetParticipantSelectRow" prop:role="budget-target-list"></anvil-component>
       </div>
       <div class="budget-summary">
-        <div><span>Amount owed</span><anvil-component type="Label" name="budget_total" prop:text="$0.00"></anvil-component></div>
-        <div><span>Amount paid</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00"></anvil-component></div>
+        <div><span>Amount owed</span><anvil-component type="Label" name="budget_total" prop:text="$0.00" prop:role="budget-owed"></anvil-component></div>
+        <div><span>Amount paid</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00" prop:role="budget-paid"></anvil-component></div>
         <div><span>Balance</span><anvil-component type="Label" name="budget_balance" prop:text="$0.00"></anvil-component></div>
         <div><span>Participants</span><anvil-component type="Label" name="budget_participants" prop:text="0 participants"></anvil-component></div>
       </div>
       <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
       <div class="tracker-card">
         <div class="budget-cost-header">
-          <div class="section-heading"><div><p class="eyebrow">Payements</p><h2>Expense details and payments</h2></div><span class="muted-copy">Each participant’s assigned categories show their per-person share. Save Amount Paid saves all participant rows, including those hidden by filters.</span></div>
-          <anvil-component type="Button" name="save_budget_payments_button" prop:text="Save Amount Paid" prop:role="budget-save-button"></anvil-component>
+          <div class="section-heading"><div><p class="eyebrow">Payements</p><h2>Expense details and payments</h2></div><span class="muted-copy">Each participant’s assigned categories show their per-person share. Save Payments adds pending payments for all participants, including those hidden by filters.</span></div>
+          <anvil-component type="Button" name="save_budget_payments_button" prop:text="Save Payments" prop:role="budget-save-button"></anvil-component>
         </div>
         <div class="budget-bulk-controls">
           <div class="field-block"><label>Participant type</label><anvil-component type="DropDown" name="budget_cost_type_filter"></anvil-component></div>
@@ -214,12 +214,12 @@
           <div class="field-block"><label>Search by name</label><anvil-component type="TextBox" name="budget_cost_search" prop:placeholder="Search participants"></anvil-component></div>
         </div>
         <div class="budget-payment-bulk-controls">
-          <div class="field-block budget-payment-amount-field"><label>Amount paid for selected ($)</label><anvil-component type="TextBox" name="budget_bulk_paid_amount" prop:placeholder="0"></anvil-component></div>
+          <div class="field-block budget-payment-amount-field"><label>Payment amount to add for selected ($)</label><anvil-component type="TextBox" name="budget_bulk_paid_amount" prop:placeholder="0"></anvil-component></div>
           <div class="budget-payment-bulk-actions">
             <anvil-component type="Button" name="select_all_budget_payments_button" prop:text="Select all participants" prop:role="secondary-button"></anvil-component>
             <anvil-component type="Button" name="select_matching_budget_payments_button" prop:text="Select all matching" prop:role="secondary-button"></anvil-component>
             <anvil-component type="Button" name="clear_budget_payment_selection_button" prop:text="Clear selection" prop:role="secondary-button"></anvil-component>
-            <anvil-component type="Button" name="apply_budget_paid_amount_button" prop:text="Set amount for selected" prop:role="secondary-button"></anvil-component>
+            <anvil-component type="Button" name="apply_budget_paid_amount_button" prop:text="Add payment to selected" prop:role="secondary-button"></anvil-component>
           </div>
         </div>
         <anvil-component type="Label" name="budget_payment_selection_status" prop:role="muted-text"></anvil-component>
