@@ -954,14 +954,22 @@ input.anvil-role-budget-paid-input:disabled {
   margin-bottom: 0;
 }
 
-.anvil-role-budget-save-button > button {
+.anvil-role-budget-save-button > button,
+.anvil-role-player-details-save-button > button {
   border-color: #16743a;
   background: #198a43;
   color: white;
 }
 
+.anvil-role-player-details-save-button {
+  display: block;
+  text-align: right;
+}
+
 .anvil-role-budget-save-button > button:hover,
-.anvil-role-budget-save-button > button:focus {
+.anvil-role-budget-save-button > button:focus,
+.anvil-role-player-details-save-button > button:hover,
+.anvil-role-player-details-save-button > button:focus {
   background: #126d34;
   color: white;
 }
