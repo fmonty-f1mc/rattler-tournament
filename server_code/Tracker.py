@@ -1126,13 +1126,22 @@ def _save_tournament_foursome_rows(tournament, groups):
     group["sequence"]: group
     for group in app_tables.tournament_foursomes.search(tournament=tournament)
   }
-  for sequence, group_entries in enumerate(groups, 1):
+  for sequence, group_data in enumerate(groups, 1):
+    if isinstance(group_data, dict):
+      group_entries = group_data["entries"]
+      group_label = group_data["group_label"]
+      tee_time = group_data["tee_time"]
+    else:
+      group_entries = group_data
+      group_label = None
+      tee_time = ""
     players = group_entries + [None] * (4 - len(group_entries))
     group = existing_rows.pop(sequence, None)
     values = {
       "tournament": tournament,
       "sequence": sequence,
-      "group_label": f"Group {sequence}",
+      "group_label": group_label or f"Group {sequence}",
+      "tee_time": tee_time,
       "grouping_basis": "tee_time",
       "player_1": players[0],
       "player_2": players[1],
@@ -1187,9 +1196,20 @@ def save_tournament_foursomes(tournament, assignments):
   entry_by_id = {entry.get_id(): entry for entry in entries}
   assigned_ids = []
   normalized_groups = []
-  for assignment in assignments:
+  for sequence, assignment in enumerate(assignments, 1):
     if not isinstance(assignment, dict):
       return _result("Choose players for each group.")
+
+    group_label = assignment.get("group_label", "")
+    if group_label is not None and not isinstance(group_label, str):
+      return _result("Group names must be text.")
+    group_label = (group_label or "").strip() or f"Group {sequence}"
+    tee_time = assignment.get("tee_time", "")
+    if tee_time is None:
+      tee_time = ""
+    if not isinstance(tee_time, str):
+      return _result("Tee times must be text.")
+    tee_time = tee_time.strip()
 
     group_entries = assignment.get("entries")
     if not isinstance(group_entries, (list, tuple)) or not group_entries:
@@ -1205,7 +1225,11 @@ def save_tournament_foursomes(tournament, assignments):
         return _result("Choose players from this tournament's field.")
       assigned_ids.append(entry_id)
       normalized_group.append(entry_by_id[entry_id])
-    normalized_groups.append(normalized_group)
+    normalized_groups.append({
+      "entries": normalized_group,
+      "group_label": group_label,
+      "tee_time": tee_time,
+    })
 
   if len(assigned_ids) != len(entries) or set(assigned_ids) != set(entry_by_id):
     return _result("Assign every player exactly once across the groups.")

@@ -41,8 +41,15 @@ class FoursomeRow(FoursomeRowTemplate):
 
   def _capture_group_details(self):
     group_name = (self.group_name_box.text or "").strip()
-    self.item["group_label"] = group_name or f"Group {self.item['sequence']}"
+    self.item["group_label"] = group_name
     self.item["tee_time"] = (self.tee_time_box.text or "").strip()
+
+  def _group_details_changed(self):
+    self._capture_group_details()
+    self.parent.raise_event(
+      "x-grouping-changed",
+      score_drafts=self._score_drafts,
+    )
 
   def _grouping_changed(self, slot):
     self._capture_score_drafts()
@@ -70,6 +77,9 @@ class FoursomeRow(FoursomeRowTemplate):
   def save_group_button_click(self, **event_args):
     self._capture_score_drafts()
     self._capture_group_details()
+    if not self.item["group_label"]:
+      self.item["group_label"] = f"Group {self.item['sequence']}"
+      self.group_name_box.text = self.item["group_label"]
     scores = []
     for slot in range(1, 5):
       entry = self.item[f"player_{slot}"]
@@ -82,6 +92,14 @@ class FoursomeRow(FoursomeRowTemplate):
       tee_time=self.item["tee_time"],
       scores=scores,
     )
+
+  @handle("group_name_box", "change")
+  def group_name_box_change(self, **event_args):
+    self._group_details_changed()
+
+  @handle("tee_time_box", "change")
+  def tee_time_box_change(self, **event_args):
+    self._group_details_changed()
 
   @handle("player_1", "change")
   def player_1_change(self, **event_args):

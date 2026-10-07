@@ -1185,6 +1185,15 @@ input.anvil-role-budget-paid-input:disabled {
     grid-template-columns: 1fr;
   }
 
+  .foursome-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .foursome-details {
+    grid-template-columns: 1fr;
+  }
+
   .score-player,
   .player-row > div:first-child,
   .entry-details-row > .field-player,

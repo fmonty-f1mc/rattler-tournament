@@ -423,13 +423,15 @@ class Form1(Form1Template):
         group["group_label"] or f"Group {group['sequence']}",
         entries,
         entry_options,
+        group["tee_time"] or "",
       ))
     return items
 
-  def _foursome_group_item(self, sequence, label, entries, entry_options):
+  def _foursome_group_item(self, sequence, label, entries, entry_options, tee_time=""):
     item = {
       "sequence": sequence,
       "group_label": label,
+      "tee_time": tee_time,
       "entry_options": entry_options,
       "score_entries": entries,
       "score_drafts": self._round_one_score_drafts,
@@ -647,6 +649,8 @@ class Form1(Form1Template):
     assignments = []
     for group in self.foursome_group_rows.items or []:
       assignments.append({
+        "group_label": group.get("group_label", ""),
+        "tee_time": group.get("tee_time", ""),
         "entries": [
           group[f"player_{slot}"]
           for slot in range(1, 5)
@@ -940,16 +944,22 @@ class Form1(Form1Template):
       return
 
     self._current_round_one_scores()
+    existing_groups = {
+      group["sequence"]: group
+      for group in self.foursome_group_rows.items or []
+    }
     entry_options = [("Open slot", None)] + [
       (entry["golfer"]["name"], entry) for entry in self._player_entries
     ]
     group_items = []
     for grouping in result["groupings"]:
+      existing_group = existing_groups.get(grouping["sequence"], {})
       group_items.append(self._foursome_group_item(
         grouping["sequence"],
-        grouping["group_label"],
+        existing_group.get("group_label") or grouping["group_label"],
         grouping["entries"],
         entry_options,
+        existing_group.get("tee_time") or "",
       ))
     self.foursome_group_rows.items = group_items
     self.round_one_status.text = (
