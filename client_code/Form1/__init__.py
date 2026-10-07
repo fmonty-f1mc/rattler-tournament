@@ -145,14 +145,12 @@ class Form1(Form1Template):
       self.standings_status.text = "Create or select a tournament to see standings."
       self.round_two_pairing_rows.items = []
       self.budget_rows.items = []
-      self.budget_accommodation_total.text = ""
-      self.budget_golf_total.text = ""
-      self.budget_travel_total.text = ""
-      self.budget_other_total.text = ""
+      self.budget_category_rows.items = []
+      self.new_budget_category_name.text = ""
       self.budget_total.text = "$0.00"
       self.budget_paid.text = "$0.00"
       self.budget_balance.text = "$0.00"
-      self.budget_accommodated.text = "0 participants"
+      self.budget_participants.text = "0 participants"
       self.round_one_status.text = ""
       self.round_two_pairing_status.text = ""
       self._load_entry_options([])
@@ -270,16 +268,13 @@ class Form1(Form1Template):
     self.round_one_status.text = ""
 
     summary = anvil.server.call("get_budget_summary", tournament)
-    totals = summary["category_totals"]
-    self.budget_accommodation_total.text = self._amount(totals["accommodation"])
-    self.budget_golf_total.text = self._amount(totals["golf"])
-    self.budget_travel_total.text = self._amount(totals["travel"])
-    self.budget_other_total.text = self._amount(totals["other"])
+    self.budget_category_rows.items = summary["categories"]
     self.budget_rows.items = summary["rows"]
     self.budget_total.text = self._money(summary["total"])
     self.budget_paid.text = self._money(summary["paid"])
     self.budget_balance.text = self._money(summary["balance"])
-    self.budget_accommodated.text = f"{summary['accommodated']} of {summary['participants']} participants"
+    count = summary["participants"]
+    self.budget_participants.text = f"{count} participant" + ("s" if count != 1 else "")
 
   def _capture_field_detail_drafts(self):
     for item in self._current_field_detail_values():
@@ -607,24 +602,59 @@ class Form1(Form1Template):
 
     self.email_status.text = result["message"]
 
-  @handle("save_budget_totals_button", "click")
-  def save_budget_totals_button_click(self, **event_args):
+  @handle("add_budget_category_button", "click")
+  def add_budget_category_button_click(self, **event_args):
     if self.current_event is None:
       self.budget_status.text = "Create or select a tournament first."
       return
     result = anvil.server.call(
-      "save_tournament_budget",
+      "add_budget_category",
       self.current_event,
-      self.budget_accommodation_total.text,
-      self.budget_golf_total.text,
-      self.budget_travel_total.text,
-      self.budget_other_total.text,
+      self.new_budget_category_name.text,
+    )
+    if not result["ok"]:
+      self.budget_status.text = result["message"]
+      return
+    self.new_budget_category_name.text = ""
+    self._load_event_data()
+    self.budget_status.text = "Budget category added."
+
+  @handle("budget_category_rows", "x-save-budget-category")
+  def budget_category_rows_save_budget_category(
+    self,
+    category,
+    name,
+    total,
+    players_only,
+    **event_args,
+  ):
+    result = anvil.server.call(
+      "save_budget_category",
+      category,
+      name,
+      total,
+      players_only,
     )
     if not result["ok"]:
       self.budget_status.text = result["message"]
       return
     self._load_event_data()
-    self.budget_status.text = "Budget totals saved."
+    self.budget_status.text = f"{name.strip()} saved."
+
+  @handle("budget_category_rows", "x-delete-budget-category")
+  def budget_category_rows_delete_budget_category(self, category, **event_args):
+    confirmed = confirm(
+      f"Delete {category['name']} from this tournament budget? Participant selections for this category will also be removed.",
+      title="Delete budget category",
+    )
+    if not confirmed:
+      return
+    result = anvil.server.call("delete_budget_category", category)
+    if not result["ok"]:
+      self.budget_status.text = result["message"]
+      return
+    self._load_event_data()
+    self.budget_status.text = "Budget category deleted."
 
   @handle("event_picker", "change")
   def event_picker_change(self, **event_args):
@@ -818,20 +848,14 @@ class Form1(Form1Template):
   def budget_rows_save_entry_budget(
     self,
     entry,
-    shares_accommodation,
-    shares_golf,
-    shares_travel,
-    shares_other,
+    categories,
     amount_paid,
     **event_args,
   ):
     result = anvil.server.call(
       "save_entry_budget",
       entry,
-      shares_accommodation,
-      shares_golf,
-      shares_travel,
-      shares_other,
+      categories,
       amount_paid,
     )
     if not result["ok"]:

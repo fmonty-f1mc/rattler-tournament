@@ -797,14 +797,16 @@ textarea.anvil-text-area:disabled,
   gap: 16px;
 }
 
-.budget-total-grid {
+.budget-category-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(100px, 1fr));
+  grid-template-columns: minmax(150px, 1.2fr) minmax(110px, 0.7fr) minmax(140px, 1fr) auto;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--blank-border);
 }
 
-.budget-total-grid label,
+.budget-category-row label,
 .budget-payment label {
   display: flex;
   flex-direction: column;
@@ -815,9 +817,21 @@ textarea.anvil-text-area:disabled,
 }
 
 .budget-category-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  margin-top: 12px;
+}
+
+.budget-category-share-row {
+  padding: 3px 0;
+}
+
+.budget-category-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.budget-category-add-form {
+  margin-top: 14px;
 }
 
 .budget-payment {
@@ -846,7 +860,7 @@ textarea.anvil-text-area:disabled,
   .form-grid-four,
   .form-grid-three,
   .form-grid-five,
-  .budget-total-grid,
+  .budget-category-row,
   .budget-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -864,6 +878,7 @@ textarea.anvil-text-area:disabled,
   .score-row,
   .player-row,
   .budget-row,
+  .budget-category-row,
   .entry-details-row,
   .round-two-pairing-row {
     grid-template-columns: 1fr;

@@ -170,26 +170,24 @@
       </div>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="budget_section" prop:role="tracker-view">
-      <div class="view-heading"><p class="eyebrow">WEEKEND COSTS</p><h2>Participant budget</h2><p class="muted-copy">Players and non-players can share accommodation, travel, and other costs. Golf costs can be shared by players.</p></div>
+      <div class="view-heading"><p class="eyebrow">WEEKEND COSTS</p><h2>Participant budget</h2><p class="muted-copy">Create the expense categories you need, set their totals, and choose who shares each cost.</p></div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">TOURNAMENT TOTALS</p><h2>Set category totals</h2></div><span class="muted-copy">Each total is divided equally among participants selected for that category.</span></div>
-        <div class="budget-total-grid">
-          <label>Accommodation total $<anvil-component type="TextBox" name="budget_accommodation_total" prop:placeholder="0"></anvil-component></label>
-          <label>Golf total $<anvil-component type="TextBox" name="budget_golf_total" prop:placeholder="0"></anvil-component></label>
-          <label>Travel total $<anvil-component type="TextBox" name="budget_travel_total" prop:placeholder="0"></anvil-component></label>
-          <label>Other total $<anvil-component type="TextBox" name="budget_other_total" prop:placeholder="0"></anvil-component></label>
+        <div class="section-heading"><div><p class="eyebrow">TOURNAMENT TOTALS</p><h2>Manage expense categories</h2></div><span class="muted-copy">Each category total is divided among the participants selected for it.</span></div>
+        <anvil-component type="RepeatingPanel" name="budget_category_rows" prop:item_template="rattler_tournament.BudgetCategoryRow" prop:role="budget-category-list"></anvil-component>
+        <div class="inline-form budget-category-add-form">
+          <anvil-component type="TextBox" name="new_budget_category_name" prop:placeholder="New category name"></anvil-component>
+          <anvil-component type="Button" name="add_budget_category_button" prop:text="Add category" prop:role="secondary-button"></anvil-component>
         </div>
-        <anvil-component type="Button" name="save_budget_totals_button" prop:text="Save totals" prop:role="secondary-button"></anvil-component>
       </div>
       <div class="budget-summary">
         <div><span>Estimated total</span><anvil-component type="Label" name="budget_total" prop:text="$0.00"></anvil-component></div>
         <div><span>Paid</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00"></anvil-component></div>
         <div><span>Balance</span><anvil-component type="Label" name="budget_balance" prop:text="$0.00"></anvil-component></div>
-        <div><span>Staying overnight</span><anvil-component type="Label" name="budget_accommodated" prop:text="0 players"></anvil-component></div>
+        <div><span>Participants</span><anvil-component type="Label" name="budget_participants" prop:text="0 participants"></anvil-component></div>
       </div>
       <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">PARTICIPANT SHARES</p><h2>Choose who shares each cost</h2></div><span class="muted-copy">Non-players can share all costs except golf.</span></div>
+        <div class="section-heading"><div><p class="eyebrow">PARTICIPANT SHARES</p><h2>Choose who shares each cost</h2></div><span class="muted-copy">Categories marked players only cannot be shared by non-players.</span></div>
         <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="rattler_tournament.BudgetRow" prop:role="budget-list"></anvil-component>
       </div>
     </anvil-component>

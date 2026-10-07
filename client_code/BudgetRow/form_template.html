@@ -5,10 +5,7 @@
       <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
       <anvil-component type="Label" name="share_total" prop:role="muted-text"></anvil-component>
       <div class="budget-category-grid">
-        <anvil-component type="CheckBox" name="accommodation_check" prop:text="Accommodation"></anvil-component>
-        <anvil-component type="CheckBox" name="golf_check" prop:text="Golf"></anvil-component>
-        <anvil-component type="CheckBox" name="travel_check" prop:text="Travel"></anvil-component>
-        <anvil-component type="CheckBox" name="other_check" prop:text="Other"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="category_rows" prop:item_template="rattler_tournament.BudgetCategoryShareRow" prop:role="budget-category-share-list"></anvil-component>
       </div>
     </div>
     <div class="budget-payment">
