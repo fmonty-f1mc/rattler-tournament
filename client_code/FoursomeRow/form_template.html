@@ -1,0 +1,12 @@
+<anvil-form container="ColumnPanel">
+  <div class="foursome-row">
+    <anvil-component type="Label" name="group_label" prop:role="row-title" bind:text="self.item['group_label']"></anvil-component>
+    <div class="foursome-players">
+      <label>Player 1<anvil-component type="DropDown" name="player_1"></anvil-component></label>
+      <label>Player 2<anvil-component type="DropDown" name="player_2"></anvil-component></label>
+      <label>Player 3<anvil-component type="DropDown" name="player_3"></anvil-component></label>
+      <label>Player 4<anvil-component type="DropDown" name="player_4"></anvil-component></label>
+    </div>
+  </div>
+  <anvil-component type="RepeatingPanel" name="score_rows" prop:item_template="rattler_tournament.ScoreRow" prop:role="score-list"></anvil-component>
+</anvil-form>

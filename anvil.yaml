@@ -285,6 +285,49 @@ db_schema:
     indexes: []
     server: full
     title: Tournament Entries
+  tournament_foursomes:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: sequence
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: group_label
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: grouping_basis
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: player_1
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: player_2
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: player_3
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: player_4
+      target: tournament_entries
+      type: link_single
+    indexes: []
+    server: full
+    title: Tournament Foursomes
   tournaments:
     client: none
     columns:

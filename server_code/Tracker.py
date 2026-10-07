@@ -3,6 +3,7 @@ from anvil.google.drive import app_files
 import csv
 import io
 import math
+import random
 import re
 from datetime import datetime
 
@@ -135,6 +136,15 @@ def _delete_pairings_for_entries(pairing_table, entries):
   for pairing in pairings.values():
     pairing.delete()
   return len(pairings)
+
+
+def _clear_tournament_foursomes(tournament):
+  if tournament is None:
+    return 0
+  groups = list(app_tables.tournament_foursomes.search(tournament=tournament))
+  for group in groups:
+    group.delete()
+  return len(groups)
 
 
 def _delete_budget_shares_for_entries(entries):
@@ -326,6 +336,12 @@ def delete_golfer(golfer):
     return _result("Choose a player from the roster.")
 
   entries = list(app_tables.tournament_entries.search(golfer=golfer))
+  cleared_tournaments = set()
+  for entry in entries:
+    tournament = entry["tournament"]
+    if tournament is not None and tournament.get_id() not in cleared_tournaments:
+      _clear_tournament_foursomes(tournament)
+      cleared_tournaments.add(tournament.get_id())
   rattler_pairing_count = _delete_pairings_for_entries(
     app_tables.rattler_pairings,
     entries,
@@ -356,11 +372,12 @@ def delete_tournament(tournament):
 
   rattler_pairings = list(app_tables.rattler_pairings.search(tournament=tournament))
   round_two_pairings = list(app_tables.round_two_pairings.search(tournament=tournament))
+  tournament_foursomes = list(app_tables.tournament_foursomes.search(tournament=tournament))
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
   divisions = list(app_tables.tournament_divisions.search(tournament=tournament))
   budget_categories = list(app_tables.budget_categories.search(tournament=tournament))
 
-  for pairing in rattler_pairings + round_two_pairings:
+  for pairing in rattler_pairings + round_two_pairings + tournament_foursomes:
     pairing.delete()
   _delete_budget_shares_for_entries(entries)
   for category in budget_categories:
@@ -462,6 +479,8 @@ def add_golfer_to_tournament(tournament, golfer, is_player=True):
 
 
 def _create_tournament_entry(tournament, golfer, is_player=True):
+  if is_player:
+    _clear_tournament_foursomes(tournament)
   return app_tables.tournament_entries.add_row(
     tournament=tournament,
     golfer=golfer,
@@ -527,6 +546,8 @@ def remove_tournament_entry(tournament, entry):
     or entry_tournament.get_id() != tournament.get_id()
   ):
     return _result("Choose a player entered in the selected tournament.")
+
+  _clear_tournament_foursomes(tournament)
 
   removed_pairing_count = _delete_pairings_for_entries(
     app_tables.rattler_pairings,
@@ -1056,6 +1077,151 @@ def save_round_two_pairings(tournament, assignments):
     pair_count=len(normalized_assignments),
     scored_pair_count=saved_score_count,
   )
+
+
+def _build_balanced_foursomes(entries):
+  shuffled_entries = list(entries)
+  random.shuffle(shuffled_entries)
+  group_count = (len(shuffled_entries) + 3) // 4
+  base_size, larger_group_count = divmod(len(shuffled_entries), group_count)
+  capacities = [
+    base_size + (1 if index < larger_group_count else 0)
+    for index in range(group_count)
+  ]
+  groups = []
+  entry_index = 0
+  for capacity in capacities:
+    groups.append(shuffled_entries[entry_index:entry_index + capacity])
+    entry_index += capacity
+  return groups
+
+
+@anvil.server.callable(require_user=True)
+def build_tournament_foursomes(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  entries = [
+    entry for entry in list_tournament_entries(tournament)
+    if _entry_is_player(entry)
+  ]
+  if not entries:
+    return _result("Add players to this tournament before building foursomes.")
+
+  groups = _build_balanced_foursomes(entries)
+  return _result(
+    group_count=len(groups),
+    groupings=[
+      {
+        "sequence": sequence,
+        "group_label": f"Group {sequence}",
+        "entries": group,
+      }
+      for sequence, group in enumerate(groups, 1)
+    ],
+  )
+
+
+@anvil.server.callable(require_user=True)
+def list_tournament_foursomes(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  return sorted(
+    app_tables.tournament_foursomes.search(tournament=tournament),
+    key=lambda group: group["sequence"],
+  )
+
+
+def _save_tournament_foursome_rows(tournament, groups):
+  existing_rows = {
+    group["sequence"]: group
+    for group in app_tables.tournament_foursomes.search(tournament=tournament)
+  }
+  for sequence, group_entries in enumerate(groups, 1):
+    players = group_entries + [None] * (4 - len(group_entries))
+    group = existing_rows.pop(sequence, None)
+    values = {
+      "tournament": tournament,
+      "sequence": sequence,
+      "group_label": f"Group {sequence}",
+      "grouping_basis": "tee_time",
+      "player_1": players[0],
+      "player_2": players[1],
+      "player_3": players[2],
+      "player_4": players[3],
+    }
+    if group is None:
+      app_tables.tournament_foursomes.add_row(**values)
+    else:
+      group.update(**values)
+  for stale_group in existing_rows.values():
+    stale_group.delete()
+
+
+@anvil.server.callable(require_user=True)
+def get_or_create_tournament_foursomes(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  existing_groups = list_tournament_foursomes(tournament)
+  if existing_groups:
+    return existing_groups
+  entries = [
+    entry for entry in list_tournament_entries(tournament)
+    if _entry_is_player(entry)
+  ]
+  if not entries:
+    return []
+  _save_tournament_foursome_rows(
+    tournament,
+    _build_balanced_foursomes(entries),
+  )
+  return list_tournament_foursomes(tournament)
+
+
+@anvil.server.callable(require_user=True)
+def save_tournament_foursomes(tournament, assignments):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  entries = [
+    entry for entry in list_tournament_entries(tournament)
+    if _entry_is_player(entry)
+  ]
+  if not entries:
+    return _result("Add players to this tournament before saving foursomes.")
+  if not isinstance(assignments, (list, tuple)):
+    return _result("Generate foursomes before editing them.")
+
+  expected_group_count = (len(entries) + 3) // 4
+  if len(assignments) != expected_group_count:
+    return _result("Generate foursomes for the current field before saving.")
+
+  entry_by_id = {entry.get_id(): entry for entry in entries}
+  assigned_ids = []
+  normalized_groups = []
+  for assignment in assignments:
+    if not isinstance(assignment, dict):
+      return _result("Choose players for each group.")
+
+    group_entries = assignment.get("entries")
+    if not isinstance(group_entries, (list, tuple)) or not group_entries:
+      return _result("Every group must have at least one player.")
+    if len(group_entries) > 4:
+      return _result("A foursome cannot have more than four players.")
+    normalized_group = []
+    for entry in group_entries:
+      if entry is None or not hasattr(entry, "get_id"):
+        return _result("Choose players from this tournament's field.")
+      entry_id = entry.get_id()
+      if entry_id not in entry_by_id:
+        return _result("Choose players from this tournament's field.")
+      assigned_ids.append(entry_id)
+      normalized_group.append(entry_by_id[entry_id])
+    normalized_groups.append(normalized_group)
+
+  if len(assigned_ids) != len(entries) or set(assigned_ids) != set(entry_by_id):
+    return _result("Assign every player exactly once across the groups.")
+
+  _save_tournament_foursome_rows(tournament, normalized_groups)
+  return _result(saved_count=len(normalized_groups))
 
 
 @anvil.server.callable(require_user=True)

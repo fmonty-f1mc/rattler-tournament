@@ -611,6 +611,30 @@ textarea.anvil-text-area:disabled,
   gap: 8px;
 }
 
+.foursome-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.6fr) minmax(320px, 2fr);
+  align-items: center;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--blank-border);
+}
+
+.foursome-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.foursome-players label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--blank-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .score-player {
   display: flex;
   align-items: baseline;
@@ -1124,6 +1148,10 @@ input.anvil-role-budget-paid-input:disabled {
   .budget-category-row,
   .entry-details-row,
   .round-two-pairing-row {
+    grid-template-columns: 1fr;
+  }
+
+  .foursome-row {
     grid-template-columns: 1fr;
   }
 
