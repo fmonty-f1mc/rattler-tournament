@@ -20,6 +20,9 @@ class BudgetRow(BudgetRowTemplate):
       paid_amount = saved_paid
     amount_owed = self.item["estimated_share"] - paid_amount
     self.amount_owed_label.text = "Amount owed: ${:,.2f}".format(amount_owed)
+    self.amount_owed_label.role = (
+      "budget-settled" if amount_owed <= 0 else "budget-owed"
+    )
     expense_details = [
       category for category in self.item["categories"] if category["selected"]
     ]

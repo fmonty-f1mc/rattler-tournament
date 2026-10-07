@@ -807,6 +807,11 @@ textarea.anvil-text-area:disabled,
   font-weight: 800;
 }
 
+.anvil-role-budget-settled {
+  color: #16743a;
+  font-weight: 800;
+}
+
 .budget-summary .anvil-role-budget-owed {
   color: #8f2525;
 }
