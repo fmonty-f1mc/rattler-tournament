@@ -19,6 +19,7 @@ class Form1(Form1Template):
     self._overall_standings = []
     self._active_standings = []
     self._budget_target_items = []
+    self._budget_cost_items = []
     self._budget_selected_entry_ids = set()
     self._budget_selection_tournament_id = None
     self.standings_scope_picker.items = [("Overall", "overall")]
@@ -148,6 +149,7 @@ class Form1(Form1Template):
       self.standings_status.text = "Create or select a tournament to see standings."
       self.round_two_pairing_rows.items = []
       self.budget_rows.items = []
+      self._budget_cost_items = []
       self.budget_category_rows.items = []
       self.budget_target_rows.items = []
       self.budget_bulk_category_picker.items = []
@@ -157,6 +159,12 @@ class Form1(Form1Template):
       self.budget_division_filter.items = [("All divisions", "all")]
       self.budget_division_filter.selected_value = "all"
       self.budget_target_search.text = ""
+      self.budget_cost_type_filter.items = [("Everyone", "all")]
+      self.budget_cost_type_filter.selected_value = "all"
+      self.budget_cost_division_filter.items = [("All divisions", "all")]
+      self.budget_cost_division_filter.selected_value = "all"
+      self.budget_cost_search.text = ""
+      self.budget_cost_match_status.text = "0 participants"
       self._budget_target_items = []
       self._budget_selected_entry_ids = set()
       self._budget_selection_tournament_id = None
@@ -284,7 +292,7 @@ class Form1(Form1Template):
 
     summary = anvil.server.call("get_budget_summary", tournament)
     self.budget_category_rows.items = summary["categories"]
-    self.budget_rows.items = summary["rows"]
+    self._load_budget_cost_items(summary["rows"])
     selected_category_id = (
       self.budget_bulk_category_picker.selected_value.get_id()
       if self.budget_bulk_category_picker.selected_value is not None
@@ -310,6 +318,85 @@ class Form1(Form1Template):
     self.budget_balance.text = self._money(summary["balance"])
     count = summary["participants"]
     self.budget_participants.text = f"{count} participant" + ("s" if count != 1 else "")
+
+  def _load_budget_cost_items(self, rows):
+    self._budget_cost_items = []
+    divisions = set()
+    for row in rows:
+      entry = row["entry"]
+      is_player = entry["is_player"] is not False
+      division = (entry["division"] or "").strip() if is_player else ""
+      if division:
+        divisions.add(division)
+      row["_is_player"] = is_player
+      row["_division"] = division
+      self._budget_cost_items.append(row)
+
+    type_options = [
+      ("Everyone", "all"),
+      ("Players", "players"),
+      ("Non-players", "non_players"),
+    ]
+    division_options = [("All divisions", "all"), ("Players without division", "unassigned")]
+    division_options.extend(
+      (division, "division:" + division)
+      for division in sorted(divisions, key=lambda value: value.lower())
+    )
+    selected_type = self.budget_cost_type_filter.selected_value or "all"
+    self.budget_cost_type_filter.items = type_options
+    self.budget_cost_type_filter.selected_value = next(
+      (value for _, value in type_options if value == selected_type),
+      "all",
+    )
+    selected_division = self.budget_cost_division_filter.selected_value or "all"
+    self.budget_cost_division_filter.items = division_options
+    self.budget_cost_division_filter.selected_value = next(
+      (value for _, value in division_options if value == selected_division),
+      "all",
+    )
+    self._refresh_budget_cost_rows()
+
+  def _matching_budget_cost_items(self):
+    query = (self.budget_cost_search.text or "").strip().lower()
+    type_filter = self.budget_cost_type_filter.selected_value or "all"
+    division_filter = self.budget_cost_division_filter.selected_value or "all"
+    matches = []
+    for item in self._budget_cost_items:
+      entry = item["entry"]
+      name = (entry["golfer"]["name"] or "").lower()
+      if query and query not in name:
+        continue
+      if type_filter == "players" and not item["_is_player"]:
+        continue
+      if type_filter == "non_players" and item["_is_player"]:
+        continue
+      if division_filter == "unassigned" and (not item["_is_player"] or item["_division"]):
+        continue
+      if division_filter.startswith("division:") and item["_division"] != division_filter[len("division:"):]:
+        continue
+      matches.append(item)
+    return matches
+
+  def _capture_budget_cost_drafts(self):
+    for row_component in self.budget_rows.get_components():
+      item = getattr(row_component, "item")
+      item["draft_paid"] = getattr(row_component, "paid_box").text
+      for category_component in getattr(row_component, "category_rows").get_components():
+        category_item = getattr(category_component, "item")
+        category_item["selected"] = getattr(
+          category_component, "category_share_check"
+        ).checked
+
+  def _refresh_budget_cost_rows(self):
+    self._capture_budget_cost_drafts()
+    matching_items = self._matching_budget_cost_items()
+    self.budget_rows.items = matching_items
+    count = len(self._budget_cost_items)
+    visible_count = len(matching_items)
+    self.budget_cost_match_status.text = (
+      f"{visible_count} matching participant" + ("s" if visible_count != 1 else "")
+      + f" · {count} total"
+    )
 
   def _load_budget_target_items(self, rows, tournament):
     tournament_id = tournament.get_id()
@@ -783,6 +870,18 @@ class Form1(Form1Template):
   @handle("budget_target_search", "change")
   def budget_target_search_change(self, **event_args):
     self._refresh_budget_target_rows()
+
+  @handle("budget_cost_type_filter", "change")
+  def budget_cost_type_filter_change(self, **event_args):
+    self._refresh_budget_cost_rows()
+
+  @handle("budget_cost_division_filter", "change")
+  def budget_cost_division_filter_change(self, **event_args):
+    self._refresh_budget_cost_rows()
+
+  @handle("budget_cost_search", "change")
+  def budget_cost_search_change(self, **event_args):
+    self._refresh_budget_cost_rows()
 
   @handle("budget_target_rows", "x-budget-target-selection-changed")
   def budget_target_rows_selection_changed(self, **event_args):

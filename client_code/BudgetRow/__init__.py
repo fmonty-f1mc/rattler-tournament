@@ -8,7 +8,9 @@ class BudgetRow(BudgetRowTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
     self.category_rows.items = self.item["categories"]
-    self.paid_box.text = self._display_amount(self.item["entry"]["amount_paid"])
+    self.paid_box.text = self._display_amount(
+      self.item.get("draft_paid", self.item["entry"]["amount_paid"])
+    )
     self.share_total.text = "Estimated share: ${:,.2f}".format(self.item["estimated_share"])
 
   @staticmethod
