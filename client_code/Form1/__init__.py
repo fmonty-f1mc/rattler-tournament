@@ -51,6 +51,13 @@ class Form1(Form1Template):
 
   def _show_view(self, name):
     show_tournament_context = name != "players"
+    field_scoring_views = {"event", "field", "round_one", "standings", "round_two"}
+    communication_views = {"email", "news"}
+    active_group = (
+      "field_scoring" if name in field_scoring_views else
+      "expenses" if name == "budget" else
+      "communication" if name in communication_views else None
+    )
     self.selected_tournament_eyebrow.visible = show_tournament_context
     self.current_event_title.visible = show_tournament_context
     self.current_event_subtitle.visible = show_tournament_context
@@ -65,22 +72,29 @@ class Form1(Form1Template):
     self.budget_section.visible = name == "budget"
     self.email_section.visible = name == "email"
     self.news_section.visible = name == "news"
-    tournament_view = name in {
-      "event", "field", "round_one", "standings", "round_two", "budget", "email", "news"
-    }
+    tournament_view = active_group is not None
     self.tournament_subnav.visible = tournament_view
+    self.field_scoring_page_nav.visible = name in field_scoring_views
+    self.communication_page_nav.visible = name in communication_views
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
       ("round_one", self.round_one_nav),
       ("standings", self.standings_nav),
       ("round_two", self.round_two_nav),
-      ("budget", self.budget_nav),
       ("email", self.email_nav),
       ("news", self.news_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
+      )
+    for group_name, button in (
+      ("field_scoring", self.field_scoring_nav),
+      ("expenses", self.expenses_nav),
+      ("communication", self.communication_nav),
+    ):
+      button.role = (
+        "tournament-subtab-active" if active_group == group_name else "tournament-subtab"
       )
 
   def _show_budget_tab(self, name):
@@ -696,6 +710,18 @@ class Form1(Form1Template):
   def event_nav_click(self, **event_args):
     self._show_view("event")
 
+  @handle("field_scoring_nav", "click")
+  def field_scoring_nav_click(self, **event_args):
+    self._show_view("event")
+
+  @handle("expenses_nav", "click")
+  def expenses_nav_click(self, **event_args):
+    self._show_view("budget")
+
+  @handle("communication_nav", "click")
+  def communication_nav_click(self, **event_args):
+    self._show_view("email")
+
   @handle("email_nav", "click")
   def email_nav_click(self, **event_args):
     self._show_view("email")
@@ -1023,10 +1049,6 @@ class Form1(Form1Template):
   @handle("public_view_nav", "click")
   def public_view_nav_click(self, **event_args):
     open_form("PublicStandings")
-
-  @handle("budget_nav", "click")
-  def budget_nav_click(self, **event_args):
-    self._show_view("budget")
 
   @handle("budget_categories_tab_button", "click")
   def budget_categories_tab_button_click(self, **event_args):
