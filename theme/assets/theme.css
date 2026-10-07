@@ -797,6 +797,30 @@ textarea.anvil-text-area:disabled,
   font-weight: 800;
 }
 
+.anvil-role-budget-owed {
+  color: #8f2525;
+  font-weight: 800;
+}
+
+.anvil-role-budget-paid {
+  color: #16743a;
+  font-weight: 800;
+}
+
+.budget-summary .anvil-role-budget-owed {
+  color: #8f2525;
+}
+
+.budget-summary .anvil-role-budget-paid {
+  color: #16743a;
+}
+
+input.anvil-role-budget-paid-input,
+input.anvil-role-budget-paid-input:disabled {
+  color: #16743a;
+  font-weight: 800;
+}
+
 .budget-row {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(200px, 0.7fr);
