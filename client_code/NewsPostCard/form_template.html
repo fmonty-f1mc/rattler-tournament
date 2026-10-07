@@ -1,0 +1,6 @@
+<anvil-form container="ColumnPanel">
+  <article class="public-news-card">
+    <anvil-component type="Label" name="news_title" prop:role="h2" bind:text="self.item['title']"></anvil-component>
+    <anvil-component type="Label" name="news_body" prop:role="news-post-body" bind:text="self.item['body']"></anvil-component>
+  </article>
+</anvil-form>

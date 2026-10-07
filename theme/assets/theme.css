@@ -197,6 +197,38 @@ a:focus {
   gap: 20px;
 }
 
+.public-news-list {
+  width: 100%;
+}
+
+.public-news-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.public-news-card {
+  padding: 24px;
+  border: 1px solid var(--blank-border);
+  border-radius: 8px;
+  background: var(--blank-surface);
+}
+
+.public-news-card .anvil-role-h2 {
+  display: block;
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.anvil-role-news-post-body {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.news-editor-card .field-block + .field-block {
+  margin-top: 16px;
+}
+
 .public-tournament-card {
   padding: 24px;
   border: 1px solid var(--blank-border);
@@ -215,12 +247,6 @@ a:focus {
 .public-tournament-heading .anvil-role-h2 {
   display: block;
   font-size: 22px;
-}
-
-.public-leaderboard-section + .public-leaderboard-section {
-  padding-top: 24px;
-  margin-top: 24px;
-  border-top: 1px solid var(--blank-border);
 }
 
 .public-leaderboard-section .section-heading h3 {
@@ -960,14 +986,22 @@ input.anvil-role-budget-paid-input:disabled {
   margin-bottom: 0;
 }
 
-.anvil-role-budget-save-button > button {
+.anvil-role-budget-save-button > button,
+.anvil-role-player-details-save-button > button {
   border-color: #16743a;
   background: #198a43;
   color: white;
 }
 
+.player-details-save-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .anvil-role-budget-save-button > button:hover,
-.anvil-role-budget-save-button > button:focus {
+.anvil-role-budget-save-button > button:focus,
+.anvil-role-player-details-save-button > button:hover,
+.anvil-role-player-details-save-button > button:focus {
   background: #126d34;
   color: white;
 }

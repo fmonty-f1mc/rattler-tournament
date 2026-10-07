@@ -3,17 +3,32 @@
     <anvil-component type="Button" name="sign_in_button" prop:text="Committee sign in" prop:role="secondary-button"></anvil-component>
   </anvil-block>
   <anvil-block slot="content">
-    <section class="public-standings-intro">
-      <p class="eyebrow">PUBLIC LEADERBOARDS</p>
-      <h2>Tournament standings</h2>
-      <p class="muted-copy">Choose a tournament, then view overall standings or a division in one leaderboard.</p>
-    </section>
     <div class="public-tournament-picker field-block">
       <anvil-component type="Label" name="tournament_label" prop:text="Select tournament" prop:role="public-field-label"></anvil-component>
       <anvil-component type="DropDown" name="tournament_picker"></anvil-component>
     </div>
-    <anvil-component type="RepeatingPanel" name="tournament_rows" prop:item_template="rattler_tournament.PublicTournamentStandings" prop:role="public-tournament-list"></anvil-component>
-    <anvil-component type="Label" name="empty_state" prop:role="muted-text" prop:text="No tournaments have been added yet."></anvil-component>
+    <anvil-component type="FlowPanel" name="public_tab_nav" prop:role="tournament-subnav">
+      <anvil-component type="Button" name="standings_tab_button" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
+      <anvil-component type="Button" name="news_tab_button" prop:text="News" prop:role="tournament-subtab"></anvil-component>
+    </anvil-component>
+    <anvil-component type="ColumnPanel" name="standings_section">
+      <section class="public-standings-intro">
+        <p class="eyebrow">PUBLIC LEADERBOARDS</p>
+        <h2>Tournament standings</h2>
+        <p class="muted-copy">Choose a tournament, then view overall standings or a division in one leaderboard.</p>
+      </section>
+      <anvil-component type="RepeatingPanel" name="tournament_rows" prop:item_template="rattler_tournament.PublicTournamentStandings" prop:role="public-tournament-list"></anvil-component>
+      <anvil-component type="Label" name="empty_state" prop:role="muted-text" prop:text="No tournaments have been added yet."></anvil-component>
+    </anvil-component>
+    <anvil-component type="ColumnPanel" name="news_section">
+      <section class="public-standings-intro">
+        <p class="eyebrow">PUBLIC UPDATES</p>
+        <h2>News</h2>
+        <p class="muted-copy">Updates from the Rattler Planning Committee.</p>
+      </section>
+      <anvil-component type="RepeatingPanel" name="news_rows" prop:item_template="rattler_tournament.NewsPostCard" prop:role="public-news-list"></anvil-component>
+      <anvil-component type="Label" name="news_empty_state" prop:role="muted-text" prop:text="There are no news posts yet."></anvil-component>
+    </anvil-component>
   </anvil-block>
   <anvil-block slot="title">
     <anvil-component type="Label" name="page_title" prop:role="h1" prop:text="Rattler Invitational"></anvil-component>
