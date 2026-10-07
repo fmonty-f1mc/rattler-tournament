@@ -967,6 +967,31 @@ class Form1(Form1Template):
       "Edit players as needed, then save tee times and scores."
     )
 
+  @handle("add_foursome_group_button", "click")
+  def add_foursome_group_button_click(self, **event_args):
+    if self.current_event is None:
+      self.round_one_status.text = "Create or select a tournament first."
+      return
+    if not self._player_entries:
+      self.round_one_status.text = "Add players to this tournament before adding groups."
+      return
+
+    self._current_round_one_scores()
+    group_items = list(self.foursome_group_rows.items or [])
+    entry_options = [("Open slot", None)] + [
+      (entry["golfer"]["name"], entry) for entry in self._player_entries
+    ]
+    group_items.append(self._foursome_group_item(
+      len(group_items) + 1,
+      f"Group {len(group_items) + 1}",
+      [],
+      entry_options,
+    ))
+    self.foursome_group_rows.items = group_items
+    self.round_one_status.text = (
+      "Group added. Assign 1–4 players to every group, then save."
+    )
+
   @handle("foursome_group_rows", "x-grouping-changed")
   def foursome_group_rows_grouping_changed(self, **event_args):
     for entry_id, gross in event_args.get("score_drafts", {}).items():

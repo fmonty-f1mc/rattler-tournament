@@ -622,6 +622,12 @@ textarea.anvil-text-area:disabled,
   border-bottom: 1px solid var(--blank-border);
 }
 
+.round-one-group-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 12px;
+}
+
 .foursome-heading {
   display: flex;
   align-items: center;

@@ -1189,10 +1189,6 @@ def save_tournament_foursomes(tournament, assignments):
   if not isinstance(assignments, (list, tuple)):
     return _result("Generate foursomes before editing them.")
 
-  expected_group_count = (len(entries) + 3) // 4
-  if len(assignments) != expected_group_count:
-    return _result("Generate foursomes for the current field before saving.")
-
   entry_by_id = {entry.get_id(): entry for entry in entries}
   assigned_ids = []
   normalized_groups = []
