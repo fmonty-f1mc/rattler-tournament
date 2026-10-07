@@ -1100,7 +1100,7 @@ def add_budget_category(tournament, name):
 
 
 @anvil.server.callable(require_user=True)
-def save_budget_category(category, name, total, players_only):
+def save_budget_category(category, name, total):
   if not _valid_row(app_tables.budget_categories, category):
     return _result("Choose a budget category.")
   name = (name or "").strip()
@@ -1116,7 +1116,7 @@ def save_budget_category(category, name, total, players_only):
     for other in app_tables.budget_categories.search(tournament=tournament)
   ):
     return _result("That category already exists for this tournament.")
-  category.update(name=name, total=amount, players_only=bool(players_only))
+  category.update(name=name, total=amount)
   return _result()
 
 

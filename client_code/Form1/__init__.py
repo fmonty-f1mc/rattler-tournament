@@ -625,7 +625,6 @@ class Form1(Form1Template):
     category,
     name,
     total,
-    players_only,
     **event_args,
   ):
     result = anvil.server.call(
@@ -633,7 +632,6 @@ class Form1(Form1Template):
       category,
       name,
       total,
-      players_only,
     )
     if not result["ok"]:
       self.budget_status.text = result["message"]

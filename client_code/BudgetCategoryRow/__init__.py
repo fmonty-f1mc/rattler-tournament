@@ -9,7 +9,6 @@ class BudgetCategoryRow(BudgetCategoryRowTemplate):
     super().__init__(**properties)
     self.category_name_box.text = self.item["name"] or ""
     self.category_total_box.text = self._display_amount(self.item["total"])
-    self.players_only_check.checked = bool(self.item["players_only"])
 
   @staticmethod
   def _display_amount(value):
@@ -22,7 +21,6 @@ class BudgetCategoryRow(BudgetCategoryRowTemplate):
       category=self.item["category"],
       name=self.category_name_box.text,
       total=self.category_total_box.text,
-      players_only=self.players_only_check.checked,
     )
 
   @handle("delete_button", "click")
