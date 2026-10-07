@@ -36,6 +36,7 @@ class Form1(Form1Template):
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
     self.email_status.text = ""
+    self.news_status.text = ""
     self._show_view("event")
     self._show_budget_tab("categories")
     self._load_players()
@@ -61,8 +62,9 @@ class Form1(Form1Template):
     self.player_section.visible = name == "players"
     self.budget_section.visible = name == "budget"
     self.email_section.visible = name == "email"
+    self.news_section.visible = name == "news"
     tournament_view = name in {
-      "event", "field", "round_one", "standings", "round_two", "budget", "email"
+      "event", "field", "round_one", "standings", "round_two", "budget", "email", "news"
     }
     self.tournament_subnav.visible = tournament_view
     for view_name, button in (
@@ -73,6 +75,7 @@ class Form1(Form1Template):
       ("round_two", self.round_two_nav),
       ("budget", self.budget_nav),
       ("email", self.email_nav),
+      ("news", self.news_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
@@ -88,6 +91,36 @@ class Form1(Form1Template):
       button.role = (
         "tournament-subtab-active" if name == tab_name else "tournament-subtab"
       )
+
+  def _load_news_posts(self, selected_post_id=None):
+    tournament = self.current_event
+    posts = anvil.server.call("list_committee_news_posts", tournament) if tournament else []
+    self.news_post_picker.items = [("New post", None)] + [
+      (
+        ("Unassigned · " if post["tournament"] is None else "") + post["title"],
+        post,
+      )
+      for post in posts
+    ]
+    selected_post = next(
+      (post for post in posts if post.get_id() == selected_post_id),
+      None,
+    )
+    self.news_post_picker.selected_value = selected_post
+    self._set_news_editor_post(selected_post)
+    self.save_news_post_button.enabled = tournament is not None
+    self.news_status.text = (
+      "Create or select a tournament before managing news."
+      if tournament is None else ""
+    )
+
+  def _set_news_editor_post(self, post):
+    self.current_news_post = post
+    self.news_post_title.text = post["title"] if post else ""
+    self.news_post_body.text = post["body"] if post else ""
+    self.delete_news_post_button.enabled = (
+      post is not None and self.current_event is not None
+    )
 
   def _load_players(self):
     self.golfers = anvil.server.call("list_golfers")
@@ -138,6 +171,7 @@ class Form1(Form1Template):
   def _load_event_data(self, capture_field_detail_drafts=True):
     if capture_field_detail_drafts:
       self._capture_field_detail_drafts()
+    self._load_news_posts()
     self.field_status.text = ""
     self.division_status.text = ""
     if self.current_event is None:
@@ -801,6 +835,44 @@ class Form1(Form1Template):
   @handle("players_nav", "click")
   def players_nav_click(self, **event_args):
     self._show_view("players")
+
+  @handle("news_nav", "click")
+  def news_nav_click(self, **event_args):
+    self._show_view("news")
+
+  @handle("news_post_picker", "change")
+  def news_post_picker_change(self, **event_args):
+    self._set_news_editor_post(self.news_post_picker.selected_value)
+    self.news_status.text = ""
+
+  @handle("save_news_post_button", "click")
+  def save_news_post_button_click(self, **event_args):
+    result = anvil.server.call(
+      "save_news_post",
+      self.current_news_post,
+      self.current_event,
+      self.news_post_title.text,
+      self.news_post_body.text,
+    )
+    if not result["ok"]:
+      self.news_status.text = result["message"]
+      return
+    self._load_news_posts(result["post"].get_id())
+    self.news_status.text = "News post saved and published."
+
+  @handle("delete_news_post_button", "click")
+  def delete_news_post_button_click(self, **event_args):
+    post = self.current_news_post
+    if post is None:
+      return
+    if not confirm(f"Delete ‘{post['title']}’ from public News?", title="Delete news post"):
+      return
+    result = anvil.server.call("delete_news_post", post, self.current_event)
+    if not result["ok"]:
+      self.news_status.text = result["message"]
+      return
+    self._load_news_posts()
+    self.news_status.text = "News post deleted."
 
   @handle("public_view_nav", "click")
   def public_view_nav_click(self, **event_args):

@@ -69,6 +69,29 @@ db_schema:
     indexes: []
     server: full
     title: Golfers
+  news_posts:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: title
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: body
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: created_at
+      type: datetime
+    indexes: []
+    server: full
+    title: News Posts
   rattler_pairings:
     client: none
     columns:

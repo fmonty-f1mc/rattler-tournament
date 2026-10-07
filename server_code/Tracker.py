@@ -4,6 +4,7 @@ import csv
 import io
 import math
 import re
+from datetime import datetime
 
 import anvil.server
 from anvil.tables import app_tables
@@ -140,6 +141,60 @@ def _delete_budget_shares_for_entries(entries):
   for entry in entries:
     for share in app_tables.budget_shares.search(entry=entry):
       share.delete()
+
+
+@anvil.server.callable(require_user=True)
+def list_committee_news_posts(tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  posts = list(app_tables.news_posts.search(tournament=tournament))
+  posts.extend(app_tables.news_posts.search(tournament=None))
+  return sorted(
+    posts,
+    key=lambda post: post["created_at"] or datetime.min,
+    reverse=True,
+  )
+
+
+@anvil.server.callable(require_user=True)
+def save_news_post(post, tournament, title, body):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  title = (title or "").strip()
+  body = (body or "").strip()
+  if not title:
+    return _result("Add a news title.")
+  if not body:
+    return _result("Add the news text.")
+
+  if post is None:
+    post = app_tables.news_posts.add_row(
+      title=title,
+      body=body,
+      tournament=tournament,
+      created_at=datetime.now(),
+    )
+  elif not _valid_row(app_tables.news_posts, post):
+    return _result("Choose a news post from the list.")
+  elif post["tournament"] is not None and post["tournament"].get_id() != tournament.get_id():
+    return _result("Choose a news post for the selected tournament.")
+  else:
+    post["title"] = title
+    post["body"] = body
+    post["tournament"] = tournament
+  return _result(post=post)
+
+
+@anvil.server.callable(require_user=True)
+def delete_news_post(post, tournament):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  if not _valid_row(app_tables.news_posts, post):
+    return _result("Choose a news post from the list.")
+  if post["tournament"] is not None and post["tournament"].get_id() != tournament.get_id():
+    return _result("Choose a news post for the selected tournament.")
+  post.delete()
+  return _result()
 
 
 @anvil.server.callable(require_user=True)
@@ -725,6 +780,14 @@ def get_public_tournament_standings():
     ]
     public_standings.append({
       "title": f"{tournament['year']} · {tournament['course']}",
+      "news_posts": [
+        {"title": post["title"], "body": post["body"]}
+        for post in sorted(
+          app_tables.news_posts.search(tournament=tournament),
+          key=lambda post: post["created_at"] or datetime.min,
+          reverse=True,
+        )
+      ],
       "standings": _net_standings(player_entries),
       "divisions": divisions,
       "round_two_pairs": [
