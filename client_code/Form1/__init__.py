@@ -18,6 +18,9 @@ class Form1(Form1Template):
     self._field_detail_drafts = {}
     self._overall_standings = []
     self._active_standings = []
+    self._budget_target_items = []
+    self._budget_selected_entry_ids = set()
+    self._budget_selection_tournament_id = None
     self.standings_scope_picker.items = [("Overall", "overall")]
     self.standings_scope_picker.selected_value = "overall"
     self.standings_sort_by.items = [("Net", "net"), ("Gross", "gross")]
@@ -146,6 +149,18 @@ class Form1(Form1Template):
       self.round_two_pairing_rows.items = []
       self.budget_rows.items = []
       self.budget_category_rows.items = []
+      self.budget_target_rows.items = []
+      self.budget_bulk_category_picker.items = []
+      self.budget_bulk_category_picker.selected_value = None
+      self.budget_target_filter.items = [("Everyone", "all")]
+      self.budget_target_filter.selected_value = "all"
+      self.budget_division_filter.items = [("All divisions", "all")]
+      self.budget_division_filter.selected_value = "all"
+      self.budget_target_search.text = ""
+      self._budget_target_items = []
+      self._budget_selected_entry_ids = set()
+      self._budget_selection_tournament_id = None
+      self.budget_target_selection_status.text = "0 participants selected."
       self.new_budget_category_name.text = ""
       self.budget_total.text = "$0.00"
       self.budget_paid.text = "$0.00"
@@ -270,11 +285,113 @@ class Form1(Form1Template):
     summary = anvil.server.call("get_budget_summary", tournament)
     self.budget_category_rows.items = summary["categories"]
     self.budget_rows.items = summary["rows"]
+    selected_category_id = (
+      self.budget_bulk_category_picker.selected_value.get_id()
+      if self.budget_bulk_category_picker.selected_value is not None
+      else None
+    )
+    category_options = [
+      (category["name"], category["category"])
+      for category in summary["categories"]
+      if category["category"] is not None
+    ]
+    self.budget_bulk_category_picker.items = category_options
+    self.budget_bulk_category_picker.selected_value = next(
+      (
+        category
+        for _, category in category_options
+        if category.get_id() == selected_category_id
+      ),
+      category_options[0][1] if category_options else None,
+    )
+    self._load_budget_target_items(summary["rows"], tournament)
     self.budget_total.text = self._money(summary["total"])
     self.budget_paid.text = self._money(summary["paid"])
     self.budget_balance.text = self._money(summary["balance"])
     count = summary["participants"]
     self.budget_participants.text = f"{count} participant" + ("s" if count != 1 else "")
+
+  def _load_budget_target_items(self, rows, tournament):
+    tournament_id = tournament.get_id()
+    if self._budget_selection_tournament_id != tournament_id:
+      self._budget_selected_entry_ids = set()
+      self._budget_selection_tournament_id = tournament_id
+
+    self._budget_target_items = []
+    divisions = set()
+    for row in rows:
+      entry = row["entry"]
+      is_player = entry["is_player"] is not False
+      division = (entry["division"] or "").strip() if is_player else ""
+      if division:
+        divisions.add(division)
+      self._budget_target_items.append({
+        "entry": entry,
+        "name": entry["golfer"]["name"] or "Unnamed participant",
+        "participant_label": row["participant_label"],
+        "is_player": is_player,
+        "division": division,
+        "selected": entry.get_id() in self._budget_selected_entry_ids,
+      })
+
+    filter_options = [("Everyone", "all"), ("Players", "players"), ("Non-players", "non_players")]
+    division_options = [("All divisions", "all"), ("Players without division", "unassigned")]
+    division_options.extend(
+      (division, "division:" + division)
+      for division in sorted(divisions, key=lambda value: value.lower())
+    )
+    selected_filter = self.budget_target_filter.selected_value or "all"
+    self.budget_target_filter.items = filter_options
+    self.budget_target_filter.selected_value = next(
+      (value for _, value in filter_options if value == selected_filter),
+      "all",
+    )
+    selected_division = self.budget_division_filter.selected_value or "all"
+    self.budget_division_filter.items = division_options
+    self.budget_division_filter.selected_value = next(
+      (value for _, value in division_options if value == selected_division),
+      "all",
+    )
+    self._refresh_budget_target_rows()
+
+  def _matching_budget_target_items(self):
+    query = (self.budget_target_search.text or "").strip().lower()
+    target_filter = self.budget_target_filter.selected_value or "all"
+    division_filter = self.budget_division_filter.selected_value or "all"
+    matches = []
+    for item in self._budget_target_items:
+      if query and query not in item["name"].lower():
+        continue
+      if target_filter == "players" and not item["is_player"]:
+        continue
+      if target_filter == "non_players" and item["is_player"]:
+        continue
+      if division_filter == "unassigned" and (not item["is_player"] or item["division"]):
+        continue
+      if division_filter.startswith("division:") and item["division"] != division_filter[len("division:"):]:
+        continue
+      matches.append(item)
+    return matches
+
+  def _sync_budget_target_selection(self):
+    self._budget_selected_entry_ids = {
+      item["entry"].get_id()
+      for item in self._budget_target_items
+      if item["selected"]
+    }
+
+  def _update_budget_target_selection_status(self):
+    self._sync_budget_target_selection()
+    selected_count = len(self._budget_selected_entry_ids)
+    visible_count = len(self._matching_budget_target_items())
+    total_count = len(self._budget_target_items)
+    self.budget_target_selection_status.text = (
+      f"{selected_count} selected · {visible_count} matching · {total_count} participants"
+    )
+
+  def _refresh_budget_target_rows(self):
+    self.budget_target_rows.items = self._matching_budget_target_items()
+    self._update_budget_target_selection_status()
 
   def _capture_field_detail_drafts(self):
     for item in self._current_field_detail_values():
@@ -617,6 +734,7 @@ class Form1(Form1Template):
       return
     self.new_budget_category_name.text = ""
     self._load_event_data()
+    self.budget_bulk_category_picker.selected_value = result["category"]
     self.budget_status.text = "Budget category added."
 
   @handle("budget_category_rows", "x-save-budget-category")
@@ -653,6 +771,104 @@ class Form1(Form1Template):
       return
     self._load_event_data()
     self.budget_status.text = "Budget category deleted."
+
+  @handle("budget_target_filter", "change")
+  def budget_target_filter_change(self, **event_args):
+    self._refresh_budget_target_rows()
+
+  @handle("budget_division_filter", "change")
+  def budget_division_filter_change(self, **event_args):
+    self._refresh_budget_target_rows()
+
+  @handle("budget_target_search", "change")
+  def budget_target_search_change(self, **event_args):
+    self._refresh_budget_target_rows()
+
+  @handle("budget_target_rows", "x-budget-target-selection-changed")
+  def budget_target_rows_selection_changed(self, **event_args):
+    self._update_budget_target_selection_status()
+
+  @handle("select_matching_budget_targets_button", "click")
+  def select_matching_budget_targets_button_click(self, **event_args):
+    for item in self.budget_target_rows.items or []:
+      item["selected"] = True
+    self._refresh_budget_target_rows()
+
+  @handle("clear_matching_budget_targets_button", "click")
+  def clear_matching_budget_targets_button_click(self, **event_args):
+    for item in self.budget_target_rows.items or []:
+      item["selected"] = False
+    self._refresh_budget_target_rows()
+
+  @handle("assign_budget_category_button", "click")
+  def assign_budget_category_button_click(self, **event_args):
+    if self.current_event is None:
+      self.budget_status.text = "Create or select a tournament first."
+      return
+    category = self.budget_bulk_category_picker.selected_value
+    if category is None:
+      self.budget_status.text = "Add or select an expense category first."
+      return
+    self._sync_budget_target_selection()
+    entries = [
+      item["entry"] for item in self._budget_target_items if item["selected"]
+    ]
+    if not entries:
+      self.budget_status.text = "Select at least one participant."
+      return
+
+    result = anvil.server.call(
+      "add_budget_category_to_entries",
+      self.current_event,
+      category,
+      entries,
+    )
+    if not result["ok"]:
+      self.budget_status.text = result["message"]
+      return
+    self._load_event_data()
+    added = result["added"]
+    already_assigned = result["already_assigned"]
+    self.budget_status.text = (
+      f"{category['name']} added to {added} participant(s)."
+      if already_assigned == 0
+      else f"{category['name']} added to {added} participant(s); {already_assigned} already shared it."
+    )
+
+  @handle("remove_budget_category_button", "click")
+  def remove_budget_category_button_click(self, **event_args):
+    if self.current_event is None:
+      self.budget_status.text = "Create or select a tournament first."
+      return
+    category = self.budget_bulk_category_picker.selected_value
+    if category is None:
+      self.budget_status.text = "Add or select an expense category first."
+      return
+    self._sync_budget_target_selection()
+    entries = [
+      item["entry"] for item in self._budget_target_items if item["selected"]
+    ]
+    if not entries:
+      self.budget_status.text = "Select at least one participant."
+      return
+
+    result = anvil.server.call(
+      "remove_budget_category_from_entries",
+      self.current_event,
+      category,
+      entries,
+    )
+    if not result["ok"]:
+      self.budget_status.text = result["message"]
+      return
+    self._load_event_data()
+    removed = result["removed"]
+    not_assigned = result["not_assigned"]
+    self.budget_status.text = (
+      f"{category['name']} cleared from {removed} participant(s)."
+      if not_assigned == 0
+      else f"{category['name']} cleared from {removed} participant(s); {not_assigned} selected participant(s) did not share it."
+    )
 
   @handle("event_picker", "change")
   def event_picker_change(self, **event_args):

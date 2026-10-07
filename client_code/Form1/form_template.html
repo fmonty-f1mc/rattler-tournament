@@ -179,6 +179,23 @@
           <anvil-component type="Button" name="add_budget_category_button" prop:text="Add category" prop:role="secondary-button"></anvil-component>
         </div>
       </div>
+      <div class="tracker-card">
+        <div class="section-heading"><div><p class="eyebrow">BULK PARTICIPANT SHARES</p><h2>Assign a category</h2></div><span class="muted-copy">Choose participants individually or select everyone matching the filters.</span></div>
+        <div class="budget-bulk-controls">
+          <div class="field-block"><label>Expense category</label><anvil-component type="DropDown" name="budget_bulk_category_picker"></anvil-component></div>
+          <div class="field-block"><label>Participant type</label><anvil-component type="DropDown" name="budget_target_filter"></anvil-component></div>
+          <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="budget_division_filter"></anvil-component></div>
+          <div class="field-block"><label>Search by name</label><anvil-component type="TextBox" name="budget_target_search" prop:placeholder="Search participants"></anvil-component></div>
+        </div>
+        <div class="budget-bulk-actions">
+          <anvil-component type="Button" name="select_matching_budget_targets_button" prop:text="Select all matching" prop:role="secondary-button"></anvil-component>
+          <anvil-component type="Button" name="clear_matching_budget_targets_button" prop:text="Clear matching" prop:role="secondary-button"></anvil-component>
+          <anvil-component type="Button" name="assign_budget_category_button" prop:text="Add category to selected" prop:role="bulk-add-button"></anvil-component>
+          <anvil-component type="Button" name="remove_budget_category_button" prop:text="Clear category from selected" prop:role="bulk-clear-button"></anvil-component>
+        </div>
+        <anvil-component type="Label" name="budget_target_selection_status" prop:role="muted-text"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="budget_target_rows" prop:item_template="rattler_tournament.BudgetParticipantSelectRow" prop:role="budget-target-list"></anvil-component>
+      </div>
       <div class="budget-summary">
         <div><span>Estimated total</span><anvil-component type="Label" name="budget_total" prop:text="$0.00"></anvil-component></div>
         <div><span>Paid</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00"></anvil-component></div>
@@ -187,7 +204,7 @@
       </div>
       <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">PARTICIPANT SHARES</p><h2>Choose who shares each cost</h2></div><span class="muted-copy">Player-only share options are disabled for non-players here.</span></div>
+        <div class="section-heading"><div><p class="eyebrow">PARTICIPANT COSTS</p><h2>Review shares and payments</h2></div><span class="muted-copy">Use the bulk assignment above to add a category to many participants at once.</span></div>
         <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="rattler_tournament.BudgetRow" prop:role="budget-list"></anvil-component>
       </div>
     </anvil-component>

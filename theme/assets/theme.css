@@ -834,6 +834,60 @@ textarea.anvil-text-area:disabled,
   margin-top: 14px;
 }
 
+.budget-bulk-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.budget-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.anvil-role-bulk-add-button > button {
+  border-color: #16743a;
+  background: #198a43;
+  color: white;
+}
+
+.anvil-role-bulk-add-button > button:hover,
+.anvil-role-bulk-add-button > button:focus {
+  background: #126d34;
+  color: white;
+}
+
+.anvil-role-bulk-clear-button > button {
+  border-color: #a82222;
+  background: #c12b2b;
+  color: white;
+}
+
+.anvil-role-bulk-clear-button > button:hover,
+.anvil-role-bulk-clear-button > button:focus {
+  background: #982020;
+  color: white;
+}
+
+.anvil-role-budget-target-list > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 4px 18px;
+}
+
+.budget-target-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.8fr);
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--blank-border);
+}
+
 .budget-payment {
   display: flex;
   align-items: end;

@@ -1165,6 +1165,102 @@ def save_entry_budget(entry, categories, paid):
   return _result()
 
 
+@anvil.server.callable(require_user=True)
+def add_budget_category_to_entries(tournament, category, entries):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  if not isinstance(entries, (list, tuple)):
+    return _result("Choose valid tournament participants.")
+  if not entries:
+    return _result("Select at least one participant.")
+
+  tournament_id = tournament.get_id()
+  available_category_ids = {
+    row.get_id()
+    for row in app_tables.budget_categories.search(tournament=tournament)
+  }
+  if category.get_id() not in available_category_ids:
+    return _result("Choose an expense category from this tournament.")
+
+  selected_entries = []
+  selected_entry_ids = set()
+  for entry in entries:
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose participants from this tournament.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament_id:
+      return _result("Choose participants from this tournament.")
+    entry_id = entry.get_id()
+    if entry_id in selected_entry_ids:
+      continue
+    if category["players_only"] and not _entry_is_player(entry):
+      return _result(
+        "Only players can share the {} category. Remove non-players from your selection.".format(
+          category["name"]
+        )
+      )
+    selected_entries.append(entry)
+    selected_entry_ids.add(entry_id)
+
+  existing_entry_ids = {
+    share["entry"].get_id()
+    for share in app_tables.budget_shares.search(category=category)
+    if share["entry"] is not None
+  }
+  entries_to_add = [
+    entry for entry in selected_entries if entry.get_id() not in existing_entry_ids
+  ]
+  for entry in entries_to_add:
+    app_tables.budget_shares.add_row(entry=entry, category=category)
+  return _result(
+    added=len(entries_to_add),
+    already_assigned=len(selected_entries) - len(entries_to_add),
+  )
+
+
+@anvil.server.callable(require_user=True)
+def remove_budget_category_from_entries(tournament, category, entries):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  if not isinstance(entries, (list, tuple)):
+    return _result("Choose valid tournament participants.")
+  if not entries:
+    return _result("Select at least one participant.")
+
+  tournament_id = tournament.get_id()
+  available_category_ids = {
+    row.get_id()
+    for row in app_tables.budget_categories.search(tournament=tournament)
+  }
+  if category.get_id() not in available_category_ids:
+    return _result("Choose an expense category from this tournament.")
+
+  selected_entry_ids = set()
+  for entry in entries:
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose participants from this tournament.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament_id:
+      return _result("Choose participants from this tournament.")
+    selected_entry_ids.add(entry.get_id())
+
+  removed_entry_ids = set()
+  for share in app_tables.budget_shares.search(category=category):
+    entry = share["entry"]
+    if entry is not None and entry.get_id() in selected_entry_ids:
+      removed_entry_ids.add(entry.get_id())
+      share.delete()
+
+  return _result(
+    removed=len(removed_entry_ids),
+    not_assigned=len(selected_entry_ids) - len(removed_entry_ids),
+  )
+
+
 def _budget_summary(tournament, migrate_legacy=False):
   if not _valid_row(app_tables.tournaments, tournament):
     return {
