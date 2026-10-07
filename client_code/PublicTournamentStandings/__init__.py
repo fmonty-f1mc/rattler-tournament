@@ -22,14 +22,82 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
     self.budget_total.text = self._money(budget["total"])
     self.budget_paid.text = self._money(budget["paid"])
     self.budget_balance.text = self._money(budget["balance"])
-    participants = budget["participants"]
-    self.budget_participant_rows.items = participants
-    self.no_budget_participants_state.visible = not participants
+    self._expense_participants = budget["participants"]
+    self.expense_search.text = ""
+    self.expense_participant_type_filter.items = [
+      ("Everyone", "all"),
+      ("Players", "players"),
+      ("Non-players", "non_players"),
+    ]
+    self.expense_participant_type_filter.selected_value = "all"
+    divisions = sorted(
+      {
+        participant["division"]
+        for participant in self._expense_participants
+        if participant["is_player"] and participant["division"]
+      },
+      key=lambda value: value.lower(),
+    )
+    self.expense_division_filter.items = [
+      ("All divisions", "all"),
+      ("Players without division", "unassigned"),
+    ] + [(division, "division:" + division) for division in divisions]
+    self.expense_division_filter.selected_value = "all"
+    self.expense_payment_filter.items = [
+      ("Any payment status", "all"),
+      ("Balance due", "owing"),
+      ("Paid in full", "paid"),
+    ]
+    self.expense_payment_filter.selected_value = "all"
+    self._refresh_expense_participants()
     self._show_selected_standings()
 
   @staticmethod
   def _money(value):
     return "${:,.2f}".format(value or 0)
+
+  def _matching_expense_participants(self):
+    query = (self.expense_search.text or "").strip().lower()
+    participant_type = self.expense_participant_type_filter.selected_value or "all"
+    division_filter = self.expense_division_filter.selected_value or "all"
+    payment_filter = self.expense_payment_filter.selected_value or "all"
+    matches = []
+    for participant in self._expense_participants:
+      if query and query not in (participant["name"] or "").lower():
+        continue
+      if participant_type == "players" and not participant["is_player"]:
+        continue
+      if participant_type == "non_players" and participant["is_player"]:
+        continue
+      if division_filter == "unassigned" and (
+        not participant["is_player"] or participant["division"]
+      ):
+        continue
+      if division_filter.startswith("division:") and participant["division"] != division_filter[len("division:"):]:
+        continue
+      balance = participant["balance"] or 0
+      if payment_filter == "owing" and balance <= 0:
+        continue
+      if payment_filter == "paid" and balance > 0:
+        continue
+      matches.append(participant)
+    return matches
+
+  def _refresh_expense_participants(self):
+    matches = self._matching_expense_participants()
+    self.budget_participant_rows.items = matches
+    total_count = len(self._expense_participants)
+    visible_count = len(matches)
+    participant_word = "participant" if total_count == 1 else "participants"
+    self.expense_filter_status.text = (
+      f"Showing {visible_count} of {total_count} {participant_word}"
+    )
+    self.no_budget_participants_state.visible = not matches
+    self.no_budget_participants_state.text = (
+      "No participant expense details have been added."
+      if not total_count
+      else "No participants match these filters."
+    )
 
   def _show_selected_standings(self):
     scope = self.standings_scope_picker.selected_value or "overall"
@@ -71,3 +139,19 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
   @handle("standings_sort_by", "change")
   def standings_sort_by_change(self, **event_args):
     self._show_selected_standings()
+
+  @handle("expense_search", "change")
+  def expense_search_change(self, **event_args):
+    self._refresh_expense_participants()
+
+  @handle("expense_participant_type_filter", "change")
+  def expense_participant_type_filter_change(self, **event_args):
+    self._refresh_expense_participants()
+
+  @handle("expense_division_filter", "change")
+  def expense_division_filter_change(self, **event_args):
+    self._refresh_expense_participants()
+
+  @handle("expense_payment_filter", "change")
+  def expense_payment_filter_change(self, **event_args):
+    self._refresh_expense_participants()

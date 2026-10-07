@@ -1,0 +1,10 @@
+<anvil-form container="ColumnPanel">
+  <div class="budget-category-row">
+    <label>Category name<anvil-component type="TextBox" name="category_name_box"></anvil-component></label>
+    <label>Total $<anvil-component type="TextBox" name="category_total_box" prop:placeholder="0"></anvil-component></label>
+    <div class="budget-category-actions">
+      <anvil-component type="Button" name="save_button" prop:text="Save" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="delete_button" prop:text="Delete" prop:role="danger-button"></anvil-component>
+    </div>
+  </div>
+</anvil-form>

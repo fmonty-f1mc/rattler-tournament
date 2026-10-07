@@ -1,19 +1,18 @@
-<anvil-form container="ColumnPanel">
+<anvil-form container="ColumnPanel" prop:visible="true">
   <div class="budget-row">
     <div class="budget-player">
-      <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
-      <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
-      <anvil-component type="Label" name="share_total" prop:role="muted-text"></anvil-component>
-      <div class="budget-category-grid">
-        <anvil-component type="CheckBox" name="accommodation_check" prop:text="Accommodation"></anvil-component>
-        <anvil-component type="CheckBox" name="golf_check" prop:text="Golf"></anvil-component>
-        <anvil-component type="CheckBox" name="travel_check" prop:text="Travel"></anvil-component>
-        <anvil-component type="CheckBox" name="other_check" prop:text="Other"></anvil-component>
+      <div class="budget-player-name">
+        <anvil-component type="CheckBox" name="payment_selection_checkbox" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+        <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
+      </div>
+      <div class="budget-expense-details">
+        <anvil-component type="Label" name="amount_owed_label" prop:role="budget-owed"></anvil-component>
+        <anvil-component type="Label" name="no_expenses_label" prop:role="muted-text" prop:text="No expenses assigned."></anvil-component>
+        <anvil-component type="RepeatingPanel" name="expense_rows" prop:item_template="rattler_tournament.ExpenseDetailRow" prop:role="budget-expense-detail-list"></anvil-component>
       </div>
     </div>
     <div class="budget-payment">
-      <label>Amount paid $<anvil-component type="TextBox" name="paid_box" prop:placeholder="0"></anvil-component></label>
-      <anvil-component type="Button" name="save_button" prop:text="Save participant shares" prop:role="secondary-button"></anvil-component>
+      <label>Total paid $<anvil-component type="TextBox" name="paid_box" prop:placeholder="0" prop:role="budget-paid-input"></anvil-component></label>
     </div>
   </div>
 </anvil-form>

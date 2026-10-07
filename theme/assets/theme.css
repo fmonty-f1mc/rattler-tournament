@@ -692,6 +692,13 @@ textarea.anvil-text-area:disabled,
   border-bottom: 1px solid var(--blank-border);
 }
 
+.public-expense-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 14px 0 8px;
+}
+
 .public-budget-player,
 .public-budget-value {
   display: flex;
@@ -790,6 +797,35 @@ textarea.anvil-text-area:disabled,
   font-weight: 800;
 }
 
+.anvil-role-budget-owed {
+  color: #8f2525;
+  font-weight: 800;
+}
+
+.anvil-role-budget-paid {
+  color: #16743a;
+  font-weight: 800;
+}
+
+.anvil-role-budget-settled {
+  color: #16743a;
+  font-weight: 800;
+}
+
+.budget-summary .anvil-role-budget-owed {
+  color: #8f2525;
+}
+
+.budget-summary .anvil-role-budget-paid {
+  color: #16743a;
+}
+
+input.anvil-role-budget-paid-input,
+input.anvil-role-budget-paid-input:disabled {
+  color: #16743a;
+  font-weight: 800;
+}
+
 .budget-row {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(200px, 0.7fr);
@@ -797,14 +833,66 @@ textarea.anvil-text-area:disabled,
   gap: 16px;
 }
 
-.budget-total-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(100px, 1fr));
+.budget-player-name {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
 }
 
-.budget-total-grid label,
+.budget-player-name .anvil-label {
+  flex: 0 1 auto;
+}
+
+.budget-expense-details {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--blank-border);
+}
+
+.budget-expense-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.budget-expense-share {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.anvil-role-budget-expense-name {
+  color: var(--blank-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.anvil-role-budget-expense-share {
+  color: var(--blank-primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.anvil-role-budget-expense-count {
+  color: var(--blank-muted);
+  font-size: 10px;
+  text-align: right;
+}
+
+.budget-category-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.2fr) minmax(110px, 0.7fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--blank-border);
+}
+
+.budget-category-row label,
 .budget-payment label {
   display: flex;
   flex-direction: column;
@@ -815,15 +903,129 @@ textarea.anvil-text-area:disabled,
 }
 
 .budget-category-grid {
+  margin-top: 12px;
+}
+
+.budget-category-share-row {
+  padding: 3px 0;
+}
+
+.budget-category-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.budget-category-add-form {
+  margin-top: 14px;
+}
+
+.budget-bulk-controls {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.budget-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.anvil-role-bulk-add-button > button {
+  border-color: #16743a;
+  background: #198a43;
+  color: white;
+}
+
+.anvil-role-bulk-add-button > button:hover,
+.anvil-role-bulk-add-button > button:focus {
+  background: #126d34;
+  color: white;
+}
+
+.budget-cost-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.budget-cost-header .section-heading {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.anvil-role-budget-save-button > button {
+  border-color: #16743a;
+  background: #198a43;
+  color: white;
+}
+
+.anvil-role-budget-save-button > button:hover,
+.anvil-role-budget-save-button > button:focus {
+  background: #126d34;
+  color: white;
+}
+
+.anvil-role-bulk-clear-button > button {
+  border-color: #a82222;
+  background: #c12b2b;
+  color: white;
+}
+
+.anvil-role-bulk-clear-button > button:hover,
+.anvil-role-bulk-clear-button > button:focus {
+  background: #982020;
+  color: white;
+}
+
+.anvil-role-budget-target-list > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 4px 18px;
+}
+
+.budget-target-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.8fr);
+  align-items: center;
   gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--blank-border);
 }
 
 .budget-payment {
   display: flex;
   align-items: end;
   gap: 10px;
+}
+
+.budget-payment-bulk-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  margin: 12px 0 6px;
+  border: 1px solid var(--blank-border);
+  border-radius: 6px;
+  background: var(--blank-surface-muted);
+}
+
+.budget-payment-amount-field {
+  flex: 0 1 220px;
+}
+
+.budget-payment-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .budget-payment label {
@@ -846,7 +1048,7 @@ textarea.anvil-text-area:disabled,
   .form-grid-four,
   .form-grid-three,
   .form-grid-five,
-  .budget-total-grid,
+  .budget-category-row,
   .budget-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -861,9 +1063,14 @@ textarea.anvil-text-area:disabled,
     text-align: left;
   }
 
+  .budget-cost-header {
+    flex-direction: column;
+  }
+
   .score-row,
   .player-row,
   .budget-row,
+  .budget-category-row,
   .entry-details-row,
   .round-two-pairing-row {
     grid-template-columns: 1fr;

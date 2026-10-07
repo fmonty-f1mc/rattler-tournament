@@ -1,0 +1,9 @@
+<anvil-form container="ColumnPanel">
+  <div class="budget-expense-detail-row">
+    <anvil-component type="Label" name="expense_name" prop:role="budget-expense-name" bind:text="self.item['name']"></anvil-component>
+    <div class="budget-expense-share">
+      <anvil-component type="Label" name="expense_share_label" prop:role="budget-expense-share"></anvil-component>
+      <anvil-component type="Label" name="sharing_count_label" prop:role="budget-expense-count"></anvil-component>
+    </div>
+  </div>
+</anvil-form>

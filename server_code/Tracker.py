@@ -110,6 +110,12 @@ def _delete_pairings_for_entries(pairing_table, entries):
   return len(pairings)
 
 
+def _delete_budget_shares_for_entries(entries):
+  for entry in entries:
+    for share in app_tables.budget_shares.search(entry=entry):
+      share.delete()
+
+
 @anvil.server.callable(require_user=True)
 def list_golfers():
   return sorted(app_tables.golfers.search(), key=lambda golfer: (not golfer["active"], golfer["name"].lower()))
@@ -247,6 +253,7 @@ def delete_golfer(golfer):
     app_tables.round_two_pairings,
     entries,
   )
+  _delete_budget_shares_for_entries(entries)
   for entry in entries:
     entry.delete()
   golfer.delete()
@@ -270,9 +277,15 @@ def delete_tournament(tournament):
   round_two_pairings = list(app_tables.round_two_pairings.search(tournament=tournament))
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
   divisions = list(app_tables.tournament_divisions.search(tournament=tournament))
+  budget_categories = list(app_tables.budget_categories.search(tournament=tournament))
 
   for pairing in rattler_pairings + round_two_pairings:
     pairing.delete()
+  _delete_budget_shares_for_entries(entries)
+  for category in budget_categories:
+    for share in app_tables.budget_shares.search(category=category):
+      share.delete()
+    category.delete()
   for entry in entries:
     entry.delete()
   for division in divisions:
@@ -350,6 +363,7 @@ def create_tournament(year, course, event_date, notes):
     golf_total=0,
     travel_total=0,
     other_total=0,
+    budget_categories_initialized=False,
   )
   return _result(tournament=tournament)
 
@@ -441,6 +455,7 @@ def remove_tournament_entry(tournament, entry):
     app_tables.round_two_pairings,
     [entry],
   )
+  _delete_budget_shares_for_entries([entry])
   entry.delete()
   return _result(removed_pairing_count=removed_pairing_count)
 
@@ -450,12 +465,6 @@ def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
-  for entry in entries:
-    if not _entry_is_player(entry):
-      continue
-    net_score = _entry_net_score(entry)
-    if net_score is not None and entry["net_18"] != net_score:
-      entry["net_18"] = net_score
   return sorted(entries, key=_entry_sort_key)
 
 
@@ -711,6 +720,12 @@ def get_public_tournament_standings():
           {
             "name": row["entry"]["golfer"]["name"],
             "participant_label": row["participant_label"],
+            "is_player": _entry_is_player(row["entry"]),
+            "division": (
+              (row["entry"]["division"] or "")
+              if _entry_is_player(row["entry"])
+              else ""
+            ),
             "estimated_share": row["estimated_share"],
             "paid": row["entry"]["amount_paid"] or 0,
             "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
@@ -992,146 +1007,364 @@ def save_rattler_card(pairing, scores):
   return _result()
 
 
-@anvil.server.callable(require_user=True)
-def save_tournament_budget(tournament, accommodation, golf, travel, other):
-  if not _valid_row(app_tables.tournaments, tournament):
-    return _result("Choose a tournament.")
-  parsed = {}
-  for key, value, label in (
-    ("accommodation_total", accommodation, "Accommodation total"),
-    ("golf_total", golf, "Golf total"),
-    ("travel_total", travel, "Travel total"),
-    ("other_total", other, "Other total"),
-  ):
-    number = _number(value, label, allow_blank=False)
-    if number is None or number < 0:
-      return _result(f"Enter a valid non-negative value for {label.lower()}.")
-    parsed[key] = number
-  tournament.update(**parsed)
-  return _result()
-
-
-@anvil.server.callable(require_user=True)
-def save_entry_budget(entry, accommodation, golf, travel, other, paid):
-  if not _valid_row(app_tables.tournament_entries, entry):
-    return _result("Choose a tournament entry.")
-  amount_paid = _number(paid, "Amount paid", allow_blank=False)
-  if amount_paid is None or amount_paid < 0:
-    return _result("Enter a valid non-negative value for amount paid.")
-  entry.update(
-    accommodation=bool(accommodation),
-    shares_golf=_entry_is_player(entry) and bool(golf),
-    shares_travel=bool(travel),
-    shares_other=bool(other),
-    amount_paid=amount_paid,
+def _legacy_budget_category_specs(tournament, entries):
+  definitions = (
+    ("Accommodation", "accommodation_total", "lodging_cost", False),
+    ("Golf", "golf_total", "golf_cost", True),
+    ("Travel", "travel_total", "travel_cost", False),
+    ("Other", "other_total", "other_cost", False),
   )
-  return _result()
+  specs = []
+  for index, (name, total_column, entry_column, players_only) in enumerate(definitions):
+    total = tournament[total_column]
+    if total is None:
+      total = sum(entry[entry_column] or 0 for entry in entries)
 
-
-def _budget_summary(tournament):
-  if not _valid_row(app_tables.tournaments, tournament):
-    return {
-      "participants": 0,
-      "accommodated": 0,
-      "total": 0,
-      "paid": 0,
-      "balance": 0,
-      "category_totals": {"accommodation": 0, "golf": 0, "travel": 0, "other": 0},
-      "category_counts": {"accommodation": 0, "golf": 0, "travel": 0, "other": 0},
-      "rows": [],
-    }
-  entries = list_tournament_entries(tournament)
-
-  category_totals = {}
-  for category, total_column, legacy_column in (
-    ("accommodation", "accommodation_total", "lodging_cost"),
-    ("golf", "golf_total", "golf_cost"),
-    ("travel", "travel_total", "travel_cost"),
-    ("other", "other_total", "other_cost"),
-  ):
-    total_value = tournament[total_column]
-    if total_value is None:
-      total_value = sum(entry[legacy_column] or 0 for entry in entries)
-    category_totals[category] = total_value or 0
-
-  entry_selections = {}
-  category_counts = {category: 0 for category in category_totals}
-  for entry in entries:
-    selections = {
-      "accommodation": bool(entry["accommodation"]) or (entry["lodging_cost"] or 0) > 0,
-      "golf": (
-        _entry_is_player(entry)
-        and (
+    selected_entry_ids = set()
+    for entry in entries:
+      if name == "Accommodation":
+        selected = bool(entry["accommodation"]) or (entry["lodging_cost"] or 0) > 0
+      elif name == "Golf":
+        selected = _entry_is_player(entry) and (
           bool(entry["shares_golf"])
           if entry["shares_golf"] is not None
           else (entry["golf_cost"] or 0) > 0
         )
-      ),
-      "travel": (
-        bool(entry["shares_travel"])
-        if entry["shares_travel"] is not None
-        else (entry["travel_cost"] or 0) > 0
-      ),
-      "other": (
-        bool(entry["shares_other"])
-        if entry["shares_other"] is not None
-        else (entry["other_cost"] or 0) > 0
-      ),
-    }
-    entry_selections[entry.get_id()] = selections
-    for category, selected in selections.items():
+      elif name == "Travel":
+        selected = (
+          bool(entry["shares_travel"])
+          if entry["shares_travel"] is not None
+          else (entry["travel_cost"] or 0) > 0
+        )
+      else:
+        selected = (
+          bool(entry["shares_other"])
+          if entry["shares_other"] is not None
+          else (entry["other_cost"] or 0) > 0
+        )
       if selected:
-        category_counts[category] += 1
+        selected_entry_ids.add(entry.get_id())
 
-  category_shares = {
-    category: total / category_counts[category] if category_counts[category] else total
-    for category, total in category_totals.items()
+    specs.append({
+      "key": "legacy-{}".format(index),
+      "name": name,
+      "total": total or 0,
+      "players_only": players_only,
+      "selected_entry_ids": selected_entry_ids,
+      "category": None,
+    })
+  return specs
+
+
+def _ensure_budget_categories(tournament, entries=None):
+  categories = list(app_tables.budget_categories.search(tournament=tournament))
+  if categories:
+    tournament["budget_categories_initialized"] = True
+    return categories
+
+  entries = list_tournament_entries(tournament) if entries is None else entries
+  if tournament["budget_categories_initialized"] is not True:
+    for spec in _legacy_budget_category_specs(tournament, entries):
+      category = app_tables.budget_categories.add_row(
+        tournament=tournament,
+        name=spec["name"],
+        total=spec["total"],
+        players_only=spec["players_only"],
+      )
+      for entry in entries:
+        if entry.get_id() in spec["selected_entry_ids"]:
+          app_tables.budget_shares.add_row(entry=entry, category=category)
+    categories = list(app_tables.budget_categories.search(tournament=tournament))
+
+  tournament["budget_categories_initialized"] = True
+  return categories
+
+
+@anvil.server.callable(require_user=True)
+def add_budget_category(tournament, name):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  name = (name or "").strip()
+  if not name:
+    return _result("Enter a category name.")
+  categories = _ensure_budget_categories(tournament)
+  if any((category["name"] or "").strip().lower() == name.lower() for category in categories):
+    return _result("That category already exists for this tournament.")
+  category = app_tables.budget_categories.add_row(
+    tournament=tournament,
+    name=name,
+    total=0,
+    players_only=False,
+  )
+  return _result(category=category)
+
+
+@anvil.server.callable(require_user=True)
+def save_budget_category(category, name, total):
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  name = (name or "").strip()
+  if not name:
+    return _result("Enter a category name.")
+  amount = _number(total, "Category total", allow_blank=False)
+  if amount is None or amount < 0:
+    return _result("Enter a valid non-negative category total.")
+  tournament = category["tournament"]
+  if any(
+    other.get_id() != category.get_id()
+    and (other["name"] or "").strip().lower() == name.lower()
+    for other in app_tables.budget_categories.search(tournament=tournament)
+  ):
+    return _result("That category already exists for this tournament.")
+  category.update(name=name, total=amount)
+  return _result()
+
+
+@anvil.server.callable(require_user=True)
+def delete_budget_category(category):
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  for share in app_tables.budget_shares.search(category=category):
+    share.delete()
+  category.delete()
+  return _result()
+
+
+@anvil.server.callable(require_user=True)
+def add_entry_payments(tournament, payments):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not isinstance(payments, (list, tuple)):
+    return _result("Choose valid participant payments.")
+
+  tournament_id = tournament.get_id()
+  seen_entry_ids = set()
+  validated_payments = []
+  for payment in payments:
+    if not isinstance(payment, dict) or "entry" not in payment or "payment_amount" not in payment:
+      return _result("Choose valid participant payments.")
+    entry = payment["entry"]
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose a valid tournament entry.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament_id:
+      return _result("Choose participants from this tournament.")
+    entry_id = entry.get_id()
+    if entry_id in seen_entry_ids:
+      return _result("Each participant can appear only once.")
+    payment_amount = _number(payment["payment_amount"], "Payment amount", allow_blank=False)
+    if payment_amount is None or payment_amount <= 0:
+      return _result(
+        "Enter a valid positive payment amount for {}.".format(_entry_name(entry))
+      )
+    seen_entry_ids.add(entry_id)
+    validated_payments.append((entry, payment_amount))
+
+  for entry, payment_amount in validated_payments:
+    entry["amount_paid"] = (entry["amount_paid"] or 0) + payment_amount
+  return _result(saved_count=len(validated_payments))
+
+
+@anvil.server.callable(require_user=True)
+def add_budget_category_to_entries(tournament, category, entries):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  if not isinstance(entries, (list, tuple)):
+    return _result("Choose valid tournament participants.")
+  if not entries:
+    return _result("Select at least one participant.")
+
+  tournament_id = tournament.get_id()
+  available_category_ids = {
+    row.get_id()
+    for row in app_tables.budget_categories.search(tournament=tournament)
   }
+  if category.get_id() not in available_category_ids:
+    return _result("Choose an expense category from this tournament.")
+
+  selected_entries = []
+  selected_entry_ids = set()
+  for entry in entries:
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose participants from this tournament.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament_id:
+      return _result("Choose participants from this tournament.")
+    entry_id = entry.get_id()
+    if entry_id in selected_entry_ids:
+      continue
+    if category["players_only"] and not _entry_is_player(entry):
+      return _result(
+        "Only players can share the {} category. Remove non-players from your selection.".format(
+          category["name"]
+        )
+      )
+    selected_entries.append(entry)
+    selected_entry_ids.add(entry_id)
+
+  existing_entry_ids = {
+    share["entry"].get_id()
+    for share in app_tables.budget_shares.search(category=category)
+    if share["entry"] is not None
+  }
+  entries_to_add = [
+    entry for entry in selected_entries if entry.get_id() not in existing_entry_ids
+  ]
+  for entry in entries_to_add:
+    app_tables.budget_shares.add_row(entry=entry, category=category)
+  return _result(
+    added=len(entries_to_add),
+    already_assigned=len(selected_entries) - len(entries_to_add),
+  )
+
+
+@anvil.server.callable(require_user=True)
+def remove_budget_category_from_entries(tournament, category, entries):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  if not isinstance(entries, (list, tuple)):
+    return _result("Choose valid tournament participants.")
+  if not entries:
+    return _result("Select at least one participant.")
+
+  tournament_id = tournament.get_id()
+  available_category_ids = {
+    row.get_id()
+    for row in app_tables.budget_categories.search(tournament=tournament)
+  }
+  if category.get_id() not in available_category_ids:
+    return _result("Choose an expense category from this tournament.")
+
+  selected_entry_ids = set()
+  for entry in entries:
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose participants from this tournament.")
+    entry_tournament = entry["tournament"]
+    if entry_tournament is None or entry_tournament.get_id() != tournament_id:
+      return _result("Choose participants from this tournament.")
+    selected_entry_ids.add(entry.get_id())
+
+  removed_entry_ids = set()
+  for share in app_tables.budget_shares.search(category=category):
+    entry = share["entry"]
+    if entry is not None and entry.get_id() in selected_entry_ids:
+      removed_entry_ids.add(entry.get_id())
+      share.delete()
+
+  return _result(
+    removed=len(removed_entry_ids),
+    not_assigned=len(selected_entry_ids) - len(removed_entry_ids),
+  )
+
+
+def _budget_summary(tournament, migrate_legacy=False):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return {
+      "participants": 0,
+      "total": 0,
+      "paid": 0,
+      "balance": 0,
+      "categories": [],
+      "rows": [],
+    }
+  entries = list_tournament_entries(tournament)
+  category_rows = list(app_tables.budget_categories.search(tournament=tournament))
+  if not category_rows and migrate_legacy:
+    category_rows = _ensure_budget_categories(tournament, entries)
+
+  if category_rows:
+    category_specs = [
+      {
+        "key": category.get_id(),
+        "name": category["name"],
+        "total": category["total"] or 0,
+        "players_only": bool(category["players_only"]),
+        "category": category,
+        "selected_entry_ids": {
+          share["entry"].get_id()
+          for share in app_tables.budget_shares.search(category=category)
+          if share["entry"] is not None
+        },
+      }
+      for category in category_rows
+    ]
+  elif tournament["budget_categories_initialized"] is not True:
+    category_specs = _legacy_budget_category_specs(tournament, entries)
+  else:
+    category_specs = []
+
+  category_counts = {spec["key"]: 0 for spec in category_specs}
+  entry_selection_ids = {}
+  for entry in entries:
+    selected_ids = {
+      spec["key"]
+      for spec in category_specs
+      if entry.get_id() in spec["selected_entry_ids"]
+    }
+    entry_selection_ids[entry.get_id()] = selected_ids
+    for category_id in selected_ids:
+      category_counts[category_id] += 1
+
+  for spec in category_specs:
+    count = category_counts[spec["key"]]
+    spec["count"] = count
+    spec["share"] = spec["total"] / count if count else spec["total"]
+
+  categories = [
+    {
+      "category": spec["category"],
+      "name": spec["name"],
+      "total": spec["total"],
+      "players_only": spec["players_only"],
+      "count": spec["count"],
+      "share": spec["share"],
+    }
+    for spec in category_specs
+  ]
   rows = []
   for entry in entries:
-    selections = entry_selections[entry.get_id()]
     participant_label = (
       (entry["division"] or "Player")
       if _entry_is_player(entry)
-      else "Non-player · budget participant"
+      else "Non-player · included in expenses"
     )
+    category_shares = [
+      {
+        "category": spec["category"],
+        "name": spec["name"],
+        "selected": spec["key"] in entry_selection_ids[entry.get_id()],
+        "share": spec["share"],
+        "count": spec["count"],
+        "players_only": spec["players_only"],
+        "entry_is_player": _entry_is_player(entry),
+      }
+      for spec in category_specs
+    ]
     rows.append({
       "entry": entry,
       "participant_label": participant_label,
-      "shares_accommodation": selections["accommodation"],
-      "shares_golf": selections["golf"],
-      "shares_travel": selections["travel"],
-      "shares_other": selections["other"],
-      "accommodation_share": category_shares["accommodation"],
-      "golf_share": category_shares["golf"],
-      "travel_share": category_shares["travel"],
-      "other_share": category_shares["other"],
-      "accommodation_count": category_counts["accommodation"],
-      "golf_count": category_counts["golf"],
-      "travel_count": category_counts["travel"],
-      "other_count": category_counts["other"],
+      "categories": category_shares,
       "estimated_share": sum(
-        category_shares[category]
-        for category, selected in selections.items()
-        if selected
+        item["share"] for item in category_shares if item["selected"]
       ),
     })
 
-  total = sum(category_totals.values())
+  total = sum(spec["total"] for spec in category_specs)
   paid = sum(entry["amount_paid"] or 0 for entry in entries)
-  accommodated = category_counts["accommodation"]
   return {
     "participants": len(entries),
-    "accommodated": accommodated,
     "total": total,
     "paid": paid,
     "balance": total - paid,
-    "category_totals": category_totals,
-    "category_counts": category_counts,
+    "categories": categories,
     "rows": rows,
   }
 
 
 @anvil.server.callable(require_user=True)
 def get_budget_summary(tournament):
-  return _budget_summary(tournament)
+  return _budget_summary(tournament, migrate_legacy=True)

@@ -1,5 +1,44 @@
 allow_embedding: false
 db_schema:
+  budget_categories:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: name
+      type: string
+    - admin_ui: {}
+      client_hidden: null
+      name: total
+      type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: players_only
+      type: bool
+    indexes: []
+    server: full
+    title: Budget Categories
+  budget_shares:
+    client: none
+    columns:
+    - admin_ui: {}
+      client_hidden: null
+      name: entry
+      target: tournament_entries
+      type: link_single
+    - admin_ui: {}
+      client_hidden: null
+      name: category
+      target: budget_categories
+      type: link_single
+    indexes: []
+    server: full
+    title: Budget Shares
   golfers:
     client: none
     columns:
@@ -254,6 +293,10 @@ db_schema:
       client_hidden: null
       name: other_total
       type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: budget_categories_initialized
+      type: bool
     indexes: []
     server: full
     title: Tournaments
@@ -306,7 +349,7 @@ services:
 - client_config: {enable_v2: true}
   server_config: {}
   source: /runtime/services/tables.yml
-- client_config: {allow_signup: false, confirm_email: false, enable_automatically: false, require_secure_passwords: true, use_email: true, use_google: true}
+- client_config: {allow_remember_me: true, allow_signup: false, confirm_email: false, enable_automatically: false, remember_me_days: 30, require_secure_passwords: true, use_email: true, use_google: true}
   server_config: {user_table: users}
   source: /runtime/services/anvil/users.yml
 - client_config: {}
