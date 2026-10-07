@@ -1131,36 +1131,12 @@ def delete_budget_category(category):
 
 
 @anvil.server.callable(require_user=True)
-def save_entry_budget(entry, categories, paid):
+def save_entry_payment(entry, paid):
   if not _valid_row(app_tables.tournament_entries, entry):
     return _result("Choose a tournament entry.")
   amount_paid = _number(paid, "Amount paid", allow_blank=False)
   if amount_paid is None or amount_paid < 0:
     return _result("Enter a valid non-negative value for amount paid.")
-  if not isinstance(categories, (list, tuple)):
-    return _result("Choose valid budget categories.")
-
-  tournament = entry["tournament"]
-  available_categories = list(app_tables.budget_categories.search(tournament=tournament))
-  available_by_id = {category.get_id(): category for category in available_categories}
-  selected_categories = []
-  selected_ids = set()
-  for category in categories:
-    if not _valid_row(app_tables.budget_categories, category):
-      return _result("Choose categories from this tournament's budget.")
-    category_id = category.get_id()
-    if category_id not in available_by_id:
-      return _result("Choose categories from this tournament's budget.")
-    if category_id in selected_ids:
-      continue
-    if category["players_only"] and not _entry_is_player(entry):
-      return _result("Only players can share the {} category.".format(category["name"]))
-    selected_categories.append(available_by_id[category_id])
-    selected_ids.add(category_id)
-
-  _delete_budget_shares_for_entries([entry])
-  for category in selected_categories:
-    app_tables.budget_shares.add_row(entry=entry, category=category)
   entry["amount_paid"] = amount_paid
   return _result()
 

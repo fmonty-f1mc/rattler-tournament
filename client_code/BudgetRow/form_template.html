@@ -3,14 +3,11 @@
     <div class="budget-player">
       <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
       <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
-      <anvil-component type="Label" name="share_total" prop:role="muted-text"></anvil-component>
-      <div class="budget-category-grid">
-        <anvil-component type="RepeatingPanel" name="category_rows" prop:item_template="rattler_tournament.BudgetCategoryShareRow" prop:role="budget-category-share-list"></anvil-component>
-      </div>
+      <anvil-component type="Label" name="amount_owed_label" prop:role="muted-text"></anvil-component>
     </div>
     <div class="budget-payment">
       <label>Amount paid $<anvil-component type="TextBox" name="paid_box" prop:placeholder="0"></anvil-component></label>
-      <anvil-component type="Button" name="save_button" prop:text="Save participant shares" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="save_button" prop:text="Save amount paid" prop:role="secondary-button"></anvil-component>
     </div>
   </div>
 </anvil-form>

@@ -381,11 +381,6 @@ class Form1(Form1Template):
     for row_component in self.budget_rows.get_components():
       item = getattr(row_component, "item")
       item["draft_paid"] = getattr(row_component, "paid_box").text
-      for category_component in getattr(row_component, "category_rows").get_components():
-        category_item = getattr(category_component, "item")
-        category_item["selected"] = getattr(
-          category_component, "category_share_check"
-        ).checked
 
   def _refresh_budget_cost_rows(self):
     self._capture_budget_cost_drafts()
@@ -1157,22 +1152,20 @@ class Form1(Form1Template):
       f"Round-one scores saved for {result['saved_count']} players."
     )
 
-  @handle("budget_rows", "x-save-entry-budget")
-  def budget_rows_save_entry_budget(
+  @handle("budget_rows", "x-save-entry-payment")
+  def budget_rows_save_entry_payment(
     self,
     entry,
-    categories,
     amount_paid,
     **event_args,
   ):
     result = anvil.server.call(
-      "save_entry_budget",
+      "save_entry_payment",
       entry,
-      categories,
       amount_paid,
     )
     if not result["ok"]:
       self.budget_status.text = result["message"]
       return
-    self.budget_status.text = f"Sharing updated for {entry['golfer']['name']}."
+    self.budget_status.text = f"Payment updated for {entry['golfer']['name']}."
     self._load_event_data()
