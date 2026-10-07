@@ -1006,6 +1006,23 @@ input.anvil-role-budget-paid-input:disabled {
   color: white;
 }
 
+.anvil-role-round-one-save-button > button {
+  border-color: #16743a;
+  background: #198a43;
+  color: white;
+}
+
+.round-one-save-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.anvil-role-round-one-save-button > button:hover,
+.anvil-role-round-one-save-button > button:focus {
+  background: #126d34;
+  color: white;
+}
+
 .anvil-role-bulk-clear-button > button {
   border-color: #a82222;
   background: #c12b2b;
