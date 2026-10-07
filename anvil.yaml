@@ -152,6 +152,10 @@ db_schema:
       type: string
     - admin_ui: {}
       client_hidden: null
+      name: pairing_basis
+      type: string
+    - admin_ui: {}
+      client_hidden: null
       name: first_entry
       target: tournament_entries
       type: link_single
@@ -349,8 +353,16 @@ services:
 - client_config: {enable_v2: true}
   server_config: {}
   source: /runtime/services/tables.yml
-- client_config: {allow_remember_me: true, allow_signup: false, confirm_email: false, enable_automatically: false, remember_me_days: 30, require_secure_passwords: true, use_email: true, use_google: true}
-  server_config: {user_table: users}
+- client_config: {allow_remember_me: true, allow_signup: true, confirm_email: false, enable_automatically: false, remember_me_days: 30, require_secure_passwords: true, use_email: true, use_google: true}
+  server_config:
+    email_content:
+      reset_password:
+        html: |-
+          <p>Hi there,</p>
+          <p>You have requested a password reset for your account {{email}}. To reset your password, click the link below:</p>
+          <p>{{reset_link}}</p>
+          <p>This link will expire in ten minutes.</p>
+    user_table: users
   source: /runtime/services/anvil/users.yml
 - client_config: {}
   server_config: {enc_delegation_refresh_token: H5Fr03IOkdNl15JiVaLAhXMIjIQmrIYF5pZG5SKCsxuUMTDNS6ES+NOhug1elvjKa0cugg0JlORqMMUOtj+BhV1FG+6cStEEJBxgGeOFzBxf5IN7027u6NVAqPI5zsSwcQEVCLwAL4X1Rm/Q+7vgXWCkaKjcgjjK5MzobXnY0qdolgE2HKsVbfhVhaHfrz4Yphgn6dnDa2J6kouQYOwtd618o9gQdX1k57LDKFOgir+xV9qjUcN9j4vpKXNeGkOhxoCtkeY2lujS00vOlsjdf00q+1GFvadZvX2qFcf1IcgTBnhYStgBszcGKI4gZw==}

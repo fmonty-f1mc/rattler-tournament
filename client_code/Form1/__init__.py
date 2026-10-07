@@ -251,30 +251,19 @@ class Form1(Form1Template):
     self.field_rows.items = field_items
     self.score_rows.items = player_entries
     round_two_pairings = anvil.server.call("list_round_two_pairings", tournament)
-    entry_options = [(entry["golfer"]["name"], entry) for entry in player_entries]
-    self.round_two_pairing_rows.items = [
-      {
-        "sequence": pairing["sequence"],
-        "pairing_number": f"Pair {pairing['sequence']}",
-        "pair_label": pairing["pair_label"],
-        "first_entry": pairing["first_entry"],
-        "second_entry": pairing["second_entry"],
-        "score_9": pairing["score_9"],
-        "score_changed": False,
-        "entry_options": entry_options,
-      }
-      for pairing in round_two_pairings
-    ]
-    self.generate_round_two_pairings_button.text = (
-      "Regenerate pairs from Round One"
-      if round_two_pairings
-      else "Generate pairs from Round One"
+    self.round_two_pairing_rows.items = self._round_two_pairing_items(
+      round_two_pairings,
+      player_entries,
     )
-    self.round_two_pairing_status.text = (
-      ""
-      if round_two_pairings
-      else "Generate pairs after all Round One scores are entered."
-    )
+    if round_two_pairings:
+      pairing_basis = round_two_pairings[0]["pairing_basis"] or "net"
+      self.round_two_pairing_status.text = (
+        f"Saved pair order: {pairing_basis} score."
+      )
+    else:
+      self.round_two_pairing_status.text = (
+        "Enter Round One scores first. Net pairing also requires a handicap for every player."
+      )
     division_counts = {division: 0 for division in self.division_options}
     missing_division_count = 0
     for entry in player_entries:
@@ -331,6 +320,33 @@ class Form1(Form1Template):
     self.budget_balance.text = self._money(summary["balance"])
     count = summary["participants"]
     self.budget_participants.text = f"{count} participant" + ("s" if count != 1 else "")
+
+  def _round_two_pairing_items(self, pairings, player_entries):
+    entry_options = [(entry["golfer"]["name"], entry) for entry in player_entries]
+    return [
+      {
+        "sequence": pairing["sequence"],
+        "pairing_number": f"Pair {pairing['sequence']}",
+        "pairing_basis": pairing["pairing_basis"] or "net",
+        "pair_label": pairing["pair_label"],
+        "first_entry": pairing["first_entry"],
+        "second_entry": pairing["second_entry"],
+        "score_9": pairing["score_9"],
+        "score_changed": (
+          pairing["score_changed"] if isinstance(pairing, dict) else False
+        ),
+        "entry_options": entry_options,
+      }
+      for pairing in pairings
+    ]
+
+  @staticmethod
+  def _round_two_pairing_key(pairing):
+    second_entry = pairing["second_entry"]
+    return frozenset((
+      pairing["first_entry"].get_id(),
+      None if second_entry is None else second_entry.get_id(),
+    ))
 
   def _load_budget_cost_items(self, rows):
     self._budget_cost_items = []
@@ -711,18 +727,45 @@ class Form1(Form1Template):
   def round_two_nav_click(self, **event_args):
     self._show_view("round_two")
 
-  @handle("generate_round_two_pairings_button", "click")
-  def generate_round_two_pairings_button_click(self, **event_args):
+  @handle("generate_round_two_net_pairings_button", "click")
+  def generate_round_two_net_pairings_button_click(self, **event_args):
+    self._generate_round_two_pairings("net")
+
+  @handle("generate_round_two_gross_pairings_button", "click")
+  def generate_round_two_gross_pairings_button_click(self, **event_args):
+    self._generate_round_two_pairings("gross")
+
+  def _generate_round_two_pairings(self, pairing_basis):
     if self.current_event is None:
       self.round_two_pairing_status.text = "Create or select a tournament first."
       return
-    result = anvil.server.call("build_round_two_pairings", self.current_event)
+    result = anvil.server.call(
+      "build_round_two_pairings",
+      self.current_event,
+      pairing_basis,
+    )
     if not result["ok"]:
       self.round_two_pairing_status.text = result["message"]
       return
-    self._load_event_data()
+    existing_pairings = self.round_two_pairing_rows.items or []
+    pairing_by_players = {
+      self._round_two_pairing_key(pairing): pairing
+      for pairing in existing_pairings
+    }
+    pairings = result["pairings"]
+    for pairing in pairings:
+      existing = pairing_by_players.get(self._round_two_pairing_key(pairing))
+      if existing is not None:
+        pairing["score_9"] = existing["score_9"]
+        pairing["score_changed"] = existing["score_changed"]
+    player_entries = self.score_rows.items or []
+    self.round_two_pairing_rows.items = self._round_two_pairing_items(
+      pairings,
+      player_entries,
+    )
     self.round_two_pairing_status.text = (
-      f"{result['pair_count']} Round Two pairs generated from Round One standings."
+      f"Draft: {result['pair_count']} pairs generated by {pairing_basis} score. "
+      "Press Save pairs and scores to keep them."
     )
 
   @handle("round_two_pairing_rows", "x-pairing-changed")
@@ -738,6 +781,7 @@ class Form1(Form1Template):
       {
         "first_entry": pairing["first_entry"],
         "second_entry": pairing["second_entry"],
+        "pairing_basis": pairing["pairing_basis"],
         "score_9": pairing["score_9"],
         "score_changed": pairing["score_changed"],
       }
