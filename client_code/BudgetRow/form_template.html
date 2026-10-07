@@ -1,11 +1,10 @@
-<anvil-form container="ColumnPanel">
+<anvil-form container="ColumnPanel" prop:visible="true">
   <div class="budget-row">
     <div class="budget-player">
       <div class="budget-player-name">
-        <anvil-component type="CheckBox" name="payment_selection_checkbox" prop:text="Select"></anvil-component>
-        <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+        <anvil-component type="CheckBox" name="payment_selection_checkbox" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+        <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
       </div>
-      <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
       <div class="budget-expense-details">
         <anvil-component type="Label" name="amount_owed_label" prop:role="budget-owed"></anvil-component>
         <anvil-component type="Label" name="no_expenses_label" prop:role="muted-text" prop:text="No expenses assigned."></anvil-component>

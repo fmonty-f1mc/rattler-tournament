@@ -840,7 +840,7 @@ input.anvil-role-budget-paid-input:disabled {
 }
 
 .budget-player-name .anvil-label {
-  flex: 1;
+  flex: 0 1 auto;
 }
 
 .budget-expense-details {
@@ -855,7 +855,6 @@ input.anvil-role-budget-paid-input:disabled {
   align-items: center;
   gap: 10px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--blank-border);
 }
 
 .budget-expense-share {
