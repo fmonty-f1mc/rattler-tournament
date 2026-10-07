@@ -423,7 +423,7 @@ services:
 - client_config: {enable_v2: true}
   server_config: {}
   source: /runtime/services/tables.yml
-- client_config: {allow_remember_me: true, allow_signup: true, confirm_email: false, enable_automatically: false, remember_me_days: 30, require_secure_passwords: true, use_email: true, use_google: true}
+- client_config: {allow_remember_me: true, allow_signup: true, confirm_email: false, enable_automatically: false, remember_me_days: 30, require_secure_passwords: false, use_email: true, use_google: true}
   server_config:
     email_content:
       reset_password:
