@@ -375,7 +375,7 @@ db_schema:
     server: full
     title: Tournaments
   users:
-    client: none
+    client: full
     columns:
     - admin_ui: {}
       client_hidden: null
