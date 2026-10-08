@@ -7,6 +7,8 @@ import anvil.users
 
 
 class Form1(Form1Template):
+  _CREATE_TOURNAMENT_PICKER_OPTION = "__create_tournament__"
+
   def __init__(self, **properties):
     super().__init__(**properties)
     self.current_user = anvil.users.get_user()
@@ -15,6 +17,7 @@ class Form1(Form1Template):
       return
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
+    self._creating_tournament = False
     self._player_entries = []
     self._round_one_score_drafts = {}
     self._field_detail_drafts = {}
@@ -24,6 +27,8 @@ class Form1(Form1Template):
     self._budget_cost_items = []
     self._budget_selected_entry_ids = set()
     self._budget_selection_tournament_id = None
+    self.edit_tournament_panel.visible = False
+    self.create_tournament_panel.visible = False
     self.standings_scope_picker.items = [("Overall", "overall")]
     self.standings_scope_picker.selected_value = "overall"
     self.standings_sort_by.items = [("Net", "net"), ("Gross", "gross")]
@@ -58,11 +63,15 @@ class Form1(Form1Template):
       "expenses" if name == "budget" else
       "communication" if name in communication_views else None
     )
-    self.selected_tournament_eyebrow.visible = show_tournament_context
+    self.selected_tournament_eyebrow.visible = (
+      show_tournament_context and not self._creating_tournament
+    )
     self.current_event_title.visible = show_tournament_context
     self.current_event_subtitle.visible = show_tournament_context
     self.event_picker.visible = show_tournament_context
-    self.field_summary.visible = show_tournament_context
+    self.field_summary.visible = (
+      show_tournament_context and not self._creating_tournament
+    )
     self.event_section.visible = name == "event"
     self.field_section.visible = name == "field"
     self.round_one_section.visible = name == "round_one"
@@ -74,10 +83,9 @@ class Form1(Form1Template):
     self.news_section.visible = name == "news"
     tournament_view = active_group is not None
     self.tournament_subnav.visible = tournament_view
-    self.field_scoring_page_nav.visible = name in field_scoring_views
+    self.field_scoring_page_nav.visible = name in {"field", "round_one", "standings", "round_two"}
     self.communication_page_nav.visible = name in communication_views
     for view_name, button in (
-      ("event", self.setup_nav),
       ("field", self.field_nav),
       ("round_one", self.round_one_nav),
       ("standings", self.standings_nav),
@@ -173,6 +181,8 @@ class Form1(Form1Template):
     self.event_picker.items = [
       (f"{tournament['year']} · {tournament['course']}", tournament)
       for tournament in tournaments
+    ] + [
+      ("Create new", self._CREATE_TOURNAMENT_PICKER_OPTION),
     ]
     selected_id = selected.get_id() if selected is not None else (
       self.current_event.get_id() if self.current_event is not None else None
@@ -181,7 +191,11 @@ class Form1(Form1Template):
       (tournament for tournament in tournaments if tournament.get_id() == selected_id),
       tournaments[0] if tournaments else None,
     )
-    self.event_picker.selected_value = self.current_event
+    self.event_picker.selected_value = (
+      self.current_event
+      if self.current_event is not None
+      else self._CREATE_TOURNAMENT_PICKER_OPTION
+    )
     self._load_event_data()
 
   def _load_event_data(self, capture_field_detail_drafts=True):
@@ -190,8 +204,25 @@ class Form1(Form1Template):
     self._load_news_posts()
     self.field_status.text = ""
     self.division_status.text = ""
+    if self._creating_tournament:
+      self.selected_tournament_actions.visible = False
+      self.edit_tournament_panel.visible = False
+      self.create_tournament_panel.visible = True
+      self.build_field_panel.visible = False
+      self.selected_tournament_eyebrow.visible = False
+      self.current_event_title.text = "Create a new tournament"
+      self.current_event_subtitle.text = "Add a year and course to get started."
+      self.field_summary.visible = False
+      self.event_status.text = ""
+      return
+
     if self.current_event is None:
-      self.delete_tournament_button.visible = False
+      self.selected_tournament_actions.visible = False
+      self.edit_tournament_panel.visible = False
+      self.create_tournament_panel.visible = True
+      self.build_field_panel.visible = False
+      self.selected_tournament_eyebrow.visible = True
+      self.field_summary.visible = True
       self.current_event_title.text = "Create your first tournament"
       self.current_event_subtitle.text = "Add a year and course to get started."
       self.field_summary.text = "No players entered yet"
@@ -245,7 +276,11 @@ class Form1(Form1Template):
       return
 
     tournament = self.current_event
-    self.delete_tournament_button.visible = True
+    self.selected_tournament_actions.visible = True
+    self.create_tournament_panel.visible = False
+    self.build_field_panel.visible = True
+    self.selected_tournament_eyebrow.visible = True
+    self.field_summary.visible = True
     self.current_event_title.text = f"{tournament['year']} · {tournament['course']}"
     event_date = tournament["event_date"]
     notes = tournament["notes"]
@@ -729,10 +764,6 @@ class Form1(Form1Template):
   @handle("email_nav", "click")
   def email_nav_click(self, **event_args):
     self._show_view("email")
-
-  @handle("setup_nav", "click")
-  def setup_nav_click(self, **event_args):
-    self._show_view("event")
 
   @handle("field_nav", "click")
   def field_nav_click(self, **event_args):
@@ -1335,8 +1366,60 @@ class Form1(Form1Template):
 
   @handle("event_picker", "change")
   def event_picker_change(self, **event_args):
-    self.current_event = self.event_picker.selected_value
+    selected_value = self.event_picker.selected_value
+    if selected_value == self._CREATE_TOURNAMENT_PICKER_OPTION:
+      self._creating_tournament = True
+      self.event_picker.selected_value = (
+        self.current_event
+        if self.current_event is not None
+        else self._CREATE_TOURNAMENT_PICKER_OPTION
+      )
+      self._show_view("event")
+      self._load_event_data()
+      return
+
+    self._creating_tournament = False
+    self.current_event = selected_value
+    self.edit_tournament_panel.visible = False
     self._load_event_data()
+
+  @handle("edit_tournament_button", "click")
+  def edit_tournament_button_click(self, **event_args):
+    tournament = self.current_event
+    if tournament is None:
+      return
+    self.edit_tournament_year.text = str(tournament["year"])
+    self.edit_course_name.text = tournament["course"]
+    self.edit_event_date.date = tournament["event_date"]
+    self.edit_tournament_notes.text = tournament["notes"] or ""
+    self.event_status.text = ""
+    self.edit_tournament_panel.visible = True
+
+  @handle("cancel_tournament_edit_button", "click")
+  def cancel_tournament_edit_button_click(self, **event_args):
+    self.edit_tournament_panel.visible = False
+
+  @handle("save_tournament_details_button", "click")
+  def save_tournament_details_button_click(self, **event_args):
+    tournament = self.current_event
+    if tournament is None:
+      self.event_status.text = "Create or select a tournament first."
+      return
+    result = anvil.server.call(
+      "update_tournament",
+      tournament,
+      self.edit_tournament_year.text,
+      self.edit_course_name.text,
+      self.edit_event_date.date,
+      self.edit_tournament_notes.text,
+    )
+    if not result["ok"]:
+      self.event_status.text = result["message"]
+      return
+    self._creating_tournament = False
+    self.edit_tournament_panel.visible = False
+    self.event_status.text = "Tournament details saved."
+    self._load_events(selected=result["tournament"])
 
   @handle("create_tournament_button", "click")
   def create_tournament_button_click(self, **event_args):
@@ -1350,6 +1433,8 @@ class Form1(Form1Template):
     if not result["ok"]:
       self.event_status.text = result["message"]
       return
+    self._creating_tournament = False
+    self.edit_tournament_panel.visible = False
     self.tournament_year.text = ""
     self.course_name.text = ""
     self.tournament_notes.text = ""

@@ -467,6 +467,31 @@ def create_tournament(year, course, event_date, notes):
 
 
 @anvil.server.callable(require_user=True)
+def update_tournament(tournament, year, course, event_date, notes):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+
+  year_value = _number(year, "Year", allow_blank=True)
+  course = (course or "").strip()
+  if year_value is None or int(year_value) != year_value:
+    return _result("Enter a valid tournament year.")
+  if not course:
+    return _result("Add the course name.")
+  year_value = int(year_value)
+  if any(
+    other.get_id() != tournament.get_id() and other["year"] == year_value
+    for other in app_tables.tournaments.search()
+  ):
+    return _result("A tournament for that year already exists.")
+
+  tournament["year"] = year_value
+  tournament["course"] = course
+  tournament["event_date"] = event_date
+  tournament["notes"] = (notes or "").strip()
+  return _result(tournament=tournament)
+
+
+@anvil.server.callable(require_user=True)
 def add_golfer_to_tournament(tournament, golfer, is_player=True):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
