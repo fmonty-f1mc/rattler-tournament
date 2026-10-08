@@ -793,7 +793,15 @@ def _public_round_one_group(group):
   }
   for slot in range(1, 5):
     entry = group[f"player_{slot}"]
-    public_group[f"player_{slot}_name"] = _entry_name(entry) if entry else "—"
+    if entry:
+      division = (entry["division"] or "").strip()
+      public_group[f"player_{slot}_name"] = _entry_name(entry)
+      public_group[f"player_{slot}_division_label"] = (
+        f" - {division}" if division else ""
+      )
+    else:
+      public_group[f"player_{slot}_name"] = "—"
+      public_group[f"player_{slot}_division_label"] = ""
     gross = entry["gross_18"] if entry else None
     public_group[f"player_{slot}_score"] = (
       str(gross) if gross and gross > 0 else "Not posted"
