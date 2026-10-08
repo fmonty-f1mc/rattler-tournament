@@ -83,9 +83,10 @@ class Form1(Form1Template):
     self.news_section.visible = name == "news"
     tournament_view = active_group is not None
     self.tournament_subnav.visible = tournament_view
-    self.field_scoring_page_nav.visible = name in {"field", "round_one", "standings", "round_two"}
+    self.field_scoring_page_nav.visible = name in field_scoring_views
     self.communication_page_nav.visible = name in communication_views
     for view_name, button in (
+      ("event", self.setup_nav),
       ("field", self.field_nav),
       ("round_one", self.round_one_nav),
       ("standings", self.standings_nav),
@@ -751,6 +752,10 @@ class Form1(Form1Template):
 
   @handle("field_scoring_nav", "click")
   def field_scoring_nav_click(self, **event_args):
+    self._show_view("event")
+
+  @handle("setup_nav", "click")
+  def setup_nav_click(self, **event_args):
     self._show_view("event")
 
   @handle("expenses_nav", "click")
