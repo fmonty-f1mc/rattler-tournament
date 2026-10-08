@@ -1117,19 +1117,61 @@ def save_round_two_pairings(tournament, assignments):
 
 
 def _build_balanced_foursomes(entries):
-  shuffled_entries = list(entries)
-  random.shuffle(shuffled_entries)
-  group_count = (len(shuffled_entries) + 3) // 4
-  base_size, larger_group_count = divmod(len(shuffled_entries), group_count)
+  group_count = (len(entries) + 3) // 4
+  base_size, larger_group_count = divmod(len(entries), group_count)
   capacities = [
     base_size + (1 if index < larger_group_count else 0)
     for index in range(group_count)
   ]
-  groups = []
-  entry_index = 0
-  for capacity in capacities:
-    groups.append(shuffled_entries[entry_index:entry_index + capacity])
-    entry_index += capacity
+  groups = [[] for _ in capacities]
+  group_divisions = [set() for _ in capacities]
+  division_entries = {}
+  unassigned_entries = []
+
+  for entry in entries:
+    division = (entry["division"] or "").strip()
+    if division:
+      division_entries.setdefault(division, []).append(entry)
+    else:
+      unassigned_entries.append(entry)
+
+  divisions = list(division_entries)
+  random.shuffle(divisions)
+  for division in divisions:
+    players = division_entries[division]
+    random.shuffle(players)
+    for entry in players:
+      available_groups = [
+        index for index, capacity in enumerate(capacities)
+        if len(groups[index]) < capacity
+      ]
+      distinct_groups = [
+        index for index in available_groups
+        if division not in group_divisions[index]
+      ]
+      candidates = distinct_groups or available_groups
+      smallest_group_size = min(len(groups[index]) for index in candidates)
+      candidates = [
+        index for index in candidates
+        if len(groups[index]) == smallest_group_size
+      ]
+      group_index = random.choice(candidates)
+      groups[group_index].append(entry)
+      group_divisions[group_index].add(division)
+
+  random.shuffle(unassigned_entries)
+  for entry in unassigned_entries:
+    available_groups = [
+      index for index, capacity in enumerate(capacities)
+      if len(groups[index]) < capacity
+    ]
+    smallest_group_size = min(len(groups[index]) for index in available_groups)
+    candidates = [
+      index for index in available_groups
+      if len(groups[index]) == smallest_group_size
+    ]
+    groups[random.choice(candidates)].append(entry)
+
   return groups
 
 
