@@ -280,6 +280,23 @@ a:focus {
   min-width: 0;
 }
 
+.public-round-one-player-name {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.public-round-one-player-name .anvil-label {
+  display: inline;
+}
+
+.public-round-one-player-name .anvil-role-muted-text {
+  color: var(--blank-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
 .public-round-one-players > div > span,
 .public-round-one-players small {
   color: var(--blank-muted);

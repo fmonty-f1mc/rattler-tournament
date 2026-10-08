@@ -445,7 +445,7 @@ class Form1(Form1Template):
     ]
 
   def _foursome_group_items(self, foursomes, player_entries):
-    entry_options = [(entry["golfer"]["name"], entry) for entry in player_entries]
+    entry_options = [(self._round_one_entry_label(entry), entry) for entry in player_entries]
     entry_options = [("Open slot", None)] + entry_options
     items = []
     for group in foursomes:
@@ -462,6 +462,12 @@ class Form1(Form1Template):
         group["tee_time"] or "",
       ))
     return items
+
+  @staticmethod
+  def _round_one_entry_label(entry):
+    name = entry["golfer"]["name"]
+    division = (entry["division"] or "").strip()
+    return f"{name} - {division}" if division else name
 
   def _foursome_group_item(self, sequence, label, entries, entry_options, tee_time=""):
     item = {
@@ -985,7 +991,8 @@ class Form1(Form1Template):
       for group in self.foursome_group_rows.items or []
     }
     entry_options = [("Open slot", None)] + [
-      (entry["golfer"]["name"], entry) for entry in self._player_entries
+      (self._round_one_entry_label(entry), entry)
+      for entry in self._player_entries
     ]
     group_items = []
     for grouping in result["groupings"]:
