@@ -47,6 +47,19 @@ body {
   gap: 8px;
 }
 
+.page-menu {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.page-menu-toggle {
+  display: none;
+}
+
+.page-menu > .page-actions {
+  display: flex;
+}
+
 .page-main {
   width: min(1120px, calc(100% - 40px));
   margin: 0 auto;
@@ -1208,6 +1221,131 @@ input.anvil-role-budget-paid-input:disabled {
 }
 
 @media (max-width: 760px) {
+  .page-header {
+    display: block;
+    padding: 22px clamp(16px, 4vw, 28px);
+  }
+
+  .page-menu {
+    display: block;
+    margin-top: 16px;
+  }
+
+  .page-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--blank-border);
+    border-radius: 6px;
+    background: var(--blank-surface);
+    color: var(--blank-primary-dark);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    list-style: none;
+  }
+
+  .page-menu-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .page-menu-toggle::marker {
+    content: "";
+  }
+
+  .page-menu-toggle:focus-visible {
+    outline: 3px solid var(--blank-focus-ring);
+    outline-offset: 2px;
+  }
+
+  .page-menu-icon,
+  .page-menu-icon::before,
+  .page-menu-icon::after {
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+
+  .page-menu-icon {
+    position: relative;
+    display: inline-block;
+  }
+
+  .page-menu-icon::before,
+  .page-menu-icon::after {
+    position: absolute;
+    left: 0;
+    content: "";
+  }
+
+  .page-menu-icon::before {
+    top: -6px;
+  }
+
+  .page-menu-icon::after {
+    top: 6px;
+  }
+
+  .page-menu[open] .page-menu-icon {
+    background: transparent;
+  }
+
+  .page-menu[open] .page-menu-icon::before {
+    top: 0;
+    transform: rotate(45deg);
+  }
+
+  .page-menu[open] .page-menu-icon::after {
+    top: 0;
+    transform: rotate(-45deg);
+  }
+
+  .page-menu > .page-actions {
+    display: none;
+  }
+
+  .page-menu[open] > .page-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    justify-content: initial;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid var(--blank-border);
+    border-radius: 8px;
+    background: var(--blank-surface);
+  }
+
+  .page-actions > .anvil-label,
+  .page-actions > .anvil-dropdown {
+    grid-column: 1 / -1;
+  }
+
+  .page-actions .anvil-dropdown {
+    width: 100%;
+    max-width: none;
+  }
+
+  .page-actions .anvil-button > button,
+  .page-actions .anvil-dropdown select {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .page-main {
+    width: calc(100% - 32px);
+    padding: 28px 0 48px;
+  }
+
+  .anvil-role-h1 {
+    font-size: clamp(24px, 6vw, 30px);
+    overflow-wrap: anywhere;
+  }
+
   .tracker-intro {
     padding: 22px;
   }
@@ -1216,12 +1354,35 @@ input.anvil-role-budget-paid-input:disabled {
     font-size: 17px;
   }
 
+  .tracker-card,
+  .anvil-role-card,
+  .public-news-card,
+  .public-tournament-card {
+    padding: 16px;
+  }
+
   .form-grid-four,
   .form-grid-three,
   .form-grid-five,
   .budget-category-row,
   .budget-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field-block,
+  .score-input-block,
+  .round-two-pairing-players label,
+  .foursome-details label,
+  .foursome-player label {
+    min-width: 0;
+  }
+
+  .field-block > .anvil-text-box,
+  .field-block > .anvil-dropdown,
+  .field-block > .anvil-datepicker,
+  .field-block > .anvil-text-area {
+    width: 100%;
+    min-width: 0;
   }
 
   .event-title-row,
@@ -1234,6 +1395,10 @@ input.anvil-role-budget-paid-input:disabled {
     text-align: left;
   }
 
+  .section-heading > .field-block {
+    width: 100%;
+  }
+
   .budget-cost-header {
     flex-direction: column;
   }
@@ -1244,11 +1409,11 @@ input.anvil-role-budget-paid-input:disabled {
   .budget-category-row,
   .entry-details-row,
   .round-two-pairing-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .foursome-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .foursome-heading {
@@ -1257,7 +1422,7 @@ input.anvil-role-budget-paid-input:disabled {
   }
 
   .foursome-details {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .score-player,
@@ -1272,19 +1437,29 @@ input.anvil-role-budget-paid-input:disabled {
     flex-direction: column;
   }
 
+  .budget-payment .anvil-text-box {
+    width: 100%;
+  }
+
   .standing-header,
   .standing-row {
-    grid-template-columns: 0.45fr 1.5fr 1fr 0.65fr 0.65fr;
+    grid-template-columns: 32px minmax(0, 1.5fr) minmax(0, 1fr) 42px 42px;
     gap: 6px;
+  }
+
+  .standing-header {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .standing-row > .anvil-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-size: 12px;
   }
 
-  .public-tournament-card {
-    padding: 16px;
-  }
-
   .public-budget-summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .public-round-one-players {
@@ -1292,34 +1467,181 @@ input.anvil-role-budget-paid-input:disabled {
   }
 
   .public-budget-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .public-budget-player {
     grid-column: 1 / -1;
   }
 
+  .public-round-two-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .public-round-two-row .anvil-role-accent-text {
+    text-align: left;
+  }
+
+  .public-expense-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .hole-input-grid {
-    grid-template-columns: repeat(5, minmax(38px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .inline-form {
     align-items: stretch;
     flex-direction: column;
   }
+
+  .inline-form .anvil-dropdown {
+    max-width: none;
+  }
+
+  .anvil-role-tournament-subnav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 22px;
+  }
+
+  .anvil-role-tournament-subnav > .anvil-button {
+    margin: 0;
+  }
+
+  .anvil-role-tournament-subtab > button {
+    min-height: 44px;
+  }
+
+  .round-two-pairing-actions {
+    justify-content: flex-start;
+  }
+
+  .tournament-delete-actions {
+    justify-content: flex-start;
+  }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 480px) {
   .page-header {
-    display: block;
+    padding: 18px 12px;
   }
 
-  .page-actions {
-    justify-content: flex-start;
-    margin-top: 18px;
+  .page-main {
+    width: calc(100% - 24px);
+    padding: 22px 0 40px;
   }
 
-  .anvil-role-h1 {
-    font-size: 28px;
+  .tracker-intro {
+    padding: 18px;
+  }
+
+  .tracker-card,
+  .anvil-role-card,
+  .public-news-card {
+    padding: 14px;
+  }
+
+  .form-grid {
+    gap: 12px;
+  }
+
+  .form-grid-four,
+  .form-grid-three,
+  .form-grid-five {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .budget-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .budget-category-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .anvil-role-tournament-subtab {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+
+  .anvil-role-tournament-subtab > button {
+    width: 100%;
+    padding-right: 10px;
+    padding-left: 10px;
+    white-space: normal;
+  }
+
+  .standing-header,
+  .standing-row {
+    grid-template-columns: 28px minmax(0, 1.3fr) minmax(0, 0.85fr) 34px 34px;
+    gap: 5px;
+  }
+
+  .standing-header {
+    font-size: 9px;
+  }
+
+  .standing-row > .anvil-label {
+    font-size: 11px;
+  }
+
+  .public-tournament-card,
+  .public-round-one-card {
+    padding: 12px;
+  }
+
+  .public-budget-summary {
+    gap: 8px;
+  }
+
+  .public-budget-summary > div {
+    padding: 10px;
+  }
+
+  .public-budget-summary .anvil-label {
+    font-size: 18px;
+    overflow-wrap: anywhere;
+  }
+
+  .public-round-one-players {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .public-expense-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hole-input-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .round-two-pairing-players {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .anvil-role-budget-target-list > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-actions .anvil-button > button,
+  .page-actions .anvil-dropdown select,
+  .anvil-button > button {
+    min-height: 44px;
+  }
+
+  .anvil-text-box,
+  .anvil-text-area,
+  .anvil-dropdown select,
+  .anvil-datepicker input {
+    font-size: 16px;
+  }
+
+  .anvil-checkbox label,
+  .anvil-radio label {
+    min-height: 42px;
   }
 }
