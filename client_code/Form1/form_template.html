@@ -92,19 +92,21 @@
       </div>
       <div class="tracker-card">
         <p class="eyebrow">DIVISIONS</p>
-        <h2>Create a division</h2>
-        <p class="muted-copy">Each division belongs to the selected tournament.</p>
+        <h2>Division setup</h2>
+        <p class="muted-copy">Choose a division, or select Create new division… to add one for this tournament.</p>
         <div class="inline-form">
-          <anvil-component type="TextBox" name="new_division_name" prop:placeholder="Division name"></anvil-component>
-          <anvil-component type="Button" name="create_division_button" prop:text="Create division"></anvil-component>
-        </div>
-        <div class="inline-form">
-          <label>Choose a division to delete</label>
-          <anvil-component type="DropDown" name="division_to_delete_dropdown"></anvil-component>
+          <label>Division</label>
+          <anvil-component type="DropDown" name="division_setup_dropdown"></anvil-component>
           <anvil-component type="Button" name="delete_division_button" prop:text="Delete selected division" prop:role="danger-button"></anvil-component>
         </div>
+        <anvil-component type="ColumnPanel" name="create_division_panel">
+          <div class="inline-form">
+            <label>New division name</label>
+            <anvil-component type="TextBox" name="new_division_name" prop:placeholder="Division name"></anvil-component>
+            <anvil-component type="Button" name="create_division_button" prop:text="Create division"></anvil-component>
+          </div>
+        </anvil-component>
         <anvil-component type="Label" name="division_status" prop:role="status-text"></anvil-component>
-        <anvil-component type="Label" name="division_list_label" prop:role="muted-text"></anvil-component>
       </div>
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and handicaps together.</span></div>

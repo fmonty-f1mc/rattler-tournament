@@ -8,6 +8,7 @@ import anvil.users
 
 class Form1(Form1Template):
   _CREATE_TOURNAMENT_PICKER_OPTION = "__create_tournament__"
+  _CREATE_DIVISION_PICKER_OPTION = "__create_division__"
 
   def __init__(self, **properties):
     super().__init__(**properties)
@@ -21,6 +22,7 @@ class Form1(Form1Template):
     self._player_entries = []
     self._round_one_score_drafts = {}
     self._field_detail_drafts = {}
+    self._division_setup_selection = None
     self._overall_standings = []
     self._active_standings = []
     self._budget_target_items = []
@@ -37,6 +39,7 @@ class Form1(Form1Template):
     self.entry_status.text = ""
     self.field_status.text = ""
     self.division_status.text = ""
+    self.create_division_panel.visible = False
     self.standings_status.text = ""
     self.player_status.text = ""
     self.round_one_status.text = ""
@@ -205,6 +208,7 @@ class Form1(Form1Template):
     self._load_news_posts()
     self.field_status.text = ""
     self.division_status.text = ""
+    self.create_division_panel.visible = False
     if self._creating_tournament:
       self.selected_tournament_actions.visible = False
       self.edit_tournament_panel.visible = False
@@ -229,9 +233,10 @@ class Form1(Form1Template):
       self.field_summary.text = "No players entered yet"
       self.division_options = []
       self.division_choices = [("No division", "")]
-      self.division_list_label.text = "Create or select a tournament first."
-      self.division_to_delete_dropdown.items = []
-      self.division_to_delete_dropdown.selected_value = None
+      self.division_setup_dropdown.items = []
+      self.division_setup_dropdown.selected_value = None
+      self._division_setup_selection = None
+      self.create_division_panel.visible = False
       self.delete_division_button.enabled = False
       self.standings_scope_picker.items = [("Overall", "overall")]
       self.standings_scope_picker.selected_value = "overall"
@@ -291,17 +296,17 @@ class Form1(Form1Template):
     self.current_event_subtitle.text = details
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
-    self.division_list_label.text = ", ".join(self.division_options) or "No divisions created yet."
-    selected_division = self.division_to_delete_dropdown.selected_value
-    self.division_to_delete_dropdown.items = [
-      (division, division) for division in self.division_options
-    ]
-    self.division_to_delete_dropdown.selected_value = (
-      selected_division
-      if selected_division in self.division_options
-      else (self.division_options[0] if self.division_options else None)
+    selected_division = self._division_setup_selection
+    if selected_division not in self.division_options:
+      selected_division = self.division_options[0] if self.division_options else None
+    self._division_setup_selection = selected_division
+    self.division_setup_dropdown.items = (
+      [("Select a division", "")] +
+      [(division, division) for division in self.division_options] +
+      [("Create new division…", self._CREATE_DIVISION_PICKER_OPTION)]
     )
-    self.delete_division_button.enabled = bool(self.division_options)
+    self.division_setup_dropdown.selected_value = selected_division or ""
+    self.delete_division_button.enabled = bool(selected_division)
     self.division_choices = [("No division", "")] + [
       (division, division) for division in self.division_options
     ]
@@ -780,6 +785,19 @@ class Form1(Form1Template):
   def field_nav_click(self, **event_args):
     self._show_view("field")
 
+  @handle("division_setup_dropdown", "change")
+  def division_setup_dropdown_change(self, **event_args):
+    selected_division = self.division_setup_dropdown.selected_value
+    if selected_division == self._CREATE_DIVISION_PICKER_OPTION:
+      self.create_division_panel.visible = True
+      self.new_division_name.text = ""
+      self.division_setup_dropdown.selected_value = self._division_setup_selection or ""
+      return
+
+    self._division_setup_selection = selected_division or None
+    self.create_division_panel.visible = False
+    self.delete_division_button.enabled = bool(self._division_setup_selection)
+
   @handle("create_division_button", "click")
   def create_division_button_click(self, **event_args):
     if self.current_event is None:
@@ -794,6 +812,8 @@ class Form1(Form1Template):
       self.division_status.text = result["message"]
       return
     self.new_division_name.text = ""
+    self.create_division_panel.visible = False
+    self._division_setup_selection = result["division_name"]
     self._load_event_data()
     self.division_status.text = f"{result['division_name']} created for this tournament."
 
@@ -802,7 +822,7 @@ class Form1(Form1Template):
     if self.current_event is None:
       self.division_status.text = "Create or select a tournament first."
       return
-    division = self.division_to_delete_dropdown.selected_value
+    division = self.division_setup_dropdown.selected_value
     if not division:
       self.division_status.text = "Choose a division to delete."
       return
