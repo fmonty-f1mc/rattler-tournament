@@ -7,7 +7,6 @@ from anvil.google.drive import app_files
 class PublicTournamentStandings(PublicTournamentStandingsTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
-    self.tournament_title.text = self.item["title"]
     self.standings_scope_picker.items = [("Overall", "overall")] + [
       ("Division: " + division["name"], "division:" + division["name"])
       for division in self.item["divisions"]

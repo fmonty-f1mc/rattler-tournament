@@ -49,13 +49,6 @@
     </anvil-component>
   </anvil-block>
   <anvil-block slot="content">
-    <div class="event-title-row">
-      <div>
-        <anvil-component type="Label" name="selected_tournament_eyebrow" prop:role="eyebrow" prop:text="SELECTED TOURNAMENT"></anvil-component>
-        <anvil-component type="Label" name="current_event_title" prop:role="h2" prop:text="Create your first tournament"></anvil-component>
-        <anvil-component type="Label" name="current_event_subtitle" prop:role="muted-text" prop:text="Add a year and course to get started."></anvil-component>
-      </div>
-    </div>
     <anvil-component type="ColumnPanel" name="event_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT</p>
@@ -334,5 +327,6 @@
   </anvil-block>
   <anvil-block slot="title">
     <anvil-component type="Label" name="page_title" prop:role="h1" prop:text="The Rattler Invitational"></anvil-component>
+    <anvil-component type="Label" name="selected_tournament_name" prop:role="h2"></anvil-component>
   </anvil-block>
 </anvil-form>

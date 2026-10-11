@@ -503,19 +503,6 @@ a:focus {
   background: var(--blank-surface);
 }
 
-.public-tournament-heading {
-  margin-bottom: 16px;
-}
-
-.public-tournament-heading .eyebrow {
-  margin-bottom: 2px;
-}
-
-.public-tournament-heading .anvil-role-h2 {
-  display: block;
-  font-size: 22px;
-}
-
 .public-round-one-group-list > div {
   display: flex;
   flex-direction: column;
@@ -756,7 +743,6 @@ textarea.anvil-text-area:disabled,
   color: var(--blank-muted);
 }
 
-.event-title-row,
 .section-heading,
 .pairing-heading {
   display: flex;
@@ -765,26 +751,10 @@ textarea.anvil-text-area:disabled,
   gap: 18px;
 }
 
-.event-title-row {
-  margin-bottom: 18px;
-}
-
 .tournament-delete-actions {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 18px;
-}
-
-.event-title-row .anvil-role-h2 {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 26px;
-  font-weight: 750;
-  line-height: 1.2;
-}
-
-.event-title-row .anvil-role-muted-text {
-  color: var(--blank-muted);
 }
 
 .page-actions .anvil-dropdown {
@@ -1658,7 +1628,6 @@ input.anvil-role-budget-paid-input:disabled {
     min-width: 0;
   }
 
-  .event-title-row,
   .section-heading {
     align-items: flex-start;
     flex-direction: column;

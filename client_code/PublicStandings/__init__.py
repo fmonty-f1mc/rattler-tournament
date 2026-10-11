@@ -39,6 +39,12 @@ class PublicStandings(PublicStandingsTemplate):
 
   def _show_selected_tournament(self):
     tournament = self.tournament_picker.selected_value
+    self.selected_tournament_name.text = (
+      tournament["title"]
+      + (f" · {tournament['date_label']}" if tournament["date_label"] else "")
+      if tournament else ""
+    )
+    self.selected_tournament_name.visible = tournament is not None
     self.tournament_rows.items = [tournament] if tournament else []
     self.news_posts = tournament["news_posts"] if tournament else []
     self.news_rows.items = self.news_posts

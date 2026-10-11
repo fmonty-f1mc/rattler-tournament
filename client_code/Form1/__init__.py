@@ -56,6 +56,22 @@ class Form1(Form1Template):
     self._load_players()
     self._load_events()
 
+  @staticmethod
+  def _format_tournament_date(event_date):
+    if event_date is None:
+      return ""
+    day = event_date.day
+    suffix = "th" if 11 <= day % 100 <= 13 else {
+      1: "st",
+      2: "nd",
+      3: "rd",
+    }.get(day % 10, "th")
+    month_names = (
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    )
+    return f"{month_names[event_date.month - 1]} {day}{suffix}, {event_date.year}"
+
   @handle("sign_out_button", "click")
   def sign_out_button_click(self, **event_args):
     anvil.users.logout(invalidate_client_objects=True)
@@ -82,11 +98,10 @@ class Form1(Form1Template):
       "expenses" if name == "budget" else
       "communication" if name in communication_views else None
     )
-    self.selected_tournament_eyebrow.visible = (
+    self.selected_tournament_name.visible = (
       show_tournament_context and not self._creating_tournament
+      and self.current_event is not None
     )
-    self.current_event_title.visible = show_tournament_context
-    self.current_event_subtitle.visible = show_tournament_context
     self.tournament_selection_label.visible = True
     self.event_picker.visible = True
     self.field_summary.visible = name == "event" and not self._creating_tournament
@@ -236,9 +251,7 @@ class Form1(Form1Template):
       self.edit_tournament_panel.visible = False
       self.create_tournament_panel.visible = True
       self.build_field_panel.visible = False
-      self.selected_tournament_eyebrow.visible = False
-      self.current_event_title.text = "Create a new tournament"
-      self.current_event_subtitle.text = "Add a year and course to get started."
+      self.selected_tournament_name.visible = False
       self.field_summary.visible = False
       self.event_status.text = ""
       return
@@ -248,10 +261,8 @@ class Form1(Form1Template):
       self.edit_tournament_panel.visible = False
       self.create_tournament_panel.visible = True
       self.build_field_panel.visible = False
-      self.selected_tournament_eyebrow.visible = True
+      self.selected_tournament_name.visible = False
       self.field_summary.visible = True
-      self.current_event_title.text = "Create your first tournament"
-      self.current_event_subtitle.text = "Add a year and course to get started."
       self.field_summary.text = "No players entered yet"
       self.division_options = []
       self.division_choices = [("No division", "")]
@@ -307,15 +318,13 @@ class Form1(Form1Template):
     self.selected_tournament_actions.visible = True
     self.create_tournament_panel.visible = False
     self.build_field_panel.visible = True
-    self.selected_tournament_eyebrow.visible = True
+    self.selected_tournament_name.visible = True
+    date_label = self._format_tournament_date(tournament["event_date"])
+    self.selected_tournament_name.text = (
+      f"{tournament['year']} · {tournament['course']}"
+      + (f" · {date_label}" if date_label else "")
+    )
     self.field_summary.visible = True
-    self.current_event_title.text = f"{tournament['year']} · {tournament['course']}"
-    event_date = tournament["event_date"]
-    notes = tournament["notes"]
-    details = str(event_date) if event_date else "Date not set"
-    if notes:
-      details = f"{details} · {notes}"
-    self.current_event_subtitle.text = details
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
     selected_division = self._division_setup_selection
