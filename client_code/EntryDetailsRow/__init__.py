@@ -24,6 +24,11 @@ class EntryDetailsRow(EntryDetailsRowTemplate):
     self.division_dropdown.selected_value = division
     self._update_entry_summary()
 
+  def set_handicap(self, handicap):
+    self.item["handicap"] = handicap
+    self.handicap_box.text = handicap
+    self._update_entry_summary()
+
   def _set_editing(self, is_editing):
     self._is_editing = is_editing
     self.entry_edit_fields.visible = is_editing
@@ -42,3 +47,8 @@ class EntryDetailsRow(EntryDetailsRowTemplate):
   def handicap_box_change(self, **event_args):
     self.item["handicap"] = self.handicap_box.text
     self._update_entry_summary()
+
+  @handle("select_player_checkbox", "change")
+  def select_player_checkbox_change(self, **event_args):
+    self.item["selected"] = self.select_player_checkbox.checked
+    self.parent.raise_event("x-field-player-selection-changed")

@@ -800,6 +800,10 @@ textarea.anvil-text-area:disabled,
   margin-top: 14px;
 }
 
+.player-details-control-row {
+  flex-wrap: wrap;
+}
+
 .inline-form .anvil-dropdown {
   flex: 1;
   max-width: 520px;
@@ -1500,9 +1504,32 @@ input.anvil-role-budget-paid-input:disabled {
   color: white;
 }
 
-.player-details-save-actions {
+.division-action-buttons {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bulk-handicap-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.player-maintenance-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.player-actions-divider {
+  width: 1px;
+  height: 38px;
+  flex: 0 0 1px;
+  background: var(--blank-border);
 }
 
 .anvil-role-budget-save-button > button:hover,
@@ -1813,6 +1840,12 @@ input.anvil-role-budget-paid-input:disabled {
 
   .inline-form .anvil-dropdown {
     max-width: none;
+  }
+
+  .player-details-control-row .player-actions-divider {
+    width: 100%;
+    height: 1px;
+    flex-basis: 1px;
   }
 
   .anvil-role-tournament-subnav,
