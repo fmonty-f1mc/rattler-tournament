@@ -578,7 +578,13 @@ textarea.anvil-text-area:disabled,
   max-width: 520px;
 }
 
-.anvil-role-player-add-options,
+.anvil-role-player-add-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .player-add-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -587,11 +593,9 @@ textarea.anvil-text-area:disabled,
 
 .anvil-role-player-add-options > .anvil-button,
 .player-add-actions > .anvil-button {
-  width: 100%;
   margin: 0;
 }
 
-.anvil-role-player-add-options > .anvil-button > button,
 .player-add-actions > .anvil-button > button {
   width: 100%;
   min-height: 44px;
