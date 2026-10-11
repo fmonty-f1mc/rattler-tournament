@@ -4,6 +4,7 @@ import anvil.google.auth, anvil.google.drive
 from anvil.google.drive import app_files
 import anvil.server
 import anvil.users
+from anvil.js.window import document
 
 
 class Form1(Form1Template):
@@ -19,6 +20,7 @@ class Form1(Form1Template):
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
     self._creating_tournament = False
+    self._tournament_menu_open = False
     self._player_entries = []
     self._round_one_score_drafts = {}
     self._field_detail_drafts = {}
@@ -58,12 +60,24 @@ class Form1(Form1Template):
     anvil.users.logout(invalidate_client_objects=True)
     open_form("Form1")
 
+  def _close_menu_drawer(self):
+    page_menu = document.querySelector(".page-menu")
+    assert page_menu is not None
+    page_menu.removeAttribute("open")
+
+  def _show_tournament_view(self, name):
+    self._tournament_menu_open = True
+    self._show_view(name)
+    self._close_menu_drawer()
+
   def _show_view(self, name):
     show_tournament_context = name != "players"
-    field_scoring_views = {"event", "field", "round_one", "standings", "round_two"}
+    field_scoring_views = {"event", "field"}
+    scoring_views = {"standings", "round_one", "round_two"}
     communication_views = {"email", "news"}
     active_group = (
       "field_scoring" if name in field_scoring_views else
+      "scoring" if name in scoring_views else
       "expenses" if name == "budget" else
       "communication" if name in communication_views else None
     )
@@ -72,7 +86,8 @@ class Form1(Form1Template):
     )
     self.current_event_title.visible = show_tournament_context
     self.current_event_subtitle.visible = show_tournament_context
-    self.event_picker.visible = show_tournament_context
+    self.tournament_selection_label.visible = True
+    self.event_picker.visible = True
     self.field_summary.visible = name == "event" and not self._creating_tournament
     self.event_section.visible = name == "event"
     self.field_section.visible = name == "field"
@@ -84,8 +99,9 @@ class Form1(Form1Template):
     self.email_section.visible = name == "email"
     self.news_section.visible = name == "news"
     tournament_view = active_group is not None
-    self.tournament_subnav.visible = tournament_view
+    self.tournament_menu.visible = self._tournament_menu_open and tournament_view
     self.field_scoring_page_nav.visible = name in field_scoring_views
+    self.scoring_page_nav.visible = name in scoring_views
     self.communication_page_nav.visible = name in communication_views
     for view_name, button in (
       ("event", self.setup_nav),
@@ -101,6 +117,7 @@ class Form1(Form1Template):
       )
     for group_name, button in (
       ("field_scoring", self.field_scoring_nav),
+      ("scoring", self.scoring_nav),
       ("expenses", self.expenses_nav),
       ("communication", self.communication_nav),
     ):
@@ -758,31 +775,43 @@ class Form1(Form1Template):
 
   @handle("event_nav", "click")
   def event_nav_click(self, **event_args):
+    self._tournament_menu_open = True
+    self.main_menu.visible = False
     self._show_view("event")
+
+  @handle("main_menu_back_button", "click")
+  def main_menu_back_button_click(self, **event_args):
+    self._tournament_menu_open = False
+    self.main_menu.visible = True
+    self.tournament_menu.visible = False
 
   @handle("field_scoring_nav", "click")
   def field_scoring_nav_click(self, **event_args):
-    self._show_view("event")
+    self._show_tournament_view("event")
+
+  @handle("scoring_nav", "click")
+  def scoring_nav_click(self, **event_args):
+    self._show_tournament_view("standings")
 
   @handle("setup_nav", "click")
   def setup_nav_click(self, **event_args):
-    self._show_view("event")
+    self._show_tournament_view("event")
 
   @handle("expenses_nav", "click")
   def expenses_nav_click(self, **event_args):
-    self._show_view("budget")
+    self._show_tournament_view("budget")
 
   @handle("communication_nav", "click")
   def communication_nav_click(self, **event_args):
-    self._show_view("email")
+    self._show_tournament_view("email")
 
   @handle("email_nav", "click")
   def email_nav_click(self, **event_args):
-    self._show_view("email")
+    self._show_tournament_view("email")
 
   @handle("field_nav", "click")
   def field_nav_click(self, **event_args):
-    self._show_view("field")
+    self._show_tournament_view("field")
 
   @handle("division_setup_dropdown", "change")
   def division_setup_dropdown_change(self, **event_args):
@@ -902,11 +931,11 @@ class Form1(Form1Template):
 
   @handle("round_one_nav", "click")
   def round_one_nav_click(self, **event_args):
-    self._show_view("round_one")
+    self._show_tournament_view("round_one")
 
   @handle("standings_nav", "click")
   def standings_nav_click(self, **event_args):
-    self._show_view("standings")
+    self._show_tournament_view("standings")
 
   @handle("standings_scope_picker", "change")
   def standings_scope_picker_change(self, **event_args):
@@ -918,7 +947,7 @@ class Form1(Form1Template):
 
   @handle("round_two_nav", "click")
   def round_two_nav_click(self, **event_args):
-    self._show_view("round_two")
+    self._show_tournament_view("round_two")
 
   @handle("generate_round_two_net_pairings_button", "click")
   def generate_round_two_net_pairings_button_click(self, **event_args):
@@ -1103,11 +1132,14 @@ class Form1(Form1Template):
 
   @handle("players_nav", "click")
   def players_nav_click(self, **event_args):
+    self._tournament_menu_open = False
+    self.main_menu.visible = True
     self._show_view("players")
+    self._close_menu_drawer()
 
   @handle("news_nav", "click")
   def news_nav_click(self, **event_args):
-    self._show_view("news")
+    self._show_tournament_view("news")
 
   @handle("news_post_picker", "change")
   def news_post_picker_change(self, **event_args):
@@ -1407,12 +1439,14 @@ class Form1(Form1Template):
       )
       self._show_view("event")
       self._load_event_data()
+      self._close_menu_drawer()
       return
 
     self._creating_tournament = False
     self.current_event = selected_value
     self.edit_tournament_panel.visible = False
     self._load_event_data()
+    self._close_menu_drawer()
 
   @handle("edit_tournament_button", "click")
   def edit_tournament_button_click(self, **event_args):
