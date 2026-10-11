@@ -1,16 +1,26 @@
 <anvil-form container="ColumnPanel">
   <div class="entry-details-row">
     <div class="field-player">
-      <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+      <div class="entry-player-copy">
+        <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+        <anvil-component type="Label" name="entry_details_summary" prop:role="muted-text"></anvil-component>
+      </div>
     </div>
-    <div class="score-input-block">
-      <label>Division (optional)</label>
-      <anvil-component type="DropDown" name="division_dropdown" writeback:selected_value="self.item['division']"></anvil-component>
+    <div class="entry-row-actions">
+      <anvil-component type="Button" name="edit_button" prop:text="Edit" prop:role="primary-button"></anvil-component>
+      <anvil-component type="Button" name="remove_button" prop:text="Remove" prop:role="danger-button"></anvil-component>
     </div>
-    <div class="score-input-block">
-      <label>Handicap</label>
-      <anvil-component type="TextBox" name="handicap_box" prop:placeholder="e.g. 12.4" writeback:text="self.item['handicap']"></anvil-component>
-    </div>
-    <anvil-component type="Button" name="remove_button" prop:text="Remove from tournament" prop:role="secondary-button"></anvil-component>
+    <anvil-component type="ColumnPanel" name="entry_edit_fields" prop:role="entry-edit-fields">
+      <div class="entry-editor-grid">
+        <div class="score-input-block">
+          <label>Division (optional)</label>
+          <anvil-component type="DropDown" name="division_dropdown" writeback:selected_value="self.item['division']"></anvil-component>
+        </div>
+        <div class="score-input-block">
+          <label>Handicap</label>
+          <anvil-component type="TextBox" name="handicap_box" prop:placeholder="e.g. 12.4" writeback:text="self.item['handicap']"></anvil-component>
+        </div>
+      </div>
+    </anvil-component>
   </div>
 </anvil-form>
