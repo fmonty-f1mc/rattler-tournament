@@ -809,6 +809,18 @@ def _public_round_one_group(group):
   return public_group
 
 
+def _format_tournament_date(event_date):
+  if event_date is None:
+    return ""
+  day = event_date.day
+  suffix = "th" if 11 <= day % 100 <= 13 else {
+    1: "st",
+    2: "nd",
+    3: "rd",
+  }.get(day % 10, "th")
+  return f"{event_date.strftime('%B')} {day}{suffix}, {event_date.year}"
+
+
 @anvil.server.callable
 def get_public_tournament_standings():
   tournaments = sorted(
@@ -843,6 +855,7 @@ def get_public_tournament_standings():
     ]
     public_standings.append({
       "title": f"{tournament['year']} · {tournament['course']}",
+      "date_label": _format_tournament_date(tournament["event_date"]),
       "news_posts": [
         {"title": post["title"], "body": post["body"]}
         for post in sorted(

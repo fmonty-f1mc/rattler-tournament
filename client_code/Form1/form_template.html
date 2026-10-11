@@ -1,43 +1,61 @@
 <anvil-form layout="rattler_tournament.Layouts.BaseLayout">
   <anvil-block slot="actions">
-    <anvil-component type="Label" name="current_user_label" prop:role="muted-text"></anvil-component>
-    <anvil-component type="Button" name="event_nav" prop:text="Tournament" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="Button" name="players_nav" prop:text="Players" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="Button" name="public_view_nav" prop:text="Public view" prop:role="secondary-button"></anvil-component>
-    <anvil-component type="DropDown" name="event_picker"></anvil-component>
-    <anvil-component type="Button" name="sign_out_button" prop:text="Sign out" prop:role="secondary-button"></anvil-component>
+    <anvil-component type="FlowPanel" name="main_menu" prop:role="menu-list">
+      <anvil-component type="Label" name="tournament_selection_label" prop:text="Tournament Selection" prop:role="menu-section-label"></anvil-component>
+      <anvil-component type="DropDown" name="event_picker"></anvil-component>
+      <anvil-component type="FlowPanel" name="tournament_menu_entry" prop:role="menu-tournament-entry">
+        <anvil-component type="Button" name="event_nav" prop:text="Tournament" prop:role="secondary-button"></anvil-component>
+      </anvil-component>
+      <anvil-component type="Button" name="public_view_nav" prop:text="Public View" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="players_nav" prop:text="Participants" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="FlowPanel" name="login_info_menu" prop:role="menu-login-info">
+        <anvil-component type="Label" name="login_info_heading" prop:text="Login info" prop:role="menu-section-label"></anvil-component>
+        <anvil-component type="Label" name="current_user_label" prop:role="muted-text"></anvil-component>
+        <anvil-component type="Button" name="sign_out_button" prop:text="Sign out" prop:role="menu-sign-out"></anvil-component>
+      </anvil-component>
+    </anvil-component>
+    <anvil-component type="FlowPanel" name="tournament_menu" prop:role="tournament-menu">
+      <anvil-component type="Button" name="main_menu_back_button" prop:text="‹ Main menu" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="FlowPanel" name="field_scoring_menu_group" prop:role="tournament-menu-group">
+        <anvil-component type="Button" name="field_scoring_nav" prop:text="Tournament Details" prop:role="tournament-subtab"></anvil-component>
+        <anvil-component type="FlowPanel" name="field_scoring_page_nav" prop:role="field-scoring-page-nav">
+          <anvil-component type="Button" name="setup_nav" prop:text="Tournament Details" prop:role="tournament-subtab"></anvil-component>
+          <anvil-component type="Button" name="field_nav" prop:text="Roster" prop:role="tournament-subtab"></anvil-component>
+        </anvil-component>
+      </anvil-component>
+      <anvil-component type="FlowPanel" name="scoring_menu_group" prop:role="tournament-menu-group">
+        <anvil-component type="Button" name="scoring_nav" prop:text="Scoring" prop:role="tournament-subtab"></anvil-component>
+        <anvil-component type="FlowPanel" name="scoring_page_nav" prop:role="scoring-page-nav">
+          <anvil-component type="Button" name="standings_nav" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
+          <anvil-component type="Button" name="round_one_nav" prop:text="Round One" prop:role="tournament-subtab"></anvil-component>
+          <anvil-component type="Button" name="round_two_nav" prop:text="Round Two" prop:role="tournament-subtab"></anvil-component>
+        </anvil-component>
+      </anvil-component>
+      <anvil-component type="FlowPanel" name="expenses_menu_group" prop:role="tournament-menu-group">
+        <anvil-component type="Button" name="expenses_nav" prop:text="Expenses" prop:role="tournament-subtab"></anvil-component>
+        <anvil-component type="FlowPanel" name="budget_tab_nav" prop:role="tournament-subnav">
+          <anvil-component type="Button" name="budget_categories_tab_button" prop:text="Categories" prop:role="tournament-subtab"></anvil-component>
+          <anvil-component type="Button" name="budget_assignments_tab_button" prop:text="Assign Expenses" prop:role="tournament-subtab"></anvil-component>
+          <anvil-component type="Button" name="budget_payments_tab_button" prop:text="Payments" prop:role="tournament-subtab"></anvil-component>
+        </anvil-component>
+      </anvil-component>
+      <anvil-component type="FlowPanel" name="communication_menu_group" prop:role="tournament-menu-group">
+        <anvil-component type="Button" name="communication_nav" prop:text="Communication" prop:role="tournament-subtab"></anvil-component>
+        <anvil-component type="FlowPanel" name="communication_page_nav" prop:role="tournament-subnav">
+          <anvil-component type="Button" name="email_nav" prop:text="Email" prop:role="tournament-subtab"></anvil-component>
+          <anvil-component type="Button" name="news_nav" prop:text="News" prop:role="tournament-subtab"></anvil-component>
+        </anvil-component>
+      </anvil-component>
+    </anvil-component>
   </anvil-block>
   <anvil-block slot="content">
-    <div class="event-title-row">
-      <div>
-        <anvil-component type="Label" name="selected_tournament_eyebrow" prop:role="eyebrow" prop:text="SELECTED TOURNAMENT"></anvil-component>
-        <anvil-component type="Label" name="current_event_title" prop:role="h2" prop:text="Create your first tournament"></anvil-component>
-        <anvil-component type="Label" name="current_event_subtitle" prop:role="muted-text" prop:text="Add a year and course to get started."></anvil-component>
-      </div>
-    </div>
-    <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
-    <anvil-component type="FlowPanel" name="tournament_subnav" prop:role="tournament-subnav">
-      <anvil-component type="Button" name="field_scoring_nav" prop:text="Field and Scoring" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="expenses_nav" prop:text="Expenses" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="communication_nav" prop:text="Communication" prop:role="tournament-subtab"></anvil-component>
-    </anvil-component>
-    <anvil-component type="FlowPanel" name="field_scoring_page_nav" prop:role="tournament-subnav">
-      <anvil-component type="Button" name="setup_nav" prop:text="Setup" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="field_nav" prop:text="Field" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="round_one_nav" prop:text="Round One" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="standings_nav" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="round_two_nav" prop:text="Round Two" prop:role="tournament-subtab"></anvil-component>
-    </anvil-component>
-    <anvil-component type="FlowPanel" name="communication_page_nav" prop:role="tournament-subnav">
-      <anvil-component type="Button" name="email_nav" prop:text="Email" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="news_nav" prop:text="News" prop:role="tournament-subtab"></anvil-component>
-    </anvil-component>
     <anvil-component type="ColumnPanel" name="event_section" prop:role="tracker-view">
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT</p>
         <h2>Details</h2>
         <p class="muted-copy">Create a year and choose the players taking part.</p>
       </div>
+      <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
       <anvil-component type="ColumnPanel" name="selected_tournament_actions">
         <anvil-component type="Button" name="edit_tournament_button" prop:text="Edit Tournament Details" prop:role="secondary-button" prop:align="left" container:grid_position="TFUTTL,NIACJP"></anvil-component>
         <anvil-component type="Button" name="delete_tournament_button" prop:text="Delete selected tournament" prop:role="danger-button" prop:align="left" container:grid_position="WYHKZS,TSYKZN"></anvil-component>
@@ -91,27 +109,44 @@
         <p class="muted-copy">Create divisions for this tournament, then optionally assign each player's division and set their handicap. Non-players are kept out of field and round setup.</p>
       </div>
       <div class="tracker-card">
-        <p class="eyebrow">DIVISIONS</p>
-        <h2>Create a division</h2>
-        <p class="muted-copy">Each division belongs to the selected tournament.</p>
-        <div class="inline-form">
-          <anvil-component type="TextBox" name="new_division_name" prop:placeholder="Division name"></anvil-component>
-          <anvil-component type="Button" name="create_division_button" prop:text="Create division"></anvil-component>
-        </div>
-        <div class="inline-form">
-          <label>Choose a division to delete</label>
-          <anvil-component type="DropDown" name="division_to_delete_dropdown"></anvil-component>
-          <anvil-component type="Button" name="delete_division_button" prop:text="Delete selected division" prop:role="danger-button"></anvil-component>
-        </div>
-        <anvil-component type="Label" name="division_status" prop:role="status-text"></anvil-component>
-        <anvil-component type="Label" name="division_list_label" prop:role="muted-text"></anvil-component>
-      </div>
-      <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and handicaps together.</span></div>
-        <div class="player-details-save-actions">
-          <anvil-component type="Button" name="save_field_details_button" prop:text="Save all player details" prop:role="player-details-save-button"></anvil-component>
+        <div class="inline-form player-details-control-row">
+          <label>Division</label>
+          <anvil-component type="DropDown" name="division_dropdown"></anvil-component>
+          <div class="division-action-buttons">
+            <anvil-component type="Button" name="delete_division_button" prop:text="Delete selected division" prop:role="danger-button"></anvil-component>
+            <anvil-component type="Button" name="apply_division_to_selected_button" prop:text="Apply division to selected players" prop:role="secondary-button"></anvil-component>
+          </div>
+          <div class="bulk-handicap-actions">
+            <label>Handicap for selected players</label>
+            <anvil-component type="TextBox" name="bulk_handicap_input" prop:type="number" prop:placeholder="e.g. 12.4"></anvil-component>
+            <anvil-component type="Button" name="apply_handicap_to_selected_button" prop:text="Apply handicap to selected players" prop:role="secondary-button"></anvil-component>
+          </div>
+          <div class="player-actions-divider" role="separator" aria-orientation="vertical"></div>
+          <div class="player-maintenance-actions">
+            <anvil-component type="Button" name="remove_selected_field_entries_button" prop:text="Remove selected players" prop:role="danger-button"></anvil-component>
+            <anvil-component type="Button" name="save_field_details_button" prop:text="Save all player details" prop:role="player-details-save-button"></anvil-component>
+          </div>
         </div>
+        <anvil-component type="ColumnPanel" name="create_division_panel">
+          <div class="inline-form">
+            <label>New division name</label>
+            <anvil-component type="TextBox" name="new_division_name" prop:placeholder="Division name"></anvil-component>
+            <anvil-component type="Button" name="create_division_button" prop:text="Create division"></anvil-component>
+          </div>
+        </anvil-component>
+        <anvil-component type="Label" name="division_status" prop:role="status-text"></anvil-component>
         <anvil-component type="Label" name="field_status" prop:role="status-text"></anvil-component>
+        <div class="budget-bulk-controls">
+          <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="field_division_filter"></anvil-component></div>
+          <div class="field-block"><label>Search by name</label><anvil-component type="TextBox" name="field_search_box" prop:placeholder="Search players"></anvil-component></div>
+        </div>
+        <div class="budget-bulk-actions">
+          <anvil-component type="Button" name="select_matching_field_players_button" prop:text="Select all matching" prop:role="secondary-button"></anvil-component>
+          <anvil-component type="Button" name="clear_matching_field_players_button" prop:text="Clear matching" prop:role="secondary-button"></anvil-component>
+          <anvil-component type="Label" name="field_search_status" prop:role="muted-text"></anvil-component>
+          <anvil-component type="Label" name="field_selection_status" prop:role="muted-text"></anvil-component>
+        </div>
         <anvil-component type="RepeatingPanel" name="field_rows" prop:item_template="rattler_tournament.EntryDetailsRow"></anvil-component>
       </div>
     </anvil-component>
@@ -182,26 +217,40 @@
       </div>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="player_section" prop:role="tracker-view">
-      <div class="view-heading"><p class="eyebrow">ROSTER</p><h2>Players across the years</h2><p class="muted-copy">Keep contact details with each player across years. Inactive players stay available for past and future tournaments.</p></div>
       <div class="tracker-card">
-        <div class="form-grid form-grid-five">
-          <div class="field-block"><label>Player name</label><anvil-component type="TextBox" name="player_name" prop:placeholder="Full name"></anvil-component></div>
-          <div class="field-block"><label>Email</label><anvil-component type="TextBox" name="player_email" prop:placeholder="name@example.com"></anvil-component></div>
-          <div class="field-block"><label>Phone</label><anvil-component type="TextBox" name="player_phone" prop:placeholder="Phone number"></anvil-component></div>
-          <div class="field-block"><label>City</label><anvil-component type="TextBox" name="player_city" prop:placeholder="City"></anvil-component></div>
-          <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
+        <div class="section-heading">
+          <div><p class="eyebrow">ROSTER</p><h2>Player roster</h2></div>
+          <anvil-component type="FlowPanel" name="player_add_options" prop:role="player-add-options">
+            <anvil-component type="Button" name="open_individual_player_add_button" prop:text="Add individual" prop:role="secondary-button"></anvil-component>
+            <anvil-component type="Button" name="open_bulk_player_add_button" prop:text="Bulk add" prop:role="secondary-button"></anvil-component>
+          </anvil-component>
         </div>
-        <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
-        <div class="section-heading"><div><p class="eyebrow">BULK ADD</p><h2>Import from CSV</h2></div></div>
-        <p class="muted-copy">Choose a CSV with a <code>name</code> header. Optional headers: <code>email</code>, <code>phone</code>, <code>city</code>, and <code>state</code>. Existing names and rows without a name are skipped.</p>
-        <div class="inline-form">
-          <anvil-component type="FileLoader" name="player_csv_file" prop:text="Choose CSV" prop:file_types=".csv"></anvil-component>
-          <anvil-component type="Button" name="import_players_button" prop:text="Import players" prop:role="secondary-button"></anvil-component>
-        </div>
+        <anvil-component type="ColumnPanel" name="player_create_panel" prop:role="player-add-panel">
+          <div class="section-heading"><div><p class="eyebrow">INDIVIDUAL ADD</p><h2>Add one player</h2></div></div>
+          <div class="form-grid form-grid-five">
+            <div class="field-block"><label>Player name</label><anvil-component type="TextBox" name="player_name" prop:placeholder="Full name"></anvil-component></div>
+            <div class="field-block"><label>Email</label><anvil-component type="TextBox" name="player_email" prop:placeholder="name@example.com"></anvil-component></div>
+            <div class="field-block"><label>Phone</label><anvil-component type="TextBox" name="player_phone" prop:placeholder="Phone number"></anvil-component></div>
+            <div class="field-block"><label>City</label><anvil-component type="TextBox" name="player_city" prop:placeholder="City"></anvil-component></div>
+            <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
+          </div>
+          <div class="player-add-actions">
+            <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
+            <anvil-component type="Button" name="close_individual_player_add_button" prop:text="Back" prop:role="secondary-button"></anvil-component>
+          </div>
+        </anvil-component>
+        <anvil-component type="ColumnPanel" name="player_import_panel" prop:role="player-add-panel">
+          <div class="section-heading"><div><p class="eyebrow">BULK ADD</p><h2>Import from CSV</h2></div></div>
+          <p class="muted-copy">Choose a CSV with a <code>name</code> header. Optional headers: <code>email</code>, <code>phone</code>, <code>city</code>, and <code>state</code>. Existing names and rows without a name are skipped.</p>
+          <div class="inline-form">
+            <anvil-component type="FileLoader" name="player_csv_file" prop:text="Choose CSV" prop:file_types=".csv"></anvil-component>
+          </div>
+          <div class="player-add-actions">
+            <anvil-component type="Button" name="import_players_button" prop:text="Import players" prop:role="secondary-button"></anvil-component>
+            <anvil-component type="Button" name="close_bulk_player_add_button" prop:text="Back" prop:role="secondary-button"></anvil-component>
+          </div>
+        </anvil-component>
         <anvil-component type="Label" name="player_status" prop:role="status-text"></anvil-component>
-      </div>
-      <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">EVERY SEASON</p><h2>Player roster</h2></div><span class="muted-copy">Round-one division and handicap are set for each tournament on the Field page.</span></div>
         <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="rattler_tournament.PlayerRow" prop:role="player-list"></anvil-component>
       </div>
     </anvil-component>
@@ -214,11 +263,6 @@
         <div><span>Participants</span><anvil-component type="Label" name="budget_participants" prop:text="0 participants"></anvil-component></div>
       </div>
       <anvil-component type="Label" name="budget_status" prop:role="status-text"></anvil-component>
-      <anvil-component type="FlowPanel" name="budget_tab_nav" prop:role="tournament-subnav">
-        <anvil-component type="Button" name="budget_categories_tab_button" prop:text="Categories" prop:role="tournament-subtab"></anvil-component>
-        <anvil-component type="Button" name="budget_assignments_tab_button" prop:text="Assign Expenses" prop:role="tournament-subtab"></anvil-component>
-        <anvil-component type="Button" name="budget_payments_tab_button" prop:text="Payments" prop:role="tournament-subtab"></anvil-component>
-      </anvil-component>
       <anvil-component type="ColumnPanel" name="budget_categories_tab" prop:role="tracker-view">
         <div class="tracker-card">
           <div class="section-heading"><div><p anvil:designer-editable-text class="eyebrow"></p><h2>Manage expense categories</h2></div><span class="muted-copy">Each category total is divided among the participants selected for it.</span></div>
@@ -298,5 +342,6 @@
   </anvil-block>
   <anvil-block slot="title">
     <anvil-component type="Label" name="page_title" prop:role="h1" prop:text="The Rattler Invitational"></anvil-component>
+    <anvil-component type="Label" name="selected_tournament_name" prop:role="h2"></anvil-component>
   </anvil-block>
 </anvil-form>

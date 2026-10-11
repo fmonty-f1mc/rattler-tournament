@@ -4,10 +4,12 @@ import anvil.google.auth, anvil.google.drive
 from anvil.google.drive import app_files
 import anvil.server
 import anvil.users
+from anvil.js.window import document
 
 
 class Form1(Form1Template):
   _CREATE_TOURNAMENT_PICKER_OPTION = "__create_tournament__"
+  _CREATE_DIVISION_PICKER_OPTION = "__create_division__"
 
   def __init__(self, **properties):
     super().__init__(**properties)
@@ -18,9 +20,15 @@ class Form1(Form1Template):
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
     self._creating_tournament = False
+    self._tournament_menu_open = False
+    self._expanded_menu_group = None
     self._player_entries = []
     self._round_one_score_drafts = {}
     self._field_detail_drafts = {}
+    self._field_detail_items = []
+    self._selected_field_entry_ids = set()
+    self._field_selection_tournament_id = None
+    self._division_selection = None
     self._overall_standings = []
     self._active_standings = []
     self._budget_target_items = []
@@ -37,8 +45,10 @@ class Form1(Form1Template):
     self.entry_status.text = ""
     self.field_status.text = ""
     self.division_status.text = ""
+    self.create_division_panel.visible = False
     self.standings_status.text = ""
     self.player_status.text = ""
+    self._show_player_add_mode(None)
     self.round_one_status.text = ""
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
@@ -49,29 +59,55 @@ class Form1(Form1Template):
     self._load_players()
     self._load_events()
 
+  @staticmethod
+  def _format_tournament_date(event_date):
+    if event_date is None:
+      return ""
+    day = event_date.day
+    suffix = "th" if 11 <= day % 100 <= 13 else {
+      1: "st",
+      2: "nd",
+      3: "rd",
+    }.get(day % 10, "th")
+    month_names = (
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    )
+    return f"{month_names[event_date.month - 1]} {day}{suffix}, {event_date.year}"
+
   @handle("sign_out_button", "click")
   def sign_out_button_click(self, **event_args):
     anvil.users.logout(invalidate_client_objects=True)
     open_form("Form1")
 
+  def _close_menu_drawer(self):
+    page_menu = document.querySelector(".page-menu")
+    assert page_menu is not None
+    page_menu.removeAttribute("open")
+
+  def _show_tournament_view(self, name):
+    self._tournament_menu_open = True
+    self._show_view(name)
+    self._close_menu_drawer()
+
   def _show_view(self, name):
     show_tournament_context = name != "players"
-    field_scoring_views = {"event", "field", "round_one", "standings", "round_two"}
+    field_scoring_views = {"event", "field"}
+    scoring_views = {"standings", "round_one", "round_two"}
     communication_views = {"email", "news"}
     active_group = (
       "field_scoring" if name in field_scoring_views else
+      "scoring" if name in scoring_views else
       "expenses" if name == "budget" else
       "communication" if name in communication_views else None
     )
-    self.selected_tournament_eyebrow.visible = (
+    self.selected_tournament_name.visible = (
       show_tournament_context and not self._creating_tournament
+      and self.current_event is not None
     )
-    self.current_event_title.visible = show_tournament_context
-    self.current_event_subtitle.visible = show_tournament_context
-    self.event_picker.visible = show_tournament_context
-    self.field_summary.visible = (
-      show_tournament_context and not self._creating_tournament
-    )
+    self.tournament_selection_label.visible = True
+    self.event_picker.visible = True
+    self.field_summary.visible = name == "event" and not self._creating_tournament
     self.event_section.visible = name == "event"
     self.field_section.visible = name == "field"
     self.round_one_section.visible = name == "round_one"
@@ -82,9 +118,15 @@ class Form1(Form1Template):
     self.email_section.visible = name == "email"
     self.news_section.visible = name == "news"
     tournament_view = active_group is not None
-    self.tournament_subnav.visible = tournament_view
-    self.field_scoring_page_nav.visible = name in field_scoring_views
-    self.communication_page_nav.visible = name in communication_views
+    self.tournament_menu.visible = self._tournament_menu_open and tournament_view
+    self.field_scoring_page_nav.visible = (
+      self._expanded_menu_group == "field_scoring"
+    )
+    self.scoring_page_nav.visible = self._expanded_menu_group == "scoring"
+    self.budget_tab_nav.visible = self._expanded_menu_group == "expenses"
+    self.communication_page_nav.visible = (
+      self._expanded_menu_group == "communication"
+    )
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
@@ -99,6 +141,7 @@ class Form1(Form1Template):
       )
     for group_name, button in (
       ("field_scoring", self.field_scoring_nav),
+      ("scoring", self.scoring_nav),
       ("expenses", self.expenses_nav),
       ("communication", self.communication_nav),
     ):
@@ -205,14 +248,13 @@ class Form1(Form1Template):
     self._load_news_posts()
     self.field_status.text = ""
     self.division_status.text = ""
+    self.create_division_panel.visible = False
     if self._creating_tournament:
       self.selected_tournament_actions.visible = False
       self.edit_tournament_panel.visible = False
       self.create_tournament_panel.visible = True
       self.build_field_panel.visible = False
-      self.selected_tournament_eyebrow.visible = False
-      self.current_event_title.text = "Create a new tournament"
-      self.current_event_subtitle.text = "Add a year and course to get started."
+      self.selected_tournament_name.visible = False
       self.field_summary.visible = False
       self.event_status.text = ""
       return
@@ -222,21 +264,37 @@ class Form1(Form1Template):
       self.edit_tournament_panel.visible = False
       self.create_tournament_panel.visible = True
       self.build_field_panel.visible = False
-      self.selected_tournament_eyebrow.visible = True
+      self.selected_tournament_name.visible = False
       self.field_summary.visible = True
-      self.current_event_title.text = "Create your first tournament"
-      self.current_event_subtitle.text = "Add a year and course to get started."
       self.field_summary.text = "No players entered yet"
       self.division_options = []
       self.division_choices = [("No division", "")]
-      self.division_list_label.text = "Create or select a tournament first."
-      self.division_to_delete_dropdown.items = []
-      self.division_to_delete_dropdown.selected_value = None
+      self._field_detail_items = []
+      self.field_search_box.text = ""
+      self.field_search_box.enabled = False
+      self.field_division_filter.items = [("All divisions", "all")]
+      self.field_division_filter.selected_value = "all"
+      self.field_division_filter.enabled = False
+      self.field_search_status.text = ""
+      self.field_selection_status.text = "0 selected · 0 matching · 0 players"
+      self.select_matching_field_players_button.enabled = False
+      self.clear_matching_field_players_button.enabled = False
+      self.division_dropdown.items = []
+      self.division_dropdown.selected_value = None
+      self.division_dropdown.enabled = False
+      self.apply_division_to_selected_button.enabled = False
+      self.bulk_handicap_input.enabled = False
+      self.apply_handicap_to_selected_button.enabled = False
+      self.remove_selected_field_entries_button.enabled = False
+      self._division_selection = None
+      self.create_division_panel.visible = False
       self.delete_division_button.enabled = False
       self.standings_scope_picker.items = [("Overall", "overall")]
       self.standings_scope_picker.selected_value = "overall"
       self.field_rows.items = []
       self._player_entries = []
+      self._selected_field_entry_ids = set()
+      self._field_selection_tournament_id = None
       self._round_one_score_drafts = {}
       self._overall_standings = []
       self._active_standings = []
@@ -280,31 +338,28 @@ class Form1(Form1Template):
     self.selected_tournament_actions.visible = True
     self.create_tournament_panel.visible = False
     self.build_field_panel.visible = True
-    self.selected_tournament_eyebrow.visible = True
+    self.selected_tournament_name.visible = True
+    date_label = self._format_tournament_date(tournament["event_date"])
+    self.selected_tournament_name.text = (
+      f"{tournament['year']} · {tournament['course']}"
+      + (f" · {date_label}" if date_label else "")
+    )
     self.field_summary.visible = True
-    self.current_event_title.text = f"{tournament['year']} · {tournament['course']}"
-    event_date = tournament["event_date"]
-    notes = tournament["notes"]
-    details = str(event_date) if event_date else "Date not set"
-    if notes:
-      details = f"{details} · {notes}"
-    self.current_event_subtitle.text = details
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
-    self.division_list_label.text = ", ".join(self.division_options) or "No divisions created yet."
-    selected_division = self.division_to_delete_dropdown.selected_value
-    self.division_to_delete_dropdown.items = [
-      (division, division) for division in self.division_options
-    ]
-    self.division_to_delete_dropdown.selected_value = (
-      selected_division
-      if selected_division in self.division_options
-      else (self.division_options[0] if self.division_options else None)
-    )
-    self.delete_division_button.enabled = bool(self.division_options)
     self.division_choices = [("No division", "")] + [
       (division, division) for division in self.division_options
     ]
+    division_values = [value for _, value in self.division_choices]
+    if self._division_selection not in division_values:
+      self._division_selection = None
+    self.division_dropdown.items = (
+      [("Choose a division", None)] + self.division_choices +
+      [("Create new division…", self._CREATE_DIVISION_PICKER_OPTION)]
+    )
+    self.division_dropdown.selected_value = self._division_selection
+    self.division_dropdown.enabled = True
+    self.delete_division_button.enabled = self._division_selection in self.division_options
     selected_scope = self.standings_scope_picker.selected_value or "overall"
     scopes = [("Overall", "overall")] + [
       ("Division: " + division, "division:" + division)
@@ -320,6 +375,33 @@ class Form1(Form1Template):
     self._load_entry_options(entries)
     player_entries = [entry for entry in entries if entry["is_player"] is not False]
     self._player_entries = player_entries
+    tournament_id = tournament.get_id()
+    if self._field_selection_tournament_id != tournament_id:
+      self._selected_field_entry_ids = set()
+      self._field_selection_tournament_id = tournament_id
+      self.field_search_box.text = ""
+      self.field_division_filter.selected_value = "all"
+    self.field_search_box.enabled = bool(player_entries)
+    self.field_division_filter.enabled = bool(player_entries)
+    field_division_options = [
+      ("All divisions", "all"),
+      ("Players without division", "unassigned"),
+    ] + [
+      (division, "division:" + division)
+      for division in sorted(self.division_options, key=lambda value: value.lower())
+    ]
+    selected_division_filter = self.field_division_filter.selected_value or "all"
+    self.field_division_filter.items = field_division_options
+    self.field_division_filter.selected_value = next(
+      (value for _, value in field_division_options if value == selected_division_filter),
+      "all",
+    )
+    self.apply_division_to_selected_button.enabled = bool(player_entries)
+    self.bulk_handicap_input.enabled = bool(player_entries)
+    self.apply_handicap_to_selected_button.enabled = bool(player_entries)
+    self.remove_selected_field_entries_button.enabled = bool(player_entries)
+    self.select_matching_field_players_button.enabled = bool(player_entries)
+    self.clear_matching_field_players_button.enabled = bool(player_entries)
     self._round_one_score_drafts = {
       entry.get_id(): (
         "" if entry["gross_18"] is None or entry["gross_18"] <= 0
@@ -343,8 +425,10 @@ class Form1(Form1Template):
         "division_options": self.division_choices,
         "division": division,
         "handicap": handicap,
+        "selected": entry_id in self._selected_field_entry_ids,
       })
-    self.field_rows.items = field_items
+    self._field_detail_items = field_items
+    self._refresh_field_rows()
     round_two_pairings = anvil.server.call("list_round_two_pairings", tournament)
     self.round_two_pairing_rows.items = self._round_two_pairing_items(
       round_two_pairings,
@@ -655,22 +739,89 @@ class Form1(Form1Template):
     self.budget_target_rows.items = self._matching_budget_target_items()
     self._update_budget_target_selection_status()
 
+  def _matching_field_items(self):
+    query = (self.field_search_box.text or "").strip().lower()
+    division_filter = self.field_division_filter.selected_value or "all"
+    matches = []
+    for item in self._field_detail_items:
+      name = (item["entry"]["golfer"]["name"] or "").lower()
+      division = (item["division"] or "").strip()
+      if query and query not in name:
+        continue
+      if division_filter == "unassigned" and division:
+        continue
+      if division_filter.startswith("division:") and division != division_filter[len("division:"):]:
+        continue
+      matches.append(item)
+    return matches
+
+  def _sync_field_selection(self):
+    self._selected_field_entry_ids = {
+      item["entry"].get_id()
+      for item in self._field_detail_items
+      if item["selected"]
+    }
+
+  def _update_field_selection_status(self):
+    self._sync_field_selection()
+    selected_count = len(self._selected_field_entry_ids)
+    matching_count = len(self._matching_field_items())
+    total_count = len(self._field_detail_items)
+    self.field_selection_status.text = (
+      f"{selected_count} selected · {matching_count} matching · {total_count} players"
+    )
+
+  def _refresh_field_rows(self):
+    field_items = self._matching_field_items()
+
+    self.field_rows.items = field_items
+    if not self._field_detail_items:
+      self.field_search_status.text = ""
+    elif not field_items:
+      self.field_search_status.text = "No players match these filters."
+    elif len(field_items) < len(self._field_detail_items):
+      self.field_search_status.text = (
+        f"Showing {len(field_items)} of {len(self._field_detail_items)} players."
+      )
+    else:
+      self.field_search_status.text = ""
+    self._update_field_selection_status()
+
   def _capture_field_detail_drafts(self):
-    for item in self._current_field_detail_values():
+    for row in self.field_rows.get_components():
+      item = getattr(row, "item")
       entry = item["entry"]
-      self._field_detail_drafts[entry.get_id()] = {
-        "division": item.get("division"),
-        "handicap": item.get("handicap"),
+      entry_id = entry.get_id()
+      item["division"] = getattr(row, "division_dropdown").selected_value
+      item["handicap"] = getattr(row, "handicap_box").text
+      item["selected"] = getattr(row, "select_player_checkbox").checked
+      self._field_detail_drafts[entry_id] = {
+        "division": item["division"],
+        "handicap": item["handicap"],
       }
+      if item["selected"]:
+        self._selected_field_entry_ids.add(entry_id)
+      else:
+        self._selected_field_entry_ids.discard(entry_id)
+
+    for item in self._field_detail_items:
+      entry_id = item["entry"].get_id()
+      draft = self._field_detail_drafts.get(entry_id)
+      if draft is not None:
+        item["division"] = draft["division"]
+        item["handicap"] = draft["handicap"]
+      item["selected"] = entry_id in self._selected_field_entry_ids
+    self._update_field_selection_status()
 
   def _current_field_detail_values(self):
+    self._capture_field_detail_drafts()
     return [
       {
-        "entry": getattr(row, "item")["entry"],
-        "division": getattr(row, "division_dropdown").selected_value,
-        "handicap": getattr(row, "handicap_box").text,
+        "entry": item["entry"],
+        "division": item["division"],
+        "handicap": item["handicap"],
       }
-      for row in self.field_rows.get_components()
+      for item in self._field_detail_items
     ]
 
   def _current_round_one_scores(self):
@@ -754,31 +905,64 @@ class Form1(Form1Template):
 
   @handle("event_nav", "click")
   def event_nav_click(self, **event_args):
+    self._tournament_menu_open = True
+    self._expanded_menu_group = None
+    self.main_menu.visible = False
     self._show_view("event")
+
+  @handle("main_menu_back_button", "click")
+  def main_menu_back_button_click(self, **event_args):
+    self._tournament_menu_open = False
+    self._expanded_menu_group = None
+    self.main_menu.visible = True
+    self.tournament_menu.visible = False
+
+  def _open_tournament_group(self, group, name):
+    self._expanded_menu_group = group
+    self._tournament_menu_open = True
+    self._show_view(name)
 
   @handle("field_scoring_nav", "click")
   def field_scoring_nav_click(self, **event_args):
-    self._show_view("event")
+    self._open_tournament_group("field_scoring", "event")
+
+  @handle("scoring_nav", "click")
+  def scoring_nav_click(self, **event_args):
+    self._open_tournament_group("scoring", "standings")
 
   @handle("setup_nav", "click")
   def setup_nav_click(self, **event_args):
-    self._show_view("event")
+    self._show_tournament_view("event")
 
   @handle("expenses_nav", "click")
   def expenses_nav_click(self, **event_args):
-    self._show_view("budget")
+    self._open_tournament_group("expenses", "budget")
+    self._show_budget_tab("categories")
 
   @handle("communication_nav", "click")
   def communication_nav_click(self, **event_args):
-    self._show_view("email")
+    self._open_tournament_group("communication", "email")
 
   @handle("email_nav", "click")
   def email_nav_click(self, **event_args):
-    self._show_view("email")
+    self._show_tournament_view("email")
 
   @handle("field_nav", "click")
   def field_nav_click(self, **event_args):
-    self._show_view("field")
+    self._show_tournament_view("field")
+
+  @handle("division_dropdown", "change")
+  def division_dropdown_change(self, **event_args):
+    selected_division = self.division_dropdown.selected_value
+    if selected_division == self._CREATE_DIVISION_PICKER_OPTION:
+      self.create_division_panel.visible = True
+      self.new_division_name.text = ""
+      self.division_dropdown.selected_value = self._division_selection
+      return
+
+    self._division_selection = selected_division
+    self.create_division_panel.visible = False
+    self.delete_division_button.enabled = selected_division in self.division_options
 
   @handle("create_division_button", "click")
   def create_division_button_click(self, **event_args):
@@ -794,6 +978,8 @@ class Form1(Form1Template):
       self.division_status.text = result["message"]
       return
     self.new_division_name.text = ""
+    self.create_division_panel.visible = False
+    self._division_selection = result["division_name"]
     self._load_event_data()
     self.division_status.text = f"{result['division_name']} created for this tournament."
 
@@ -802,7 +988,7 @@ class Form1(Form1Template):
     if self.current_event is None:
       self.division_status.text = "Create or select a tournament first."
       return
-    division = self.division_to_delete_dropdown.selected_value
+    division = self.division_dropdown.selected_value
     if not division:
       self.division_status.text = "Choose a division to delete."
       return
@@ -826,6 +1012,7 @@ class Form1(Form1Template):
     for draft in self._field_detail_drafts.values():
       if draft["division"] == division:
         draft["division"] = ""
+    self._division_selection = None
     self._load_event_data(capture_field_detail_drafts=False)
     self.division_status.text = (
       f"Deleted {result['division_name']}. Its players now have no division; their scores were kept."
@@ -849,45 +1036,194 @@ class Form1(Form1Template):
       self.field_status.text = result["message"]
       return
     self._load_event_data()
+    self._selected_field_entry_ids.clear()
+    for item in self._field_detail_items:
+      item["selected"] = False
+    for row in self.field_rows.get_components():
+      row_item = getattr(row, "item")
+      row_item["selected"] = False
+      getattr(row, "select_player_checkbox").checked = False
+    self._update_field_selection_status()
     self.field_status.text = f"Division and handicap saved for {result['saved_count']} players."
 
-  @handle("field_rows", "x-remove-entry")
-  def field_rows_remove_entry(self, entry, **event_args):
-    name = entry["golfer"]["name"]
+  @handle("field_search_box", "change")
+  def field_search_box_change(self, **event_args):
+    self._capture_field_detail_drafts()
+    self._refresh_field_rows()
+
+  @handle("field_division_filter", "change")
+  def field_division_filter_change(self, **event_args):
+    self._capture_field_detail_drafts()
+    self._refresh_field_rows()
+
+  @handle("field_rows", "x-field-player-selection-changed")
+  def field_rows_selection_changed(self, **event_args):
+    self._update_field_selection_status()
+
+  @handle("select_matching_field_players_button", "click")
+  def select_matching_field_players_button_click(self, **event_args):
+    self._capture_field_detail_drafts()
+    for item in self._matching_field_items():
+      item["selected"] = True
+    self._refresh_field_rows()
+
+  @handle("clear_matching_field_players_button", "click")
+  def clear_matching_field_players_button_click(self, **event_args):
+    self._capture_field_detail_drafts()
+    for item in self._matching_field_items():
+      item["selected"] = False
+    self._refresh_field_rows()
+
+  @handle("apply_division_to_selected_button", "click")
+  def apply_division_to_selected_button_click(self, **event_args):
+    if self.current_event is None:
+      self.field_status.text = "Create or select a tournament first."
+      return
+
+    division = self.division_dropdown.selected_value
+    if division is None or division not in [value for _, value in self.division_choices]:
+      self.field_status.text = "Choose a division to apply."
+      return
+
+    self._capture_field_detail_drafts()
+    selected_items = [
+      item for item in self._field_detail_items
+      if item.get("selected")
+    ]
+    if not selected_items:
+      self.field_status.text = "Select at least one player."
+      return
+
+    selected_ids = {item["entry"].get_id() for item in selected_items}
+    for item in selected_items:
+      item["division"] = division
+      entry_id = item["entry"].get_id()
+      draft = self._field_detail_drafts.get(entry_id) or {
+        "division": item["division"],
+        "handicap": item["handicap"],
+      }
+      draft["division"] = division
+      self._field_detail_drafts[entry_id] = draft
+    for row in self.field_rows.get_components():
+      if getattr(row, "item")["entry"].get_id() in selected_ids:
+        getattr(row, "set_division")(division)
+    self._capture_field_detail_drafts()
+    self._refresh_field_rows()
+    division_label = division or "No division"
+    self.field_status.text = (
+      f"Applied {division_label} to {len(selected_items)} selected players. "
+      "Save all player details to keep the changes."
+    )
+
+  @handle("apply_handicap_to_selected_button", "click")
+  def apply_handicap_to_selected_button_click(self, **event_args):
+    if self.current_event is None:
+      self.field_status.text = "Create or select a tournament first."
+      return
+
+    handicap = self.bulk_handicap_input.text.strip()
+    if not handicap:
+      self.field_status.text = "Enter a handicap to apply."
+      return
+
+    self._capture_field_detail_drafts()
+    selected_items = [
+      item for item in self._field_detail_items
+      if item.get("selected")
+    ]
+    if not selected_items:
+      self.field_status.text = "Select at least one player."
+      return
+
+    selected_ids = {item["entry"].get_id() for item in selected_items}
+    for item in selected_items:
+      item["handicap"] = handicap
+      entry_id = item["entry"].get_id()
+      draft = self._field_detail_drafts.get(entry_id) or {
+        "division": item["division"],
+        "handicap": item["handicap"],
+      }
+      draft["handicap"] = handicap
+      self._field_detail_drafts[entry_id] = draft
+    for row in self.field_rows.get_components():
+      if getattr(row, "item")["entry"].get_id() in selected_ids:
+        getattr(row, "set_handicap")(handicap)
+    self._capture_field_detail_drafts()
+    self.field_status.text = (
+      f"Applied handicap {handicap} to {len(selected_items)} selected players. "
+      "Save all player details to keep the changes."
+    )
+
+  @handle("remove_selected_field_entries_button", "click")
+  def remove_selected_field_entries_button_click(self, **event_args):
+    if self.current_event is None:
+      self.field_status.text = "Create or select a tournament first."
+      return
+
+    self._capture_field_detail_drafts()
+    selected_entries = [
+      item["entry"] for item in self._field_detail_items
+      if item.get("selected")
+    ]
+    if not selected_entries:
+      self.field_status.text = "Select at least one player."
+      return
+
+    player_label = "player" if len(selected_entries) == 1 else "players"
     tournament = self.current_event
     confirmed = confirm(
-      f"Remove {name} from this tournament? Their scores and expense details for this tournament will be deleted. Any pairings containing them will also be removed, including shared pairing scores for the other player.",
-      title="Remove player from tournament",
+      f"Remove {len(selected_entries)} selected {player_label} from this tournament? Their scores and expense details for this tournament will be deleted. Pairings containing them will also be removed, including shared pairing scores for other players.",
+      title="Remove selected players",
     )
     if not confirmed:
       return
 
-    entry_id = entry.get_id()
     self._capture_field_detail_drafts()
-    result = anvil.server.call("remove_tournament_entry", tournament, entry)
-    if not result["ok"]:
-      self.field_status.text = result["message"]
-      return
+    removed_entries = []
+    removed_pairing_count = 0
+    for entry in selected_entries:
+      result = anvil.server.call("remove_tournament_entry", tournament, entry)
+      if not result["ok"]:
+        for removed_entry in removed_entries:
+          entry_id = removed_entry.get_id()
+          self._field_detail_drafts.pop(entry_id, None)
+          self._selected_field_entry_ids.discard(entry_id)
+        if removed_entries:
+          self._load_event_data(capture_field_detail_drafts=False)
+          self.field_status.text = (
+            f"Removed {len(removed_entries)} of {len(selected_entries)} selected {player_label}. "
+            f"{result['message']}"
+          )
+        else:
+          self.field_status.text = result["message"]
+        return
+      removed_entries.append(entry)
+      removed_pairing_count += result["removed_pairing_count"]
 
-    self._field_detail_drafts.pop(entry_id, None)
+    for entry in removed_entries:
+      entry_id = entry.get_id()
+      self._field_detail_drafts.pop(entry_id, None)
+      self._selected_field_entry_ids.discard(entry_id)
     self._load_event_data(capture_field_detail_drafts=False)
-    pairing_count = result["removed_pairing_count"]
-    if pairing_count:
-      pairing_label = "pairing" if pairing_count == 1 else "pairings"
+    if removed_pairing_count:
+      pairing_label = "pairing" if removed_pairing_count == 1 else "pairings"
       self.field_status.text = (
-        f"Removed {name} from this tournament and removed "
-        f"{pairing_count} {pairing_label}, including their shared scores."
+        f"Removed {len(removed_entries)} selected {player_label} "
+        f"from this tournament and removed {removed_pairing_count} {pairing_label}, "
+        "including shared scores."
       )
     else:
-      self.field_status.text = f"Removed {name} from this tournament."
+      self.field_status.text = (
+        f"Removed {len(removed_entries)} selected {player_label} from this tournament."
+      )
 
   @handle("round_one_nav", "click")
   def round_one_nav_click(self, **event_args):
-    self._show_view("round_one")
+    self._show_tournament_view("round_one")
 
   @handle("standings_nav", "click")
   def standings_nav_click(self, **event_args):
-    self._show_view("standings")
+    self._show_tournament_view("standings")
 
   @handle("standings_scope_picker", "change")
   def standings_scope_picker_change(self, **event_args):
@@ -899,7 +1235,7 @@ class Form1(Form1Template):
 
   @handle("round_two_nav", "click")
   def round_two_nav_click(self, **event_args):
-    self._show_view("round_two")
+    self._show_tournament_view("round_two")
 
   @handle("generate_round_two_net_pairings_button", "click")
   def generate_round_two_net_pairings_button_click(self, **event_args):
@@ -1084,11 +1420,14 @@ class Form1(Form1Template):
 
   @handle("players_nav", "click")
   def players_nav_click(self, **event_args):
+    self._tournament_menu_open = False
+    self.main_menu.visible = True
     self._show_view("players")
+    self._close_menu_drawer()
 
   @handle("news_nav", "click")
   def news_nav_click(self, **event_args):
-    self._show_view("news")
+    self._show_tournament_view("news")
 
   @handle("news_post_picker", "change")
   def news_post_picker_change(self, **event_args):
@@ -1130,14 +1469,17 @@ class Form1(Form1Template):
 
   @handle("budget_categories_tab_button", "click")
   def budget_categories_tab_button_click(self, **event_args):
+    self._show_tournament_view("budget")
     self._show_budget_tab("categories")
 
   @handle("budget_assignments_tab_button", "click")
   def budget_assignments_tab_button_click(self, **event_args):
+    self._show_tournament_view("budget")
     self._show_budget_tab("assign")
 
   @handle("budget_payments_tab_button", "click")
   def budget_payments_tab_button_click(self, **event_args):
+    self._show_tournament_view("budget")
     self._show_budget_tab("payments")
 
   @handle("send_tournament_email_button", "click")
@@ -1388,12 +1730,14 @@ class Form1(Form1Template):
       )
       self._show_view("event")
       self._load_event_data()
+      self._close_menu_drawer()
       return
 
     self._creating_tournament = False
     self.current_event = selected_value
     self.edit_tournament_panel.visible = False
     self._load_event_data()
+    self._close_menu_drawer()
 
   @handle("edit_tournament_button", "click")
   def edit_tournament_button_click(self, **event_args):
@@ -1512,6 +1856,28 @@ class Form1(Form1Template):
   def add_non_players_button_click(self, **event_args):
     self._add_selected_entries(False)
 
+  def _show_player_add_mode(self, mode):
+    self.player_add_options.visible = mode is None
+    self.player_create_panel.visible = mode == "individual"
+    self.player_import_panel.visible = mode == "bulk"
+    self.player_status.text = ""
+
+  @handle("open_individual_player_add_button", "click")
+  def open_individual_player_add_button_click(self, **event_args):
+    self._show_player_add_mode("individual")
+
+  @handle("open_bulk_player_add_button", "click")
+  def open_bulk_player_add_button_click(self, **event_args):
+    self._show_player_add_mode("bulk")
+
+  @handle("close_individual_player_add_button", "click")
+  def close_individual_player_add_button_click(self, **event_args):
+    self._show_player_add_mode(None)
+
+  @handle("close_bulk_player_add_button", "click")
+  def close_bulk_player_add_button_click(self, **event_args):
+    self._show_player_add_mode(None)
+
   @handle("create_player_button", "click")
   def create_player_button_click(self, **event_args):
     result = anvil.server.call(
@@ -1530,9 +1896,10 @@ class Form1(Form1Template):
     self.player_phone.text = ""
     self.player_city.text = ""
     self.player_state.text = ""
-    self.player_status.text = "Player added to the roster."
     self._load_players()
     self._load_event_data()
+    self._show_player_add_mode(None)
+    self.player_status.text = "Player added to the roster."
 
   @handle("import_players_button", "click")
   def import_players_button_click(self, **event_args):
@@ -1551,27 +1918,30 @@ class Form1(Form1Template):
       self.player_status.text = result["message"]
       return
 
+    self._load_players()
+    self._load_event_data()
+    self._show_player_add_mode(None)
     self.player_status.text = result["message"]
-    self._load_players()
-    self._load_event_data()
-
-  @handle("player_rows", "x-toggle-player")
-  def player_rows_toggle_player(self, golfer, active, **event_args):
-    result = anvil.server.call("set_golfer_active", golfer, active)
-    if not result["ok"]:
-      self.player_status.text = result["message"]
-      return
-    self.player_status.text = "Roster updated."
-    self._load_players()
-    self._load_event_data()
 
   @handle("player_rows", "x-save-player")
-  def player_rows_save_player(self, golfer, name, email, phone, city, state, **event_args):
+  def player_rows_save_player(self, golfer, name, email, phone, city, state, active, **event_args):
     result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state)
     if not result["ok"]:
       self.player_status.text = result["message"]
       return
-    self.player_status.text = "Player name and details updated."
+
+    if bool(active) != bool(golfer["active"]):
+      status_result = anvil.server.call("set_golfer_active", golfer, active)
+      if not status_result["ok"]:
+        self.player_status.text = (
+          "Player details were saved, but roster status was not updated: "
+          + status_result["message"]
+        )
+        self._load_players()
+        self._load_event_data()
+        return
+
+    self.player_status.text = "Player details and roster status updated."
     self._load_players()
     self._load_event_data()
 
