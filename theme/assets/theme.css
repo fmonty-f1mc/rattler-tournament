@@ -155,7 +155,7 @@ body {
   width: min(380px, 100vw);
   box-sizing: border-box;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 18px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -169,7 +169,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  justify-items: end;
+  justify-items: center;
   align-items: start;
   row-gap: 12px;
 }
@@ -188,13 +188,13 @@ body {
 .page-actions .anvil-button > button {
   width: 100%;
   min-height: 44px;
-  text-align: right;
+  text-align: center;
 }
 
 .page-actions .anvil-dropdown {
   width: min(100%, 280px);
   max-width: 280px;
-  margin-left: auto;
+  margin: 0 auto;
 }
 
 .page-actions .anvil-dropdown select {
@@ -206,7 +206,7 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  justify-items: end;
+  justify-items: center;
   row-gap: 8px;
 }
 
@@ -216,26 +216,26 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   width: min(100%, 252px);
-  justify-self: end;
-  justify-items: end;
+  justify-self: center;
+  justify-items: center;
   align-content: start;
   row-gap: 6px;
   margin: 0;
 }
 
 .anvil-role-tournament-menu .anvil-role-tournament-subtab {
-  justify-self: end;
+  justify-self: center;
   width: min(100%, 280px);
 }
 
 .anvil-role-tournament-menu .anvil-role-tournament-subtab > button {
   width: 100%;
-  justify-content: flex-end;
+  justify-content: center;
   border-color: transparent;
   border-radius: 0;
   background: transparent;
   color: var(--blank-primary-dark);
-  text-align: right;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -257,7 +257,7 @@ body {
 .anvil-role-tournament-menu-group .anvil-role-field-scoring-page-nav,
 .anvil-role-tournament-menu-group .anvil-role-scoring-page-nav {
   box-sizing: border-box;
-  padding-left: 16px;
+  padding: 0 16px;
   border-left: 2px solid var(--blank-border);
 }
 
@@ -265,14 +265,14 @@ body {
 .anvil-role-tournament-menu-group .anvil-role-field-scoring-page-nav .anvil-role-tournament-subtab > button,
 .anvil-role-tournament-menu-group .anvil-role-scoring-page-nav .anvil-role-tournament-subtab > button {
   min-height: 40px;
-  padding-right: 24px;
+  padding: 0 24px;
   font-size: 14px;
 }
 
 .anvil-role-menu-login-info {
   width: 100%;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 6px;
   padding-top: 14px;
   border-top: 1px solid var(--blank-border);
@@ -283,7 +283,7 @@ body {
   color: var(--blank-muted);
   font-size: 13px;
   font-weight: 700;
-  text-align: right;
+  text-align: center;
 }
 
 .anvil-role-menu-login-info .anvil-role-menu-section-label {
