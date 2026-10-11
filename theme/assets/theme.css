@@ -142,34 +142,36 @@ body {
 .page-menu[open] > .page-menu-toggle {
   position: fixed;
   top: 18px;
-  left: 18px;
+  right: 18px;
   z-index: 1003;
 }
 
 .page-menu[open] > .page-actions {
   position: fixed;
   inset-block: 0;
-  left: 0;
+  right: 0;
   z-index: 1002;
   display: flex;
   width: min(380px, 100vw);
   box-sizing: border-box;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 18px;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 84px 24px 28px;
-  border-right: 1px solid var(--blank-border);
+  border-left: 1px solid var(--blank-border);
   background: var(--blank-surface);
 }
 
-.anvil-role-menu-list,
-.anvil-role-tournament-menu {
+.page-actions .anvil-role-menu-list,
+.page-actions .anvil-role-tournament-menu {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  justify-items: end;
+  align-items: start;
+  row-gap: 12px;
 }
 
 .anvil-role-menu-tournament-entry {
@@ -186,13 +188,13 @@ body {
 .page-actions .anvil-button > button {
   width: 100%;
   min-height: 44px;
-  text-align: left;
+  text-align: right;
 }
 
 .page-actions .anvil-dropdown {
   width: min(100%, 280px);
   max-width: 280px;
-  margin-right: auto;
+  margin-left: auto;
 }
 
 .page-actions .anvil-dropdown select {
@@ -200,25 +202,77 @@ body {
   min-height: 44px;
 }
 
-.anvil-role-tournament-menu .anvil-role-tournament-subnav,
-.anvil-role-tournament-menu .anvil-role-field-scoring-page-nav,
-.anvil-role-tournament-menu .anvil-role-scoring-page-nav {
-  flex-wrap: nowrap;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
+.page-actions .anvil-role-tournament-menu .anvil-role-tournament-menu-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  justify-items: end;
+  row-gap: 8px;
+}
+
+.page-actions .anvil-role-tournament-menu .anvil-role-tournament-subnav,
+.page-actions .anvil-role-tournament-menu .anvil-role-field-scoring-page-nav,
+.page-actions .anvil-role-tournament-menu .anvil-role-scoring-page-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: min(100%, 252px);
+  justify-self: end;
+  justify-items: end;
+  align-content: start;
+  row-gap: 6px;
   margin: 0;
+}
+
+.anvil-role-tournament-menu .anvil-role-tournament-subtab {
+  justify-self: end;
+  width: min(100%, 280px);
 }
 
 .anvil-role-tournament-menu .anvil-role-tournament-subtab > button {
   width: 100%;
-  white-space: normal;
+  justify-content: flex-end;
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--blank-primary-dark);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.anvil-role-tournament-menu .anvil-role-tournament-subtab > button:hover,
+.anvil-role-tournament-menu .anvil-role-tournament-subtab > button:focus {
+  border-color: transparent;
+  background: var(--blank-surface-muted);
+  color: var(--blank-primary-dark);
+}
+
+.anvil-role-tournament-menu .anvil-role-tournament-subtab-active > button {
+  border-color: transparent;
+  background: var(--blank-surface-muted);
+  color: var(--blank-primary-dark);
+  font-weight: 800;
+}
+
+.anvil-role-tournament-menu-group .anvil-role-tournament-subnav,
+.anvil-role-tournament-menu-group .anvil-role-field-scoring-page-nav,
+.anvil-role-tournament-menu-group .anvil-role-scoring-page-nav {
+  box-sizing: border-box;
+  padding-left: 16px;
+  border-left: 2px solid var(--blank-border);
+}
+
+.anvil-role-tournament-menu-group .anvil-role-tournament-subnav .anvil-role-tournament-subtab > button,
+.anvil-role-tournament-menu-group .anvil-role-field-scoring-page-nav .anvil-role-tournament-subtab > button,
+.anvil-role-tournament-menu-group .anvil-role-scoring-page-nav .anvil-role-tournament-subtab > button {
+  min-height: 40px;
+  padding-right: 24px;
+  font-size: 14px;
 }
 
 .anvil-role-menu-login-info {
   width: 100%;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 6px;
   padding-top: 14px;
   border-top: 1px solid var(--blank-border);
@@ -229,7 +283,7 @@ body {
   color: var(--blank-muted);
   font-size: 13px;
   font-weight: 700;
-  text-align: left;
+  text-align: right;
 }
 
 .anvil-role-menu-login-info .anvil-role-menu-section-label {
@@ -1544,12 +1598,15 @@ input.anvil-role-budget-paid-input:disabled {
   .page-menu {
     display: block;
     margin-top: 16px;
+    text-align: right;
   }
 
   .page-menu[open] > .page-actions {
-    width: 100vw;
+    right: 0;
+    left: auto;
+    width: min(380px, 100vw);
     padding: 76px clamp(16px, 5vw, 28px) 24px;
-    border-right: 0;
+    border-left: 0;
   }
 
   .page-main {

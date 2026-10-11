@@ -21,6 +21,7 @@ class Form1(Form1Template):
     self.current_event = None
     self._creating_tournament = False
     self._tournament_menu_open = False
+    self._expanded_menu_group = None
     self._player_entries = []
     self._round_one_score_drafts = {}
     self._field_detail_drafts = {}
@@ -100,9 +101,14 @@ class Form1(Form1Template):
     self.news_section.visible = name == "news"
     tournament_view = active_group is not None
     self.tournament_menu.visible = self._tournament_menu_open and tournament_view
-    self.field_scoring_page_nav.visible = name in field_scoring_views
-    self.scoring_page_nav.visible = name in scoring_views
-    self.communication_page_nav.visible = name in communication_views
+    self.field_scoring_page_nav.visible = (
+      self._expanded_menu_group == "field_scoring"
+    )
+    self.scoring_page_nav.visible = self._expanded_menu_group == "scoring"
+    self.budget_tab_nav.visible = self._expanded_menu_group == "expenses"
+    self.communication_page_nav.visible = (
+      self._expanded_menu_group == "communication"
+    )
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
@@ -776,22 +782,29 @@ class Form1(Form1Template):
   @handle("event_nav", "click")
   def event_nav_click(self, **event_args):
     self._tournament_menu_open = True
+    self._expanded_menu_group = None
     self.main_menu.visible = False
     self._show_view("event")
 
   @handle("main_menu_back_button", "click")
   def main_menu_back_button_click(self, **event_args):
     self._tournament_menu_open = False
+    self._expanded_menu_group = None
     self.main_menu.visible = True
     self.tournament_menu.visible = False
 
+  def _open_tournament_group(self, group, name):
+    self._expanded_menu_group = group
+    self._tournament_menu_open = True
+    self._show_view(name)
+
   @handle("field_scoring_nav", "click")
   def field_scoring_nav_click(self, **event_args):
-    self._show_tournament_view("event")
+    self._open_tournament_group("field_scoring", "event")
 
   @handle("scoring_nav", "click")
   def scoring_nav_click(self, **event_args):
-    self._show_tournament_view("standings")
+    self._open_tournament_group("scoring", "standings")
 
   @handle("setup_nav", "click")
   def setup_nav_click(self, **event_args):
@@ -799,11 +812,12 @@ class Form1(Form1Template):
 
   @handle("expenses_nav", "click")
   def expenses_nav_click(self, **event_args):
-    self._show_tournament_view("budget")
+    self._open_tournament_group("expenses", "budget")
+    self._show_budget_tab("categories")
 
   @handle("communication_nav", "click")
   def communication_nav_click(self, **event_args):
-    self._show_tournament_view("email")
+    self._open_tournament_group("communication", "email")
 
   @handle("email_nav", "click")
   def email_nav_click(self, **event_args):
@@ -1181,14 +1195,17 @@ class Form1(Form1Template):
 
   @handle("budget_categories_tab_button", "click")
   def budget_categories_tab_button_click(self, **event_args):
+    self._show_tournament_view("budget")
     self._show_budget_tab("categories")
 
   @handle("budget_assignments_tab_button", "click")
   def budget_assignments_tab_button_click(self, **event_args):
+    self._show_tournament_view("budget")
     self._show_budget_tab("assign")
 
   @handle("budget_payments_tab_button", "click")
   def budget_payments_tab_button_click(self, **event_args):
+    self._show_tournament_view("budget")
     self._show_budget_tab("payments")
 
   @handle("send_tournament_email_button", "click")
