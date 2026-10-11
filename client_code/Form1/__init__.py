@@ -272,6 +272,7 @@ class Form1(Form1Template):
       self.bulk_division_dropdown.selected_value = None
       self.bulk_division_dropdown.enabled = False
       self.apply_division_to_selected_button.enabled = False
+      self.remove_selected_field_entries_button.enabled = False
       self.division_setup_dropdown.items = []
       self.division_setup_dropdown.selected_value = None
       self._division_setup_selection = None
@@ -372,6 +373,7 @@ class Form1(Form1Template):
       self._selected_field_entry_ids = set()
       self._field_selection_tournament_id = tournament_id
     self.apply_division_to_selected_button.enabled = bool(player_entries)
+    self.remove_selected_field_entries_button.enabled = bool(player_entries)
     self._round_one_score_drafts = {
       entry.get_id(): (
         "" if entry["gross_18"] is None or entry["gross_18"] <= 0
@@ -977,36 +979,68 @@ class Form1(Form1Template):
       "Save all player details to keep the changes."
     )
 
-  @handle("field_rows", "x-remove-entry")
-  def field_rows_remove_entry(self, entry, **event_args):
-    name = entry["golfer"]["name"]
+  @handle("remove_selected_field_entries_button", "click")
+  def remove_selected_field_entries_button_click(self, **event_args):
+    if self.current_event is None:
+      self.field_status.text = "Create or select a tournament first."
+      return
+
+    selected_rows = [
+      row for row in self.field_rows.get_components()
+      if getattr(row, "item").get("selected")
+    ]
+    if not selected_rows:
+      self.field_status.text = "Select at least one player."
+      return
+
+    selected_entries = [getattr(row, "item")["entry"] for row in selected_rows]
+    player_label = "player" if len(selected_entries) == 1 else "players"
     tournament = self.current_event
     confirmed = confirm(
-      f"Remove {name} from this tournament? Their scores and expense details for this tournament will be deleted. Any pairings containing them will also be removed, including shared pairing scores for the other player.",
-      title="Remove player from tournament",
+      f"Remove {len(selected_entries)} selected {player_label} from this tournament? Their scores and expense details for this tournament will be deleted. Pairings containing them will also be removed, including shared pairing scores for other players.",
+      title="Remove selected players",
     )
     if not confirmed:
       return
 
-    entry_id = entry.get_id()
     self._capture_field_detail_drafts()
-    result = anvil.server.call("remove_tournament_entry", tournament, entry)
-    if not result["ok"]:
-      self.field_status.text = result["message"]
-      return
+    removed_entries = []
+    removed_pairing_count = 0
+    for entry in selected_entries:
+      result = anvil.server.call("remove_tournament_entry", tournament, entry)
+      if not result["ok"]:
+        for removed_entry in removed_entries:
+          entry_id = removed_entry.get_id()
+          self._field_detail_drafts.pop(entry_id, None)
+          self._selected_field_entry_ids.discard(entry_id)
+        if removed_entries:
+          self._load_event_data(capture_field_detail_drafts=False)
+          self.field_status.text = (
+            f"Removed {len(removed_entries)} of {len(selected_entries)} selected {player_label}. "
+            f"{result['message']}"
+          )
+        else:
+          self.field_status.text = result["message"]
+        return
+      removed_entries.append(entry)
+      removed_pairing_count += result["removed_pairing_count"]
 
-    self._field_detail_drafts.pop(entry_id, None)
-    self._selected_field_entry_ids.discard(entry_id)
+    for entry in removed_entries:
+      entry_id = entry.get_id()
+      self._field_detail_drafts.pop(entry_id, None)
+      self._selected_field_entry_ids.discard(entry_id)
     self._load_event_data(capture_field_detail_drafts=False)
-    pairing_count = result["removed_pairing_count"]
-    if pairing_count:
-      pairing_label = "pairing" if pairing_count == 1 else "pairings"
+    if removed_pairing_count:
+      pairing_label = "pairing" if removed_pairing_count == 1 else "pairings"
       self.field_status.text = (
-        f"Removed {name} from this tournament and removed "
-        f"{pairing_count} {pairing_label}, including their shared scores."
+        f"Removed {len(removed_entries)} selected {player_label} "
+        f"from this tournament and removed {removed_pairing_count} {pairing_label}, "
+        "including shared scores."
       )
     else:
-      self.field_status.text = f"Removed {name} from this tournament."
+      self.field_status.text = (
+        f"Removed {len(removed_entries)} selected {player_label} from this tournament."
+      )
 
   @handle("round_one_nav", "click")
   def round_one_nav_click(self, **event_args):

@@ -2,14 +2,15 @@
   <div class="entry-details-row">
     <div class="field-player">
       <div class="entry-player-copy">
-        <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+        <div class="entry-player-heading">
+          <anvil-component type="CheckBox" name="select_player_checkbox" writeback:checked="self.item['selected']"></anvil-component>
+          <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
+        </div>
         <anvil-component type="Label" name="entry_details_summary" prop:role="muted-text"></anvil-component>
-        <anvil-component type="CheckBox" name="select_player_checkbox" prop:text="Select" writeback:checked="self.item['selected']"></anvil-component>
       </div>
     </div>
     <div class="entry-row-actions">
       <anvil-component type="Button" name="edit_button" prop:text="Edit" prop:role="primary-button"></anvil-component>
-      <anvil-component type="Button" name="remove_button" prop:text="Remove" prop:role="danger-button"></anvil-component>
     </div>
     <anvil-component type="ColumnPanel" name="entry_edit_fields" prop:role="entry-edit-fields">
       <div class="entry-editor-grid">
