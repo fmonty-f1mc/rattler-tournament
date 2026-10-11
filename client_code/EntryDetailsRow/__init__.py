@@ -19,6 +19,11 @@ class EntryDetailsRow(EntryDetailsRowTemplate):
       f"Division: {division} · Handicap: {handicap}"
     )
 
+  def set_division(self, division):
+    self.item["division"] = division
+    self.division_dropdown.selected_value = division
+    self._update_entry_summary()
+
   def _set_editing(self, is_editing):
     self._is_editing = is_editing
     self.entry_edit_fields.visible = is_editing

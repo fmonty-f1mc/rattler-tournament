@@ -128,6 +128,11 @@
       </div>
       <div class="tracker-card">
         <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and handicaps together.</span></div>
+        <div class="inline-form">
+          <label>Division for selected players</label>
+          <anvil-component type="DropDown" name="bulk_division_dropdown"></anvil-component>
+          <anvil-component type="Button" name="apply_division_to_selected_button" prop:text="Apply division to selected players" prop:role="secondary-button"></anvil-component>
+        </div>
         <div class="player-details-save-actions">
           <anvil-component type="Button" name="save_field_details_button" prop:text="Save all player details" prop:role="player-details-save-button"></anvil-component>
         </div>

@@ -4,6 +4,7 @@
       <div class="entry-player-copy">
         <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
         <anvil-component type="Label" name="entry_details_summary" prop:role="muted-text"></anvil-component>
+        <anvil-component type="CheckBox" name="select_player_checkbox" prop:text="Select" writeback:checked="self.item['selected']"></anvil-component>
       </div>
     </div>
     <div class="entry-row-actions">
