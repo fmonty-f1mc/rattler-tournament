@@ -992,6 +992,10 @@ textarea.anvil-text-area:disabled,
   padding-top: 12px;
 }
 
+.foursome-row .round-one-group-actions {
+  justify-content: center;
+}
+
 .foursome-heading {
   display: flex;
   align-items: center;

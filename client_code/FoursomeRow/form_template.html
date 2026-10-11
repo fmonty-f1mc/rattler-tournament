@@ -5,7 +5,6 @@
         <label>Group name<anvil-component type="TextBox" name="group_name_box" prop:placeholder="Group name" writeback:text="self.item['group_label']"></anvil-component></label>
         <label>Tee time<anvil-component type="TextBox" name="tee_time_box" prop:placeholder="e.g. 8:00 AM" writeback:text="self.item['tee_time']"></anvil-component></label>
       </div>
-      <anvil-component type="Button" name="save_group_button" prop:text="Save group" prop:role="round-one-save-button"></anvil-component>
     </div>
     <div class="foursome-players">
       <div class="foursome-player">
@@ -24,6 +23,9 @@
         <label>Player 4<anvil-component type="DropDown" name="player_4"></anvil-component></label>
         <label>Gross score<anvil-component type="TextBox" name="gross_score_4" prop:placeholder="Enter gross score"></anvil-component></label>
       </div>
+    </div>
+    <div class="round-one-group-actions">
+      <anvil-component type="Button" name="save_group_button" prop:text="Save group" prop:role="round-one-save-button"></anvil-component>
     </div>
   </div>
 </anvil-form>
