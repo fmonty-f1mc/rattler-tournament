@@ -42,6 +42,7 @@ class Form1(Form1Template):
     self.create_division_panel.visible = False
     self.standings_status.text = ""
     self.player_status.text = ""
+    self._show_player_add_mode(None)
     self.round_one_status.text = ""
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
@@ -1532,6 +1533,28 @@ class Form1(Form1Template):
   def add_non_players_button_click(self, **event_args):
     self._add_selected_entries(False)
 
+  def _show_player_add_mode(self, mode):
+    self.player_add_options.visible = mode is None
+    self.player_create_panel.visible = mode == "individual"
+    self.player_import_panel.visible = mode == "bulk"
+    self.player_status.text = ""
+
+  @handle("open_individual_player_add_button", "click")
+  def open_individual_player_add_button_click(self, **event_args):
+    self._show_player_add_mode("individual")
+
+  @handle("open_bulk_player_add_button", "click")
+  def open_bulk_player_add_button_click(self, **event_args):
+    self._show_player_add_mode("bulk")
+
+  @handle("close_individual_player_add_button", "click")
+  def close_individual_player_add_button_click(self, **event_args):
+    self._show_player_add_mode(None)
+
+  @handle("close_bulk_player_add_button", "click")
+  def close_bulk_player_add_button_click(self, **event_args):
+    self._show_player_add_mode(None)
+
   @handle("create_player_button", "click")
   def create_player_button_click(self, **event_args):
     result = anvil.server.call(
@@ -1550,9 +1573,10 @@ class Form1(Form1Template):
     self.player_phone.text = ""
     self.player_city.text = ""
     self.player_state.text = ""
-    self.player_status.text = "Player added to the roster."
     self._load_players()
     self._load_event_data()
+    self._show_player_add_mode(None)
+    self.player_status.text = "Player added to the roster."
 
   @handle("import_players_button", "click")
   def import_players_button_click(self, **event_args):
@@ -1571,27 +1595,30 @@ class Form1(Form1Template):
       self.player_status.text = result["message"]
       return
 
+    self._load_players()
+    self._load_event_data()
+    self._show_player_add_mode(None)
     self.player_status.text = result["message"]
-    self._load_players()
-    self._load_event_data()
-
-  @handle("player_rows", "x-toggle-player")
-  def player_rows_toggle_player(self, golfer, active, **event_args):
-    result = anvil.server.call("set_golfer_active", golfer, active)
-    if not result["ok"]:
-      self.player_status.text = result["message"]
-      return
-    self.player_status.text = "Roster updated."
-    self._load_players()
-    self._load_event_data()
 
   @handle("player_rows", "x-save-player")
-  def player_rows_save_player(self, golfer, name, email, phone, city, state, **event_args):
+  def player_rows_save_player(self, golfer, name, email, phone, city, state, active, **event_args):
     result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state)
     if not result["ok"]:
       self.player_status.text = result["message"]
       return
-    self.player_status.text = "Player name and details updated."
+
+    if bool(active) != bool(golfer["active"]):
+      status_result = anvil.server.call("set_golfer_active", golfer, active)
+      if not status_result["ok"]:
+        self.player_status.text = (
+          "Player details were saved, but roster status was not updated: "
+          + status_result["message"]
+        )
+        self._load_players()
+        self._load_event_data()
+        return
+
+    self.player_status.text = "Player details and roster status updated."
     self._load_players()
     self._load_event_data()
 

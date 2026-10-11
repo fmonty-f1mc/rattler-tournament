@@ -1,17 +1,45 @@
 <anvil-form container="ColumnPanel">
   <div class="player-row">
-    <div>
-      <div class="player-edit-field"><label>Player name</label><anvil-component type="TextBox" name="name_box" prop:placeholder="Full name"></anvil-component></div>
-      <anvil-component type="Label" name="active_label" prop:role="muted-text"></anvil-component>
-    </div>
-    <div class="player-edit-field"><label for="email_box">Email</label><anvil-component type="TextBox" name="email_box" prop:placeholder="name@example.com"></anvil-component></div>
-    <div class="player-edit-field"><label for="phone_box">Phone</label><anvil-component type="TextBox" name="phone_box" prop:placeholder="Phone number"></anvil-component></div>
-    <div class="player-edit-field"><label for="city_box">City</label><anvil-component type="TextBox" name="city_box" prop:placeholder="City"></anvil-component></div>
-    <div class="player-edit-field"><label for="state_box">State</label><anvil-component type="TextBox" name="state_box" prop:placeholder="State"></anvil-component></div>
-    <div class="player-row-actions">
-      <anvil-component type="Button" name="save_button" prop:text="Save details" prop:role="secondary-button"></anvil-component>
-      <anvil-component type="Button" name="toggle_button" prop:role="secondary-button"></anvil-component>
-      <anvil-component type="Button" name="delete_button" prop:text="Delete" prop:role="secondary-button"></anvil-component>
-    </div>
+    <anvil-component type="Button" name="name_button" prop:role="player-name-button"></anvil-component>
+    <anvil-component type="ColumnPanel" name="details_panel" prop:role="player-details">
+      <div class="player-details-grid">
+        <div class="player-detail-cell">
+          <span class="player-detail-label">Name</span>
+          <anvil-component type="Label" name="name_label" prop:role="row-title" bind:text="self.item['name']"></anvil-component>
+          <anvil-component type="TextBox" name="name_box" prop:placeholder="Full name"></anvil-component>
+        </div>
+        <div class="player-detail-cell">
+          <span class="player-detail-label">Email</span>
+          <anvil-component type="Label" name="email_label" bind:text="self.item['email']"></anvil-component>
+          <anvil-component type="TextBox" name="email_box" prop:placeholder="name@example.com"></anvil-component>
+        </div>
+        <div class="player-detail-cell">
+          <span class="player-detail-label">Phone</span>
+          <anvil-component type="Label" name="phone_label" bind:text="self.item['phone']"></anvil-component>
+          <anvil-component type="TextBox" name="phone_box" prop:placeholder="Phone number"></anvil-component>
+        </div>
+        <div class="player-detail-cell">
+          <span class="player-detail-label">City</span>
+          <anvil-component type="Label" name="city_label" bind:text="self.item['city']"></anvil-component>
+          <anvil-component type="TextBox" name="city_box" prop:placeholder="City"></anvil-component>
+        </div>
+        <div class="player-detail-cell">
+          <span class="player-detail-label">State</span>
+          <anvil-component type="Label" name="state_label" bind:text="self.item['state']"></anvil-component>
+          <anvil-component type="TextBox" name="state_box" prop:placeholder="State"></anvil-component>
+        </div>
+        <div class="player-detail-cell">
+          <span class="player-detail-label">Status</span>
+          <anvil-component type="Label" name="active_label" prop:role="muted-text"></anvil-component>
+          <anvil-component type="DropDown" name="active_picker"></anvil-component>
+        </div>
+      </div>
+      <div class="player-row-actions">
+        <anvil-component type="Button" name="edit_button" prop:text="Edit" prop:role="secondary-button"></anvil-component>
+        <anvil-component type="Button" name="save_button" prop:text="Save" prop:role="secondary-button"></anvil-component>
+        <anvil-component type="Button" name="cancel_button" prop:text="Cancel" prop:role="secondary-button"></anvil-component>
+        <anvil-component type="Button" name="delete_button" prop:text="Delete" prop:role="danger-button"></anvil-component>
+      </div>
+    </anvil-component>
   </div>
 </anvil-form>

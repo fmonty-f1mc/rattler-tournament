@@ -578,6 +578,32 @@ textarea.anvil-text-area:disabled,
   max-width: 520px;
 }
 
+.anvil-role-player-add-options,
+.player-add-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.anvil-role-player-add-options > .anvil-button,
+.player-add-actions > .anvil-button {
+  width: 100%;
+  margin: 0;
+}
+
+.anvil-role-player-add-options > .anvil-button > button,
+.player-add-actions > .anvil-button > button {
+  width: 100%;
+  min-height: 44px;
+}
+
+.anvil-role-player-add-panel {
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--blank-border);
+}
+
 .anvil-role-summary-strip {
   display: block;
   padding: 12px 16px;
@@ -916,19 +942,101 @@ textarea.anvil-text-area:disabled,
 }
 
 .player-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 1.2fr) minmax(150px, 1.3fr) minmax(120px, 1fr) minmax(100px, 0.8fr) minmax(65px, 0.5fr) auto;
-  align-items: center;
-  gap: 14px;
+  padding: 0;
+  border-bottom: 1px solid var(--blank-border);
 }
 
-.player-row > .player-row-actions {
-  flex-direction: row;
+.player-row > .anvil-role-player-name-button {
+  width: 100%;
+  margin: 0;
+}
+
+.anvil-role-player-name-button > button {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--blank-primary-dark);
+  font-size: 16px;
+  text-align: left;
+}
+
+.anvil-role-player-name-button > button:hover,
+.anvil-role-player-name-button > button:focus {
+  background: var(--blank-surface-muted);
+  color: var(--blank-primary-dark);
+}
+
+.anvil-role-player-details {
+  width: 100%;
+  padding: 0 12px 14px;
+}
+
+.player-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 18px;
+  padding: 2px 0 14px;
+}
+
+.player-detail-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.player-detail-cell > .anvil-label {
+  overflow-wrap: anywhere;
+}
+
+.player-detail-label {
+  color: var(--blank-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.player-row .anvil-text-box,
+.player-row .anvil-dropdown {
+  width: 100%;
+  min-width: 0;
+}
+
+.player-row-actions {
+  display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.player-row > div,
+.player-row-actions > .anvil-button {
+  margin: 0;
+}
+
+.player-row-actions > .anvil-button > button {
+  min-height: 44px;
+}
+
+.player-row .anvil-role-secondary-button {
+  flex: 0 0 auto;
+}
+
+.player-row .anvil-role-secondary-button > button {
+  min-width: 82px;
+}
+
+.player-row .anvil-role-danger-button > button {
+  min-width: 82px;
+}
+
+.player-row .anvil-role-player-name-button > button:focus-visible {
+  outline: 3px solid var(--blank-focus-ring);
+  outline-offset: -3px;
+}
+
 .budget-player,
 .player-edit-field {
   display: flex;
@@ -1404,12 +1512,32 @@ input.anvil-role-budget-paid-input:disabled {
   }
 
   .score-row,
-  .player-row,
   .budget-row,
   .budget-category-row,
   .entry-details-row,
   .round-two-pairing-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .player-row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .player-row-actions > .anvil-button {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .player-row-actions > .anvil-button > button {
+    width: 100%;
+    padding: 8px 10px;
+    white-space: normal;
   }
 
   .foursome-row {
@@ -1426,7 +1554,6 @@ input.anvil-role-budget-paid-input:disabled {
   }
 
   .score-player,
-  .player-row > div:first-child,
   .entry-details-row > .field-player,
   .budget-player {
     grid-column: 1 / -1;
@@ -1551,6 +1678,10 @@ input.anvil-role-budget-paid-input:disabled {
   .form-grid-four,
   .form-grid-three,
   .form-grid-five {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-details-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

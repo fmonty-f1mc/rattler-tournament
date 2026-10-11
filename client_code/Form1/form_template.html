@@ -186,20 +186,35 @@
     <anvil-component type="ColumnPanel" name="player_section" prop:role="tracker-view">
       <div class="view-heading"><p class="eyebrow">ROSTER</p><h2>Players across the years</h2><p class="muted-copy">Keep contact details with each player across years. Inactive players stay available for past and future tournaments.</p></div>
       <div class="tracker-card">
-        <div class="form-grid form-grid-five">
-          <div class="field-block"><label>Player name</label><anvil-component type="TextBox" name="player_name" prop:placeholder="Full name"></anvil-component></div>
-          <div class="field-block"><label>Email</label><anvil-component type="TextBox" name="player_email" prop:placeholder="name@example.com"></anvil-component></div>
-          <div class="field-block"><label>Phone</label><anvil-component type="TextBox" name="player_phone" prop:placeholder="Phone number"></anvil-component></div>
-          <div class="field-block"><label>City</label><anvil-component type="TextBox" name="player_city" prop:placeholder="City"></anvil-component></div>
-          <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
-        </div>
-        <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
-        <div class="section-heading"><div><p class="eyebrow">BULK ADD</p><h2>Import from CSV</h2></div></div>
-        <p class="muted-copy">Choose a CSV with a <code>name</code> header. Optional headers: <code>email</code>, <code>phone</code>, <code>city</code>, and <code>state</code>. Existing names and rows without a name are skipped.</p>
-        <div class="inline-form">
-          <anvil-component type="FileLoader" name="player_csv_file" prop:text="Choose CSV" prop:file_types=".csv"></anvil-component>
-          <anvil-component type="Button" name="import_players_button" prop:text="Import players" prop:role="secondary-button"></anvil-component>
-        </div>
+        <anvil-component type="FlowPanel" name="player_add_options" prop:role="player-add-options">
+          <anvil-component type="Button" name="open_individual_player_add_button" prop:text="Add individual" prop:role="secondary-button"></anvil-component>
+          <anvil-component type="Button" name="open_bulk_player_add_button" prop:text="Bulk add" prop:role="secondary-button"></anvil-component>
+        </anvil-component>
+        <anvil-component type="ColumnPanel" name="player_create_panel" prop:role="player-add-panel">
+          <div class="section-heading"><div><p class="eyebrow">INDIVIDUAL ADD</p><h2>Add one player</h2></div></div>
+          <div class="form-grid form-grid-five">
+            <div class="field-block"><label>Player name</label><anvil-component type="TextBox" name="player_name" prop:placeholder="Full name"></anvil-component></div>
+            <div class="field-block"><label>Email</label><anvil-component type="TextBox" name="player_email" prop:placeholder="name@example.com"></anvil-component></div>
+            <div class="field-block"><label>Phone</label><anvil-component type="TextBox" name="player_phone" prop:placeholder="Phone number"></anvil-component></div>
+            <div class="field-block"><label>City</label><anvil-component type="TextBox" name="player_city" prop:placeholder="City"></anvil-component></div>
+            <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
+          </div>
+          <div class="player-add-actions">
+            <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
+            <anvil-component type="Button" name="close_individual_player_add_button" prop:text="Back" prop:role="secondary-button"></anvil-component>
+          </div>
+        </anvil-component>
+        <anvil-component type="ColumnPanel" name="player_import_panel" prop:role="player-add-panel">
+          <div class="section-heading"><div><p class="eyebrow">BULK ADD</p><h2>Import from CSV</h2></div></div>
+          <p class="muted-copy">Choose a CSV with a <code>name</code> header. Optional headers: <code>email</code>, <code>phone</code>, <code>city</code>, and <code>state</code>. Existing names and rows without a name are skipped.</p>
+          <div class="inline-form">
+            <anvil-component type="FileLoader" name="player_csv_file" prop:text="Choose CSV" prop:file_types=".csv"></anvil-component>
+          </div>
+          <div class="player-add-actions">
+            <anvil-component type="Button" name="import_players_button" prop:text="Import players" prop:role="secondary-button"></anvil-component>
+            <anvil-component type="Button" name="close_bulk_player_add_button" prop:text="Back" prop:role="secondary-button"></anvil-component>
+          </div>
+        </anvil-component>
         <anvil-component type="Label" name="player_status" prop:role="status-text"></anvil-component>
       </div>
       <div class="tracker-card">
