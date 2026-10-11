@@ -161,7 +161,8 @@ a:focus {
   color: #7c1d1d;
 }
 
-.anvil-role-tournament-subnav {
+.anvil-role-tournament-subnav,
+.anvil-role-field-scoring-page-nav {
   width: 100%;
   margin: 18px 0 26px;
   justify-content: flex-start;
@@ -1631,14 +1632,16 @@ input.anvil-role-budget-paid-input:disabled {
     max-width: none;
   }
 
-  .anvil-role-tournament-subnav {
+  .anvil-role-tournament-subnav,
+  .anvil-role-field-scoring-page-nav {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin: 16px 0 22px;
   }
 
-  .anvil-role-tournament-subnav > .anvil-button {
+  .anvil-role-tournament-subnav > .anvil-button,
+  .anvil-role-field-scoring-page-nav > .anvil-button {
     margin: 0;
   }
 
@@ -1707,6 +1710,36 @@ input.anvil-role-budget-paid-input:disabled {
     padding-right: 10px;
     padding-left: 10px;
     white-space: normal;
+  }
+
+  .anvil-role-field-scoring-page-nav {
+    position: sticky;
+    top: var(--anvil-banner-height, 0px);
+    z-index: 10;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 10px 0 18px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--blank-border);
+    background: var(--blank-bg);
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .anvil-role-field-scoring-page-nav > .anvil-button,
+  .anvil-role-field-scoring-page-nav .anvil-role-tournament-subtab {
+    flex: 0 0 auto;
+    min-width: max-content;
+    scroll-snap-align: start;
+  }
+
+  .anvil-role-field-scoring-page-nav .anvil-role-tournament-subtab > button {
+    width: auto;
+    white-space: nowrap;
   }
 
   .standing-header,

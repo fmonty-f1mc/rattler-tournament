@@ -73,9 +73,7 @@ class Form1(Form1Template):
     self.current_event_title.visible = show_tournament_context
     self.current_event_subtitle.visible = show_tournament_context
     self.event_picker.visible = show_tournament_context
-    self.field_summary.visible = (
-      show_tournament_context and not self._creating_tournament
-    )
+    self.field_summary.visible = name == "event" and not self._creating_tournament
     self.event_section.visible = name == "event"
     self.field_section.visible = name == "field"
     self.round_one_section.visible = name == "round_one"

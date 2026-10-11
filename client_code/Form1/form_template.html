@@ -15,13 +15,12 @@
         <anvil-component type="Label" name="current_event_subtitle" prop:role="muted-text" prop:text="Add a year and course to get started."></anvil-component>
       </div>
     </div>
-    <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
     <anvil-component type="FlowPanel" name="tournament_subnav" prop:role="tournament-subnav">
       <anvil-component type="Button" name="field_scoring_nav" prop:text="Field and Scoring" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="expenses_nav" prop:text="Expenses" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="communication_nav" prop:text="Communication" prop:role="tournament-subtab"></anvil-component>
     </anvil-component>
-    <anvil-component type="FlowPanel" name="field_scoring_page_nav" prop:role="tournament-subnav">
+    <anvil-component type="FlowPanel" name="field_scoring_page_nav" prop:role="field-scoring-page-nav">
       <anvil-component type="Button" name="setup_nav" prop:text="Setup" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="field_nav" prop:text="Field" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="round_one_nav" prop:text="Round One" prop:role="tournament-subtab"></anvil-component>
@@ -38,6 +37,7 @@
         <h2>Details</h2>
         <p class="muted-copy">Create a year and choose the players taking part.</p>
       </div>
+      <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
       <anvil-component type="ColumnPanel" name="selected_tournament_actions">
         <anvil-component type="Button" name="edit_tournament_button" prop:text="Edit Tournament Details" prop:role="secondary-button" prop:align="left" container:grid_position="TFUTTL,NIACJP"></anvil-component>
         <anvil-component type="Button" name="delete_tournament_button" prop:text="Delete selected tournament" prop:role="danger-button" prop:align="left" container:grid_position="WYHKZS,TSYKZN"></anvil-component>
