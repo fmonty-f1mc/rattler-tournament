@@ -32,11 +32,36 @@ def _valid_row(table, candidate):
   return any(row.get_id() == candidate_id for row in table.search())
 
 
-def _tournament_email_details(tournament):
+def _tournament_email_filter_error(tournament, recipient_type, division_filter):
+  if recipient_type not in ("all", "players", "non_players"):
+    return "Choose a valid email recipient type."
+  if recipient_type == "non_players":
+    return None if division_filter == "all" else "Division filtering applies to players only."
+  if division_filter in ("all", "unassigned"):
+    return None
+  if not isinstance(division_filter, str) or not division_filter.startswith("division:"):
+    return "Choose a valid tournament division."
+  division = division_filter[len("division:"):]
+  if division not in _division_names(tournament):
+    return "Choose a division from this tournament."
+  return None
+
+
+def _tournament_email_details(tournament, recipient_type="all", division_filter="all"):
   recipient_by_address = {}
   missing_count = 0
   invalid_count = 0
   for entry in app_tables.tournament_entries.search(tournament=tournament):
+    is_player = _entry_is_player(entry)
+    if recipient_type == "players" and not is_player:
+      continue
+    if recipient_type == "non_players" and is_player:
+      continue
+    division = (entry["division"] or "").strip() if is_player else ""
+    if division_filter == "unassigned" and (not is_player or division):
+      continue
+    if division_filter.startswith("division:") and division != division_filter[len("division:"):]:
+      continue
     golfer = entry["golfer"]
     address = (golfer["email"] or "").strip()
     if not address:
@@ -398,10 +423,17 @@ def delete_tournament(tournament):
 
 
 @anvil.server.callable(require_user=True)
-def get_tournament_email_summary(tournament):
+def get_tournament_email_summary(tournament, recipient_type="all", division_filter="all"):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
-  recipients, missing_count, invalid_count = _tournament_email_details(tournament)
+  filter_error = _tournament_email_filter_error(tournament, recipient_type, division_filter)
+  if filter_error:
+    return _result(filter_error)
+  recipients, missing_count, invalid_count = _tournament_email_details(
+    tournament,
+    recipient_type,
+    division_filter,
+  )
   return _result(
     recipient_count=len(recipients),
     missing_count=missing_count,
@@ -410,9 +442,12 @@ def get_tournament_email_summary(tournament):
 
 
 @anvil.server.callable(require_user=True)
-def send_tournament_email(tournament, subject, body):
+def send_tournament_email(tournament, subject, body, recipient_type="all", division_filter="all"):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
+  filter_error = _tournament_email_filter_error(tournament, recipient_type, division_filter)
+  if filter_error:
+    return _result(filter_error)
   subject = (subject or "").strip()
   body = (body or "").strip()
   if not subject:
@@ -420,9 +455,13 @@ def send_tournament_email(tournament, subject, body):
   if not body:
     return _result("Enter a message.")
 
-  recipients, missing_count, invalid_count = _tournament_email_details(tournament)
+  recipients, missing_count, invalid_count = _tournament_email_details(
+    tournament,
+    recipient_type,
+    division_filter,
+  )
   if not recipients:
-    return _result("No participants have a usable email address.")
+    return _result("No selected participants have a usable email address.")
 
   anvil.google.mail.send(
     bcc=recipients,
