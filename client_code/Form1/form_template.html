@@ -251,7 +251,14 @@
           </div>
         </anvil-component>
         <anvil-component type="Label" name="player_status" prop:role="status-text"></anvil-component>
+        <div class="player-roster-filters">
+          <div class="field-block"><label>Search participants</label><anvil-component type="TextBox" name="player_search" prop:placeholder="Search name, email, or phone"></anvil-component></div>
+          <anvil-component type="CheckBox" name="email_unlisted_filter" prop:text="Email unlisted" prop:role="player-contact-filter"></anvil-component>
+          <anvil-component type="CheckBox" name="phone_unlisted_filter" prop:text="Phone unlisted" prop:role="player-contact-filter"></anvil-component>
+        </div>
+        <anvil-component type="Label" name="player_filter_status" prop:role="muted-text"></anvil-component>
         <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="rattler_tournament.PlayerRow" prop:role="player-list"></anvil-component>
+        <anvil-component type="Label" name="no_player_matches" prop:role="muted-text"></anvil-component>
       </div>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="budget_section" prop:role="tracker-view">
@@ -317,12 +324,16 @@
       </anvil-component>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="email_section" prop:role="tracker-view">
-      <div class="view-heading"><p class="eyebrow">TOURNAMENT UPDATES</p><h2>Email participants</h2><p class="muted-copy">Send a message to everyone entered in the selected tournament, including players and non-players.</p></div>
+      <div class="view-heading"><p class="eyebrow">TOURNAMENT UPDATES</p><h2>Email participants</h2><p class="muted-copy">Choose everyone, players, non-players, or a player division as the recipient group.</p></div>
       <div class="tracker-card">
-        <p class="muted-copy">Participant addresses are sent as BCC. Entries without a usable email address are skipped.</p>
+        <p class="muted-copy">Matching addresses are sent as BCC. Entries without a usable email address are skipped.</p>
+        <div class="inline-form">
+          <div class="field-block"><label>Recipients</label><anvil-component type="DropDown" name="email_recipient_type_filter"></anvil-component></div>
+          <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="email_division_filter"></anvil-component></div>
+        </div>
         <div class="field-block"><label>Subject</label><anvil-component type="TextBox" name="email_subject" prop:placeholder="Tournament update"></anvil-component></div>
         <div class="field-block"><label>Message</label><anvil-component type="TextArea" name="email_body" prop:placeholder="Write your message to tournament participants"></anvil-component></div>
-        <anvil-component type="Button" name="send_tournament_email_button" prop:text="Send email to participants"></anvil-component>
+        <anvil-component type="Button" name="send_tournament_email_button" prop:text="Send email to selected recipients"></anvil-component>
         <anvil-component type="Label" name="email_status" prop:role="status-text"></anvil-component>
       </div>
     </anvil-component>

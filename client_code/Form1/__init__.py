@@ -53,6 +53,14 @@ class Form1(Form1Template):
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
     self.email_status.text = ""
+    self.email_recipient_type_filter.items = [
+      ("Everyone", "all"),
+      ("Players", "players"),
+      ("Non-players", "non_players"),
+    ]
+    self.email_recipient_type_filter.selected_value = "all"
+    self.email_division_filter.items = [("All divisions", "all")]
+    self.email_division_filter.selected_value = "all"
     self.news_status.text = ""
     self._show_view("event")
     self._show_budget_tab("categories")
@@ -192,7 +200,49 @@ class Form1(Form1Template):
 
   def _load_players(self):
     self.golfers = anvil.server.call("list_golfers")
-    self.player_rows.items = self.golfers
+    self._refresh_player_rows()
+
+  def _refresh_player_rows(self):
+    query = (self.player_search.text or "").strip().lower()
+    email_unlisted = self.email_unlisted_filter.checked
+    phone_unlisted = self.phone_unlisted_filter.checked
+    matches = []
+
+    for golfer in self.golfers:
+      name = (golfer["name"] or "").lower()
+      email = (golfer["email"] or "").strip()
+      phone = (golfer["phone"] or "").strip()
+      searchable_text = " ".join((name, email.lower(), phone.lower()))
+
+      if query and query not in searchable_text:
+        continue
+      if email_unlisted and email:
+        continue
+      if phone_unlisted and phone:
+        continue
+      matches.append(golfer)
+
+    self.player_rows.items = matches
+    self.player_filter_status.text = (
+      f"Showing {len(matches)} of {len(self.golfers)} participants"
+    )
+    self.no_player_matches.visible = not matches
+    self.no_player_matches.text = (
+      "No participants in the roster yet."
+      if not self.golfers else "No participants match these filters."
+    )
+
+  @handle("player_search", "change")
+  def player_search_change(self, **event_args):
+    self._refresh_player_rows()
+
+  @handle("email_unlisted_filter", "change")
+  def email_unlisted_filter_change(self, **event_args):
+    self._refresh_player_rows()
+
+  @handle("phone_unlisted_filter", "change")
+  def phone_unlisted_filter_change(self, **event_args):
+    self._refresh_player_rows()
 
   def _load_entry_options(self, entries):
     if self.current_event is None:
@@ -317,6 +367,9 @@ class Form1(Form1Template):
       self.budget_cost_type_filter.selected_value = "all"
       self.budget_cost_division_filter.items = [("All divisions", "all")]
       self.budget_cost_division_filter.selected_value = "all"
+      self.email_division_filter.items = [("All divisions", "all")]
+      self.email_division_filter.selected_value = "all"
+      self.email_division_filter.enabled = True
       self.budget_cost_search.text = ""
       self.budget_cost_match_status.text = "0 participants"
       self.budget_payment_selection_status.text = "0 participants selected."
@@ -347,6 +400,22 @@ class Form1(Form1Template):
     self.field_summary.visible = True
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
+    email_division_options = [
+      ("All divisions", "all"),
+      ("Players without a division", "unassigned"),
+    ] + [
+      (division, "division:" + division)
+      for division in self.division_options
+    ]
+    selected_email_division = self.email_division_filter.selected_value or "all"
+    self.email_division_filter.items = email_division_options
+    self.email_division_filter.selected_value = next(
+      (value for _, value in email_division_options if value == selected_email_division),
+      "all",
+    )
+    self.email_division_filter.enabled = (
+      self.email_recipient_type_filter.selected_value != "non_players"
+    )
     self.division_choices = [("No division", "")] + [
       (division, division) for division in self.division_options
     ]
@@ -1490,6 +1559,8 @@ class Form1(Form1Template):
 
     subject = (self.email_subject.text or "").strip()
     body = (self.email_body.text or "").strip()
+    recipient_type = self.email_recipient_type_filter.selected_value or "all"
+    division_filter = self.email_division_filter.selected_value or "all"
     if not subject:
       self.email_status.text = "Enter an email subject."
       return
@@ -1499,7 +1570,12 @@ class Form1(Form1Template):
 
     self.send_tournament_email_button.enabled = False
     try:
-      summary = anvil.server.call("get_tournament_email_summary", self.current_event)
+      summary = anvil.server.call(
+        "get_tournament_email_summary",
+        self.current_event,
+        recipient_type,
+        division_filter,
+      )
     finally:
       self.send_tournament_email_button.enabled = True
 
@@ -1508,7 +1584,7 @@ class Form1(Form1Template):
       return
     recipient_count = summary["recipient_count"]
     if not recipient_count:
-      self.email_status.text = "No participants have a usable email address."
+      self.email_status.text = "No selected participants have a usable email address."
       return
 
     skipped_details = []
@@ -1520,11 +1596,22 @@ class Form1(Form1Template):
       " Participants with " + " and ".join(skipped_details) + " will be skipped."
       if skipped_details else ""
     )
+    if recipient_type == "non_players":
+      audience = "Non-players"
+    elif division_filter == "unassigned":
+      audience = "Players without a division"
+    elif division_filter.startswith("division:"):
+      audience = f"Players in {division_filter[len('division:'):]}"
+    elif recipient_type == "players":
+      audience = "Players"
+    else:
+      audience = "Everyone"
     confirmed = confirm(
-      f"Send this message to {recipient_count} unique email addresses for "
+      f"Send this message to {recipient_count} unique email addresses matching "
+      f"{audience} for "
       f"{self.current_event['year']} · {self.current_event['course']}? "
       f"Recipients will be BCCed.{skipped_message}",
-      title="Email tournament participants",
+      title="Email tournament recipients",
     )
     if not confirmed:
       return
@@ -1537,11 +1624,25 @@ class Form1(Form1Template):
         self.current_event,
         subject,
         body,
+        recipient_type,
+        division_filter,
       )
     finally:
       self.send_tournament_email_button.enabled = True
 
     self.email_status.text = result["message"]
+
+  @handle("email_recipient_type_filter", "change")
+  def email_recipient_type_filter_change(self, **event_args):
+    recipient_type = self.email_recipient_type_filter.selected_value or "all"
+    if recipient_type == "non_players":
+      self.email_division_filter.selected_value = "all"
+    self.email_division_filter.enabled = recipient_type != "non_players"
+    self.email_status.text = ""
+
+  @handle("email_division_filter", "change")
+  def email_division_filter_change(self, **event_args):
+    self.email_status.text = ""
 
   @handle("add_budget_category_button", "click")
   def add_budget_category_button_click(self, **event_args):
