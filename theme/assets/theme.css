@@ -779,6 +779,24 @@ textarea.anvil-text-area:disabled,
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.player-roster-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(140px, 1fr));
+  align-items: end;
+  gap: 16px;
+  margin: 18px 0 10px;
+}
+
+.player-roster-filters .field-block {
+  margin: 0;
+}
+
+.anvil-role-player-contact-filter {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+}
+
 .field-block,
 .score-input-block,
 .score-reference,
@@ -1621,6 +1639,14 @@ input.anvil-role-budget-paid-input:disabled {
 }
 
 @media (max-width: 760px) {
+  .player-roster-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .player-roster-filters .field-block {
+    grid-column: 1 / -1;
+  }
+
   .page-header {
     display: block;
     padding: 22px clamp(16px, 4vw, 28px);
@@ -1881,6 +1907,14 @@ input.anvil-role-budget-paid-input:disabled {
 }
 
 @media (max-width: 480px) {
+  .player-roster-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .player-roster-filters .field-block {
+    grid-column: auto;
+  }
+
   .page-header {
     padding: 18px 12px;
   }

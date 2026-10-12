@@ -192,7 +192,49 @@ class Form1(Form1Template):
 
   def _load_players(self):
     self.golfers = anvil.server.call("list_golfers")
-    self.player_rows.items = self.golfers
+    self._refresh_player_rows()
+
+  def _refresh_player_rows(self):
+    query = (self.player_search.text or "").strip().lower()
+    email_unlisted = self.email_unlisted_filter.checked
+    phone_unlisted = self.phone_unlisted_filter.checked
+    matches = []
+
+    for golfer in self.golfers:
+      name = (golfer["name"] or "").lower()
+      email = (golfer["email"] or "").strip()
+      phone = (golfer["phone"] or "").strip()
+      searchable_text = " ".join((name, email.lower(), phone.lower()))
+
+      if query and query not in searchable_text:
+        continue
+      if email_unlisted and email:
+        continue
+      if phone_unlisted and phone:
+        continue
+      matches.append(golfer)
+
+    self.player_rows.items = matches
+    self.player_filter_status.text = (
+      f"Showing {len(matches)} of {len(self.golfers)} participants"
+    )
+    self.no_player_matches.visible = not matches
+    self.no_player_matches.text = (
+      "No participants in the roster yet."
+      if not self.golfers else "No participants match these filters."
+    )
+
+  @handle("player_search", "change")
+  def player_search_change(self, **event_args):
+    self._refresh_player_rows()
+
+  @handle("email_unlisted_filter", "change")
+  def email_unlisted_filter_change(self, **event_args):
+    self._refresh_player_rows()
+
+  @handle("phone_unlisted_filter", "change")
+  def phone_unlisted_filter_change(self, **event_args):
+    self._refresh_player_rows()
 
   def _load_entry_options(self, entries):
     if self.current_event is None:

@@ -251,7 +251,14 @@
           </div>
         </anvil-component>
         <anvil-component type="Label" name="player_status" prop:role="status-text"></anvil-component>
+        <div class="player-roster-filters">
+          <div class="field-block"><label>Search participants</label><anvil-component type="TextBox" name="player_search" prop:placeholder="Search name, email, or phone"></anvil-component></div>
+          <anvil-component type="CheckBox" name="email_unlisted_filter" prop:text="Email unlisted" prop:role="player-contact-filter"></anvil-component>
+          <anvil-component type="CheckBox" name="phone_unlisted_filter" prop:text="Phone unlisted" prop:role="player-contact-filter"></anvil-component>
+        </div>
+        <anvil-component type="Label" name="player_filter_status" prop:role="muted-text"></anvil-component>
         <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="rattler_tournament.PlayerRow" prop:role="player-list"></anvil-component>
+        <anvil-component type="Label" name="no_player_matches" prop:role="muted-text"></anvil-component>
       </div>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="budget_section" prop:role="tracker-view">
