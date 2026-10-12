@@ -4,7 +4,7 @@ import anvil.google.auth, anvil.google.drive
 from anvil.google.drive import app_files
 import anvil.server
 import anvil.users
-from anvil.js.window import document
+from anvil.js.window import document, window
 
 
 class Form1(Form1Template):
@@ -66,6 +66,10 @@ class Form1(Form1Template):
     self._show_budget_tab("categories")
     self._load_players()
     self._load_events()
+
+  @staticmethod
+  def _reload_after_delete():
+    window.location.reload()
 
   @staticmethod
   def _format_tournament_date(event_date):
@@ -1077,15 +1081,7 @@ class Form1(Form1Template):
     if not result["ok"]:
       self.division_status.text = result["message"]
       return
-
-    for draft in self._field_detail_drafts.values():
-      if draft["division"] == division:
-        draft["division"] = ""
-    self._division_selection = None
-    self._load_event_data(capture_field_detail_drafts=False)
-    self.division_status.text = (
-      f"Deleted {result['division_name']}. Its players now have no division; their scores were kept."
-    )
+    self._reload_after_delete()
 
   @handle("save_field_details_button", "click")
   def save_field_details_button_click(self, **event_args):
@@ -1248,43 +1244,26 @@ class Form1(Form1Template):
       return
 
     self._capture_field_detail_drafts()
-    removed_entries = []
-    removed_pairing_count = 0
-    for entry in selected_entries:
+    selected_entry_ids = [entry.get_id() for entry in selected_entries]
+    removed_entry_ids = []
+    for entry, entry_id in zip(selected_entries, selected_entry_ids):
       result = anvil.server.call("remove_tournament_entry", tournament, entry)
       if not result["ok"]:
-        for removed_entry in removed_entries:
-          entry_id = removed_entry.get_id()
+        for entry_id in removed_entry_ids:
           self._field_detail_drafts.pop(entry_id, None)
           self._selected_field_entry_ids.discard(entry_id)
-        if removed_entries:
+        if removed_entry_ids:
           self._load_event_data(capture_field_detail_drafts=False)
           self.field_status.text = (
-            f"Removed {len(removed_entries)} of {len(selected_entries)} selected {player_label}. "
+            f"Removed {len(removed_entry_ids)} of {len(selected_entries)} selected {player_label}. "
             f"{result['message']}"
           )
         else:
           self.field_status.text = result["message"]
         return
-      removed_entries.append(entry)
-      removed_pairing_count += result["removed_pairing_count"]
+      removed_entry_ids.append(entry_id)
 
-    for entry in removed_entries:
-      entry_id = entry.get_id()
-      self._field_detail_drafts.pop(entry_id, None)
-      self._selected_field_entry_ids.discard(entry_id)
-    self._load_event_data(capture_field_detail_drafts=False)
-    if removed_pairing_count:
-      pairing_label = "pairing" if removed_pairing_count == 1 else "pairings"
-      self.field_status.text = (
-        f"Removed {len(removed_entries)} selected {player_label} "
-        f"from this tournament and removed {removed_pairing_count} {pairing_label}, "
-        "including shared scores."
-      )
-    else:
-      self.field_status.text = (
-        f"Removed {len(removed_entries)} selected {player_label} from this tournament."
-      )
+    self._reload_after_delete()
 
   @handle("round_one_nav", "click")
   def round_one_nav_click(self, **event_args):
@@ -1529,8 +1508,7 @@ class Form1(Form1Template):
     if not result["ok"]:
       self.news_status.text = result["message"]
       return
-    self._load_news_posts()
-    self.news_status.text = "News post deleted."
+    self._reload_after_delete()
 
   @handle("public_view_nav", "click")
   def public_view_nav_click(self, **event_args):
@@ -1694,8 +1672,7 @@ class Form1(Form1Template):
     if not result["ok"]:
       self.budget_status.text = result["message"]
       return
-    self._load_event_data()
-    self.budget_status.text = "Expense category deleted."
+    self._reload_after_delete()
 
   @handle("budget_target_filter", "change")
   def budget_target_filter_change(self, **event_args):
@@ -1917,12 +1894,7 @@ class Form1(Form1Template):
     if not result["ok"]:
       self.event_status.text = result["message"]
       return
-
-    self._field_detail_drafts = {}
-    self.field_rows.items = []
-    self.current_event = None
-    self.event_status.text = f"Deleted tournament {title}."
-    self._load_events()
+    self._reload_after_delete()
 
   def _add_selected_entries(self, is_player):
     if self.current_event is None:
@@ -2060,12 +2032,7 @@ class Form1(Form1Template):
     if not result["ok"]:
       self.player_status.text = result["message"]
       return
-
-    entry_count = result["removed_entry_count"]
-    entry_label = "tournament entry" if entry_count == 1 else "tournament entries"
-    self.player_status.text = f"Deleted {name} and removed {entry_count} {entry_label}."
-    self._load_players()
-    self._load_event_data()
+    self._reload_after_delete()
 
   @handle("save_budget_payments_button", "click")
   def save_budget_payments_button_click(self, **event_args):
