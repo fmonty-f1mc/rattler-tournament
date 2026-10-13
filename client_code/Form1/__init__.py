@@ -1627,7 +1627,7 @@ class Form1(Form1Template):
   def link_google_account_button_click(self, **event_args):
     try:
       anvil.google.auth.login(
-        additional_scopes=["https://www.googleapis.com/auth/gmail.send"]
+        ["https://www.googleapis.com/auth/gmail.send"]
       )
     except anvil.server.InternalError as error:
       if "you need to supply your own client ID and secret" not in str(error):
