@@ -83,6 +83,28 @@ def _entry_is_player(entry):
   return entry["is_player"] is not False
 
 
+def _previous_year_handicap(tournament, golfer):
+  year = tournament["year"]
+  if year is None or int(year) != year:
+    return None
+
+  previous_tournament = next(
+    iter(app_tables.tournaments.search(year=int(year) - 1)),
+    None,
+  )
+  if previous_tournament is None:
+    return None
+
+  previous_entry = next(
+    iter(app_tables.tournament_entries.search(
+      tournament=previous_tournament,
+      golfer=golfer,
+    )),
+    None,
+  )
+  return previous_entry["handicap"] if previous_entry is not None else None
+
+
 def _entry_sort_key(entry):
   return (not _entry_is_player(entry), entry["division"] or "", _entry_name(entry).lower())
 
@@ -545,12 +567,13 @@ def add_golfer_to_tournament(tournament, golfer, is_player=True):
 def _create_tournament_entry(tournament, golfer, is_player=True):
   if is_player:
     _clear_tournament_foursomes(tournament)
+  previous_handicap = _previous_year_handicap(tournament, golfer)
   return app_tables.tournament_entries.add_row(
     tournament=tournament,
     golfer=golfer,
     is_player=bool(is_player),
     division="",
-    handicap=0,
+    handicap=previous_handicap if previous_handicap is not None else 0,
     gross_18=0,
     net_18=0,
     gross_9=0,
@@ -631,6 +654,11 @@ def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
+  for entry in entries:
+    if entry["handicap"] in (None, 0):
+      previous_handicap = _previous_year_handicap(tournament, entry["golfer"])
+      if previous_handicap is not None:
+        entry["handicap"] = previous_handicap
   return sorted(entries, key=_entry_sort_key)
 
 
