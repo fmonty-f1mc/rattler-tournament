@@ -19,6 +19,7 @@ class Form1(Form1Template):
       return
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
+    self._default_email_subject = None
     self._creating_tournament = False
     self._tournament_menu_open = False
     self._expanded_menu_group = None
@@ -394,6 +395,10 @@ class Form1(Form1Template):
       return
 
     tournament = self.current_event
+    default_email_subject = f"[RattlerMail {tournament['year']}]:"
+    if not self.email_subject.text or self.email_subject.text == self._default_email_subject:
+      self.email_subject.text = default_email_subject
+    self._default_email_subject = default_email_subject
     self.selected_tournament_actions.visible = True
     self.create_tournament_panel.visible = False
     self.build_field_panel.visible = True
