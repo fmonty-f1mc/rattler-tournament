@@ -1627,7 +1627,6 @@ class Form1(Form1Template):
       f"Email will be sent from {email_address}."
       if email_address else "Link a Google account to send from your own address."
     )
-
   @handle("link_google_account_button", "click")
   def link_google_account_button_click(self, **event_args):
     try:
