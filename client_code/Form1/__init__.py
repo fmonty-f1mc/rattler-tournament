@@ -19,6 +19,7 @@ class Form1(Form1Template):
       return
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
+    self._default_email_subject = None
     self._creating_tournament = False
     self._tournament_menu_open = False
     self._expanded_menu_group = None
@@ -53,6 +54,8 @@ class Form1(Form1Template):
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
     self.email_status.text = ""
+    self.email_from_box.enabled = False
+    self._refresh_email_sender()
     self.email_recipient_type_filter.items = [
       ("Everyone", "all"),
       ("Players", "players"),
@@ -392,6 +395,10 @@ class Form1(Form1Template):
       return
 
     tournament = self.current_event
+    default_email_subject = f"[RattlerMail {tournament['year']}]:"
+    if not self.email_subject.text or self.email_subject.text == self._default_email_subject:
+      self.email_subject.text = default_email_subject
+    self._default_email_subject = default_email_subject
     self.selected_tournament_actions.visible = True
     self.create_tournament_panel.visible = False
     self.build_field_panel.visible = True
@@ -1534,6 +1541,9 @@ class Form1(Form1Template):
     if self.current_event is None:
       self.email_status.text = "Create or select a tournament first."
       return
+    if not anvil.google.auth.get_user_email():
+      self.email_status.text = "Link a Google account before sending email."
+      return
 
     subject = (self.email_subject.text or "").strip()
     body = (self.email_body.text or "").strip()
@@ -1609,6 +1619,28 @@ class Form1(Form1Template):
       self.send_tournament_email_button.enabled = True
 
     self.email_status.text = result["message"]
+
+  def _refresh_email_sender(self):
+    email_address = anvil.google.auth.get_user_email()
+    self.email_from_box.text = email_address or ""
+    self.email_account_status.text = (
+      f"Email will be sent from {email_address}."
+      if email_address else "Link a Google account to send from your own address."
+    )
+  @handle("link_google_account_button", "click")
+  def link_google_account_button_click(self, **event_args):
+    try:
+      anvil.google.auth.login(
+        ["https://www.googleapis.com/auth/gmail.send"]
+      )
+    except anvil.server.InternalError as error:
+      if "you need to supply your own client ID and secret" not in str(error):
+        raise
+      self.email_account_status.text = (
+        "Google email linking needs an OAuth client ID and secret in the Google Service."
+      )
+      return
+    self._refresh_email_sender()
 
   @handle("email_recipient_type_filter", "change")
   def email_recipient_type_filter_change(self, **event_args):

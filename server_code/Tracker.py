@@ -1,11 +1,16 @@
-import anvil.google.auth, anvil.google.drive, anvil.google.mail
+import anvil.google.auth, anvil.google.drive
+import base64
 from anvil.google.drive import app_files
 import csv
+from email.message import EmailMessage
 import io
+import json
 import math
 import random
 import re
 from datetime import datetime
+import urllib.error
+import urllib.request
 
 import anvil.server
 from anvil.tables import app_tables
@@ -74,6 +79,53 @@ def _tournament_email_details(tournament, recipient_type="all", division_filter=
   return list(recipient_by_address.values()), missing_count, invalid_count
 
 
+def _send_linked_gmail_message(recipients, subject, body):
+  try:
+    sender = anvil.google.auth.get_user_email()
+    access_token = anvil.google.auth.get_user_access_token()
+  except anvil.server.InternalError as error:
+    if "you need to supply your own client ID and secret" not in str(error):
+      raise
+    return "Google email sending needs an OAuth client ID and secret in the Google Service."
+  if not sender or not access_token:
+    return "Link a Google account with Gmail send access before sending email."
+
+  message = EmailMessage()
+  message["From"] = sender
+  message["Bcc"] = ", ".join(recipients)
+  message["Subject"] = subject
+  message.set_content(body)
+  raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+  request = urllib.request.Request(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+    data=json.dumps({"raw": raw_message}).encode("utf-8"),
+    headers={
+      "Authorization": f"Bearer {access_token}",
+      "Content-Type": "application/json",
+    },
+    method="POST",
+  )
+
+  try:
+    with urllib.request.urlopen(request) as response:
+      response.read()
+  except urllib.error.HTTPError as error:
+    if error.code == 401:
+      return "Google authorization expired. Link your Google account again to send email."
+    if error.code == 403:
+      error_body = json.loads(error.read().decode("utf-8"))
+      google_error = error_body.get("error", {})
+      reasons = {
+        detail.get("reason")
+        for detail in google_error.get("errors", [])
+      }
+      if "insufficientPermissions" in reasons:
+        return "Grant Gmail send access by linking your Google account again."
+    raise
+
+  return None
+
+
 def _entry_name(entry):
   return entry["golfer"]["name"]
 
@@ -81,6 +133,28 @@ def _entry_name(entry):
 def _entry_is_player(entry):
   # Treat entries created before this field existed as players.
   return entry["is_player"] is not False
+
+
+def _previous_year_handicap(tournament, golfer):
+  year = tournament["year"]
+  if year is None or int(year) != year:
+    return None
+
+  previous_tournament = next(
+    iter(app_tables.tournaments.search(year=int(year) - 1)),
+    None,
+  )
+  if previous_tournament is None:
+    return None
+
+  previous_entry = next(
+    iter(app_tables.tournament_entries.search(
+      tournament=previous_tournament,
+      golfer=golfer,
+    )),
+    None,
+  )
+  return previous_entry["handicap"] if previous_entry is not None else None
 
 
 def _entry_sort_key(entry):
@@ -454,6 +528,8 @@ def send_tournament_email(tournament, subject, body, recipient_type="all", divis
     return _result("Enter an email subject.")
   if not body:
     return _result("Enter a message.")
+  if "\n" in subject or "\r" in subject:
+    return _result("Email subject cannot contain line breaks.")
 
   recipients, missing_count, invalid_count = _tournament_email_details(
     tournament,
@@ -463,11 +539,9 @@ def send_tournament_email(tournament, subject, body, recipient_type="all", divis
   if not recipients:
     return _result("No selected participants have a usable email address.")
 
-  anvil.google.mail.send(
-    bcc=recipients,
-    subject=subject,
-    text=body,
-  )
+  send_error = _send_linked_gmail_message(recipients, subject, body)
+  if send_error:
+    return _result(send_error)
   skipped_count = missing_count + invalid_count
   message = f"Email sent to {len(recipients)} unique email addresses."
   if skipped_count:
@@ -545,12 +619,13 @@ def add_golfer_to_tournament(tournament, golfer, is_player=True):
 def _create_tournament_entry(tournament, golfer, is_player=True):
   if is_player:
     _clear_tournament_foursomes(tournament)
+  previous_handicap = _previous_year_handicap(tournament, golfer)
   return app_tables.tournament_entries.add_row(
     tournament=tournament,
     golfer=golfer,
     is_player=bool(is_player),
     division="",
-    handicap=0,
+    handicap=previous_handicap if previous_handicap is not None else 0,
     gross_18=0,
     net_18=0,
     gross_9=0,
@@ -631,6 +706,11 @@ def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
+  for entry in entries:
+    if entry["handicap"] in (None, 0):
+      previous_handicap = _previous_year_handicap(tournament, entry["golfer"])
+      if previous_handicap is not None:
+        entry["handicap"] = previous_handicap
   return sorted(entries, key=_entry_sort_key)
 
 
