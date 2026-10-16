@@ -54,8 +54,7 @@ class Form1(Form1Template):
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
     self.email_status.text = ""
-    self.email_from_box.enabled = False
-    self._refresh_email_sender()
+    self._sending_tournament_email = False
     self.email_recipient_type_filter.items = [
       ("Everyone", "all"),
       ("Players", "players"),
@@ -1536,13 +1535,12 @@ class Form1(Form1Template):
     self._show_tournament_view("budget")
     self._show_budget_tab("payments")
 
-  @handle("send_tournament_email_button", "click")
-  def send_tournament_email_button_click(self, **event_args):
+  @handle("send_with_gmail_link", "click")
+  def send_with_gmail_link_click(self, **event_args):
+    if self._sending_tournament_email:
+      return
     if self.current_event is None:
       self.email_status.text = "Create or select a tournament first."
-      return
-    if not anvil.google.auth.get_user_email():
-      self.email_status.text = "Link a Google account before sending email."
       return
 
     subject = (self.email_subject.text or "").strip()
@@ -1556,57 +1554,69 @@ class Form1(Form1Template):
       self.email_status.text = "Enter a message."
       return
 
-    self.send_tournament_email_button.enabled = False
+    self._sending_tournament_email = True
     try:
+      self.email_status.text = "Sign in with Google to authorize Gmail sending…"
+      try:
+        anvil.google.auth.login(
+          ["https://www.googleapis.com/auth/gmail.send"]
+        )
+      except anvil.server.InternalError as error:
+        if "you need to supply your own client ID and secret" not in str(error):
+          raise
+        self.email_status.text = (
+          "Google email sending needs an OAuth client ID and secret in the Google Service."
+        )
+        return
+
+      if not anvil.google.auth.get_user_email():
+        self.email_status.text = "Sign in with a Google account to send email."
+        return
+
       summary = anvil.server.call(
         "get_tournament_email_summary",
         self.current_event,
         recipient_type,
         division_filter,
       )
-    finally:
-      self.send_tournament_email_button.enabled = True
+      if not summary["ok"]:
+        self.email_status.text = summary["message"]
+        return
+      recipient_count = summary["recipient_count"]
+      if not recipient_count:
+        self.email_status.text = "No selected participants have a usable email address."
+        return
 
-    if not summary["ok"]:
-      self.email_status.text = summary["message"]
-      return
-    recipient_count = summary["recipient_count"]
-    if not recipient_count:
-      self.email_status.text = "No selected participants have a usable email address."
-      return
+      skipped_details = []
+      if summary["missing_count"]:
+        skipped_details.append(f"{summary['missing_count']} without an email address")
+      if summary["invalid_count"]:
+        skipped_details.append(f"{summary['invalid_count']} with an invalid email address")
+      skipped_message = (
+        " Participants with " + " and ".join(skipped_details) + " will be skipped."
+        if skipped_details else ""
+      )
+      if recipient_type == "non_players":
+        audience = "Non-players"
+      elif division_filter == "unassigned":
+        audience = "Players without a division"
+      elif division_filter.startswith("division:"):
+        audience = f"Players in {division_filter[len('division:'):]}"
+      elif recipient_type == "players":
+        audience = "Players"
+      else:
+        audience = "Everyone"
+      confirmed = confirm(
+        f"Send this message to {recipient_count} unique email addresses matching "
+        f"{audience} for "
+        f"{self.current_event['year']} · {self.current_event['course']}? "
+        f"Recipients will be BCCed.{skipped_message}",
+        title="Email tournament recipients",
+      )
+      if not confirmed:
+        return
 
-    skipped_details = []
-    if summary["missing_count"]:
-      skipped_details.append(f"{summary['missing_count']} without an email address")
-    if summary["invalid_count"]:
-      skipped_details.append(f"{summary['invalid_count']} with an invalid email address")
-    skipped_message = (
-      " Participants with " + " and ".join(skipped_details) + " will be skipped."
-      if skipped_details else ""
-    )
-    if recipient_type == "non_players":
-      audience = "Non-players"
-    elif division_filter == "unassigned":
-      audience = "Players without a division"
-    elif division_filter.startswith("division:"):
-      audience = f"Players in {division_filter[len('division:'):]}"
-    elif recipient_type == "players":
-      audience = "Players"
-    else:
-      audience = "Everyone"
-    confirmed = confirm(
-      f"Send this message to {recipient_count} unique email addresses matching "
-      f"{audience} for "
-      f"{self.current_event['year']} · {self.current_event['course']}? "
-      f"Recipients will be BCCed.{skipped_message}",
-      title="Email tournament recipients",
-    )
-    if not confirmed:
-      return
-
-    self.email_status.text = "Sending email…"
-    self.send_tournament_email_button.enabled = False
-    try:
+      self.email_status.text = "Sending email…"
       result = anvil.server.call(
         "send_tournament_email",
         self.current_event,
@@ -1615,32 +1625,9 @@ class Form1(Form1Template):
         recipient_type,
         division_filter,
       )
+      self.email_status.text = result["message"]
     finally:
-      self.send_tournament_email_button.enabled = True
-
-    self.email_status.text = result["message"]
-
-  def _refresh_email_sender(self):
-    email_address = anvil.google.auth.get_user_email()
-    self.email_from_box.text = email_address or ""
-    self.email_account_status.text = (
-      f"Email will be sent from {email_address}."
-      if email_address else "Link a Google account to send from your own address."
-    )
-  @handle("link_google_account_button", "click")
-  def link_google_account_button_click(self, **event_args):
-    try:
-      anvil.google.auth.login(
-        ["https://www.googleapis.com/auth/gmail.send"]
-      )
-    except anvil.server.InternalError as error:
-      if "you need to supply your own client ID and secret" not in str(error):
-        raise
-      self.email_account_status.text = (
-        "Google email linking needs an OAuth client ID and secret in the Google Service."
-      )
-      return
-    self._refresh_email_sender()
+      self._sending_tournament_email = False
 
   @handle("email_recipient_type_filter", "change")
   def email_recipient_type_filter_change(self, **event_args):

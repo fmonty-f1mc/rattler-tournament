@@ -88,7 +88,7 @@ def _send_linked_gmail_message(recipients, subject, body):
       raise
     return "Google email sending needs an OAuth client ID and secret in the Google Service."
   if not sender or not access_token:
-    return "Link a Google account with Gmail send access before sending email."
+    return "Sign in with Google and grant Gmail send access to send this email."
 
   message = EmailMessage()
   message["From"] = sender
@@ -111,7 +111,7 @@ def _send_linked_gmail_message(recipients, subject, body):
       response.read()
   except urllib.error.HTTPError as error:
     if error.code == 401:
-      return "Google authorization expired. Link your Google account again to send email."
+      return "Google authorization expired. Click ‘Send with Gmail account’ to authorize again."
     if error.code == 403:
       error_body = json.loads(error.read().decode("utf-8"))
       google_error = error_body.get("error", {})
@@ -120,7 +120,7 @@ def _send_linked_gmail_message(recipients, subject, body):
         for detail in google_error.get("errors", [])
       }
       if "insufficientPermissions" in reasons:
-        return "Grant Gmail send access by linking your Google account again."
+        return "Grant Gmail send access by clicking ‘Send with Gmail account’."
     raise
 
   return None
