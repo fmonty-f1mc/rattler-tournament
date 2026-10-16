@@ -1535,8 +1535,8 @@ class Form1(Form1Template):
     self._show_tournament_view("budget")
     self._show_budget_tab("payments")
 
-  @handle("send_with_gmail_link", "click")
-  def send_with_gmail_link_click(self, **event_args):
+  @handle("send_with_google_button", "click")
+  def send_with_google_button_click(self, **event_args):
     if self._sending_tournament_email:
       return
     if self.current_event is None:
@@ -1555,8 +1555,9 @@ class Form1(Form1Template):
       return
 
     self._sending_tournament_email = True
+    self.send_with_google_button.enabled = False
     try:
-      self.email_status.text = "Sign in with Google to authorize Gmail sending…"
+      self.email_status.text = "Connect your Google account to send email…"
       try:
         anvil.google.auth.login(
           ["https://www.googleapis.com/auth/gmail.send"]
@@ -1609,14 +1610,16 @@ class Form1(Form1Template):
       confirmed = confirm(
         f"Send this message to {recipient_count} unique email addresses matching "
         f"{audience} for "
-        f"{self.current_event['year']} · {self.current_event['course']}? "
+        f"{self.current_event['year']} · {self.current_event['course']} "
+        f"from {anvil.google.auth.get_user_email()}? "
         f"Recipients will be BCCed.{skipped_message}",
         title="Email tournament recipients",
       )
       if not confirmed:
+        self.email_status.text = "Email cancelled."
         return
 
-      self.email_status.text = "Sending email…"
+      self.email_status.text = "Sending email through Google…"
       result = anvil.server.call(
         "send_tournament_email",
         self.current_event,
@@ -1628,6 +1631,7 @@ class Form1(Form1Template):
       self.email_status.text = result["message"]
     finally:
       self._sending_tournament_email = False
+      self.send_with_google_button.enabled = True
 
   @handle("email_recipient_type_filter", "change")
   def email_recipient_type_filter_change(self, **event_args):

@@ -81,13 +81,12 @@ def _tournament_email_details(tournament, recipient_type="all", division_filter=
 
 def _send_linked_gmail_message(recipients, subject, body):
   try:
-    #sender = anvil.google.auth.get_user_email()
+    sender = anvil.google.auth.get_user_email()
     access_token = anvil.google.auth.get_user_access_token()
-    sender = anvil.google.auth.login()
   except anvil.server.InternalError as error:
     if "you need to supply your own client ID and secret" not in str(error):
       raise
-    return "Google email sending needs an OAuth client ID and secret in the Google Service."
+    return "Configure an OAuth client ID and secret in the Google Service to send Gmail."
   if not sender or not access_token:
     return "Sign in with Google and grant Gmail send access to send this email."
 
@@ -112,7 +111,7 @@ def _send_linked_gmail_message(recipients, subject, body):
       response.read()
   except urllib.error.HTTPError as error:
     if error.code == 401:
-      return "Google authorization expired. Click ‘Send with Gmail account’ to authorize again."
+      return "Google authorization expired. Click ‘Send email with Google’ to authorize again."
     if error.code == 403:
       error_body = json.loads(error.read().decode("utf-8"))
       google_error = error_body.get("error", {})
@@ -121,7 +120,9 @@ def _send_linked_gmail_message(recipients, subject, body):
         for detail in google_error.get("errors", [])
       }
       if "insufficientPermissions" in reasons:
-        return "Grant Gmail send access by clicking ‘Send with Gmail account’."
+        return "Grant Gmail send access by clicking ‘Send email with Google’."
+      if "accessNotConfigured" in reasons:
+        return "Enable the Gmail API for the Google Cloud project used by the Google Service."
     raise
 
   return None
