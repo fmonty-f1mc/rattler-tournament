@@ -81,8 +81,9 @@ def _tournament_email_details(tournament, recipient_type="all", division_filter=
 
 def _send_linked_gmail_message(recipients, subject, body):
   try:
-    sender = anvil.google.auth.get_user_email()
+    #sender = anvil.google.auth.get_user_email()
     access_token = anvil.google.auth.get_user_access_token()
+    sender = anvil.google.auth.login()
   except anvil.server.InternalError as error:
     if "you need to supply your own client ID and secret" not in str(error):
       raise
