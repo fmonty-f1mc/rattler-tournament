@@ -1,16 +1,11 @@
-import anvil.google.auth, anvil.google.drive
-import base64
+import anvil.google.drive, anvil.google.mail
 from anvil.google.drive import app_files
 import csv
-from email.message import EmailMessage
 import io
-import json
 import math
 import random
 import re
 from datetime import datetime
-import urllib.error
-import urllib.request
 
 import anvil.server
 from anvil.tables import app_tables
@@ -37,18 +32,19 @@ def _valid_row(table, candidate):
   return any(row.get_id() == candidate_id for row in table.search())
 
 
-def _tournament_email_filter_error(tournament, recipient_type, division_filter):
+def _email_filter_error(tournament, recipient_type, division_filter):
   if recipient_type not in ("all", "players", "non_players"):
-    return "Choose a valid email recipient type."
-  if recipient_type == "non_players":
-    return None if division_filter == "all" else "Division filtering applies to players only."
+    return "Choose a valid participant filter."
   if division_filter in ("all", "unassigned"):
-    return None
-  if not isinstance(division_filter, str) or not division_filter.startswith("division:"):
-    return "Choose a valid tournament division."
-  division = division_filter[len("division:"):]
-  if division not in _division_names(tournament):
-    return "Choose a division from this tournament."
+    pass
+  elif isinstance(division_filter, str) and division_filter.startswith("division:"):
+    division = division_filter[len("division:"):]
+    if division not in _division_names(tournament):
+      return "Choose a division from this tournament."
+  else:
+    return "Choose a valid division filter."
+  if recipient_type == "non_players" and division_filter != "all":
+    return "Division filters are only available for players."
   return None
 
 
@@ -77,55 +73,6 @@ def _tournament_email_details(tournament, recipient_type="all", division_filter=
       continue
     recipient_by_address.setdefault(address.lower(), address)
   return list(recipient_by_address.values()), missing_count, invalid_count
-
-
-def _send_linked_gmail_message(recipients, subject, body):
-  try:
-    sender = anvil.google.auth.get_user_email()
-    access_token = anvil.google.auth.get_user_access_token()
-  except anvil.server.InternalError as error:
-    if "you need to supply your own client ID and secret" not in str(error):
-      raise
-    return "Configure an OAuth client ID and secret in the Google Service to send Gmail."
-  if not sender or not access_token:
-    return "Sign in with Google and grant Gmail send access to send this email."
-
-  message = EmailMessage()
-  message["From"] = sender
-  message["Bcc"] = ", ".join(recipients)
-  message["Subject"] = subject
-  message.set_content(body)
-  raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
-  request = urllib.request.Request(
-    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-    data=json.dumps({"raw": raw_message}).encode("utf-8"),
-    headers={
-      "Authorization": f"Bearer {access_token}",
-      "Content-Type": "application/json",
-    },
-    method="POST",
-  )
-
-  try:
-    with urllib.request.urlopen(request) as response:
-      response.read()
-  except urllib.error.HTTPError as error:
-    if error.code == 401:
-      return "Google authorization expired. Click ‘Send email with Google’ to authorize again."
-    if error.code == 403:
-      error_body = json.loads(error.read().decode("utf-8"))
-      google_error = error_body.get("error", {})
-      reasons = {
-        detail.get("reason")
-        for detail in google_error.get("errors", [])
-      }
-      if "insufficientPermissions" in reasons:
-        return "Grant Gmail send access by clicking ‘Send email with Google’."
-      if "accessNotConfigured" in reasons:
-        return "Enable the Gmail API for the Google Cloud project used by the Google Service."
-    raise
-
-  return None
 
 
 def _entry_name(entry):
@@ -502,13 +449,11 @@ def delete_tournament(tournament):
 def get_tournament_email_summary(tournament, recipient_type="all", division_filter="all"):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
-  filter_error = _tournament_email_filter_error(tournament, recipient_type, division_filter)
+  filter_error = _email_filter_error(tournament, recipient_type, division_filter)
   if filter_error:
     return _result(filter_error)
   recipients, missing_count, invalid_count = _tournament_email_details(
-    tournament,
-    recipient_type,
-    division_filter,
+    tournament, recipient_type, division_filter
   )
   return _result(
     recipient_count=len(recipients),
@@ -518,12 +463,11 @@ def get_tournament_email_summary(tournament, recipient_type="all", division_filt
 
 
 @anvil.server.callable(require_user=True)
-def send_tournament_email(tournament, subject, body, recipient_type="all", division_filter="all"):
+def send_tournament_email(
+  tournament, subject, body, recipient_type="all", division_filter="all"
+):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
-  filter_error = _tournament_email_filter_error(tournament, recipient_type, division_filter)
-  if filter_error:
-    return _result(filter_error)
   subject = (subject or "").strip()
   body = (body or "").strip()
   if not subject:
@@ -533,17 +477,20 @@ def send_tournament_email(tournament, subject, body, recipient_type="all", divis
   if "\n" in subject or "\r" in subject:
     return _result("Email subject cannot contain line breaks.")
 
+  filter_error = _email_filter_error(tournament, recipient_type, division_filter)
+  if filter_error:
+    return _result(filter_error)
   recipients, missing_count, invalid_count = _tournament_email_details(
-    tournament,
-    recipient_type,
-    division_filter,
+    tournament, recipient_type, division_filter
   )
   if not recipients:
     return _result("No selected participants have a usable email address.")
 
-  send_error = _send_linked_gmail_message(recipients, subject, body)
-  if send_error:
-    return _result(send_error)
+  anvil.google.mail.send(
+    bcc=recipients,
+    subject=subject,
+    text=body,
+  )
   skipped_count = missing_count + invalid_count
   message = f"Email sent to {len(recipients)} unique email addresses."
   if skipped_count:

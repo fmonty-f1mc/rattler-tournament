@@ -767,6 +767,10 @@ textarea.anvil-text-area:disabled,
   margin: 18px 0;
 }
 
+.form-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .form-grid-four {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -1691,6 +1695,7 @@ input.anvil-role-budget-paid-input:disabled {
     padding: 16px;
   }
 
+  .form-grid-two,
   .form-grid-four,
   .form-grid-three,
   .form-grid-five,
@@ -1938,6 +1943,7 @@ input.anvil-role-budget-paid-input:disabled {
     gap: 12px;
   }
 
+  .form-grid-two,
   .form-grid-four,
   .form-grid-three,
   .form-grid-five {

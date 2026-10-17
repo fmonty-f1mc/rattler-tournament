@@ -1,6 +1,6 @@
 from ._anvil_designer import Form1Template
 from anvil import *
-import anvil.google.auth, anvil.google.drive
+import anvil.google.drive
 from anvil.google.drive import app_files
 import anvil.server
 import anvil.users
@@ -19,7 +19,6 @@ class Form1(Form1Template):
       return
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
-    self._default_email_subject = None
     self._creating_tournament = False
     self._tournament_menu_open = False
     self._expanded_menu_group = None
@@ -36,6 +35,9 @@ class Form1(Form1Template):
     self._budget_cost_items = []
     self._budget_selected_entry_ids = set()
     self._budget_selection_tournament_id = None
+    self._email_filter_tournament_id = None
+    self._email_has_players = False
+    self._email_default_subject = None
     self.edit_tournament_panel.visible = False
     self.create_tournament_panel.visible = False
     self.standings_scope_picker.items = [("Overall", "overall")]
@@ -54,15 +56,6 @@ class Form1(Form1Template):
     self.round_two_pairing_status.text = ""
     self.budget_status.text = ""
     self.email_status.text = ""
-    self._sending_tournament_email = False
-    self.email_recipient_type_filter.items = [
-      ("Everyone", "all"),
-      ("Players", "players"),
-      ("Non-players", "non_players"),
-    ]
-    self.email_recipient_type_filter.selected_value = "all"
-    self.email_division_filter.items = [("All divisions", "all")]
-    self.email_division_filter.selected_value = "all"
     self.news_status.text = ""
     self._show_view("event")
     self._show_budget_tab("categories")
@@ -306,6 +299,7 @@ class Form1(Form1Template):
     self.division_status.text = ""
     self.create_division_panel.visible = False
     if self._creating_tournament:
+      self._load_email_filters(None, [])
       self.selected_tournament_actions.visible = False
       self.edit_tournament_panel.visible = False
       self.create_tournament_panel.visible = True
@@ -316,6 +310,7 @@ class Form1(Form1Template):
       return
 
     if self.current_event is None:
+      self._load_email_filters(None, [])
       self.selected_tournament_actions.visible = False
       self.edit_tournament_panel.visible = False
       self.create_tournament_panel.visible = True
@@ -373,9 +368,6 @@ class Form1(Form1Template):
       self.budget_cost_type_filter.selected_value = "all"
       self.budget_cost_division_filter.items = [("All divisions", "all")]
       self.budget_cost_division_filter.selected_value = "all"
-      self.email_division_filter.items = [("All divisions", "all")]
-      self.email_division_filter.selected_value = "all"
-      self.email_division_filter.enabled = True
       self.budget_cost_search.text = ""
       self.budget_cost_match_status.text = "0 participants"
       self.budget_payment_selection_status.text = "0 participants selected."
@@ -394,10 +386,7 @@ class Form1(Form1Template):
       return
 
     tournament = self.current_event
-    default_email_subject = f"[RattlerMail {tournament['year']}]:"
-    if not self.email_subject.text or self.email_subject.text == self._default_email_subject:
-      self.email_subject.text = default_email_subject
-    self._default_email_subject = default_email_subject
+    self._set_email_subject_default(tournament)
     self.selected_tournament_actions.visible = True
     self.create_tournament_panel.visible = False
     self.build_field_panel.visible = True
@@ -410,22 +399,6 @@ class Form1(Form1Template):
     self.field_summary.visible = True
 
     self.division_options = anvil.server.call("list_tournament_divisions", tournament)
-    email_division_options = [
-      ("All divisions", "all"),
-      ("Players without a division", "unassigned"),
-    ] + [
-      (division, "division:" + division)
-      for division in self.division_options
-    ]
-    selected_email_division = self.email_division_filter.selected_value or "all"
-    self.email_division_filter.items = email_division_options
-    self.email_division_filter.selected_value = next(
-      (value for _, value in email_division_options if value == selected_email_division),
-      "all",
-    )
-    self.email_division_filter.enabled = (
-      self.email_recipient_type_filter.selected_value != "non_players"
-    )
     self.division_choices = [("No division", "")] + [
       (division, division) for division in self.division_options
     ]
@@ -451,6 +424,7 @@ class Form1(Form1Template):
       selected_scope = "overall"
     self.standings_scope_picker.selected_value = selected_scope
     entries = anvil.server.call("list_tournament_entries", tournament)
+    self._load_email_filters(tournament, entries)
     self._load_entry_options(entries)
     player_entries = [entry for entry in entries if entry["is_player"] is not False]
     self._player_entries = player_entries
@@ -587,6 +561,71 @@ class Form1(Form1Template):
     self.budget_balance.text = self._money(summary["balance"])
     count = summary["participants"]
     self.budget_participants.text = f"{count} participant" + ("s" if count != 1 else "")
+
+  def _load_email_filters(self, tournament, entries):
+    recipient_options = [
+      ("Everyone", "all"), ("Players", "players"), ("Non-players", "non_players")
+    ]
+    if tournament is None:
+      self._email_filter_tournament_id = None
+      self._email_has_players = False
+      self.email_recipient_type.items = recipient_options
+      self.email_recipient_type.selected_value = "all"
+      self.email_recipient_type.enabled = False
+      self.email_division_filter.items = [("All divisions", "all")]
+      self.email_division_filter.selected_value = "all"
+      self.email_division_filter.enabled = False
+      return
+
+    tournament_id = tournament.get_id()
+    if self._email_filter_tournament_id != tournament_id:
+      self._email_filter_tournament_id = tournament_id
+      self.email_recipient_type.selected_value = "all"
+      self.email_division_filter.selected_value = "all"
+
+    division_options = [
+      ("All divisions", "all"), ("Players without a division", "unassigned")
+    ] + [
+      (division, "division:" + division)
+      for division in sorted(self.division_options, key=lambda value: value.lower())
+    ]
+    selected_recipient = self.email_recipient_type.selected_value or "all"
+    selected_division = self.email_division_filter.selected_value or "all"
+    self.email_recipient_type.items = recipient_options
+    self.email_recipient_type.selected_value = next(
+      (value for _, value in recipient_options if value == selected_recipient), "all"
+    )
+    self.email_division_filter.items = division_options
+    self.email_division_filter.selected_value = next(
+      (value for _, value in division_options if value == selected_division), "all"
+    )
+    self._email_has_players = any(
+      entry["is_player"] is not False for entry in entries
+    )
+    self.email_recipient_type.enabled = bool(entries)
+    self._update_email_division_filter_state()
+
+  def _set_email_subject_default(self, tournament):
+    year = tournament["year"]
+    year_label = str(int(year)) if year is not None and int(year) == year else str(year)
+    default_subject = f"[RattlerMail {year_label}]"
+    current_subject = (self.email_subject.text or "").strip()
+    if not current_subject or current_subject == self._email_default_subject:
+      self.email_subject.text = default_subject
+    self._email_default_subject = default_subject
+
+  def _update_email_division_filter_state(self):
+    if self.email_recipient_type.selected_value == "non_players":
+      self.email_division_filter.selected_value = "all"
+    self.email_division_filter.enabled = (
+      self.current_event is not None
+      and self._email_has_players
+      and self.email_recipient_type.selected_value != "non_players"
+    )
+
+  @handle("email_recipient_type", "change")
+  def email_recipient_type_change(self, **event_args):
+    self._update_email_division_filter_state()
 
   def _round_two_pairing_items(self, pairings, player_entries):
     entry_options = [(entry["golfer"]["name"], entry) for entry in player_entries]
@@ -1535,18 +1574,14 @@ class Form1(Form1Template):
     self._show_tournament_view("budget")
     self._show_budget_tab("payments")
 
-  @handle("send_with_google_button", "click")
-  def send_with_google_button_click(self, **event_args):
-    if self._sending_tournament_email:
-      return
+  @handle("send_tournament_email_button", "click")
+  def send_tournament_email_button_click(self, **event_args):
     if self.current_event is None:
       self.email_status.text = "Create or select a tournament first."
       return
 
     subject = (self.email_subject.text or "").strip()
     body = (self.email_body.text or "").strip()
-    recipient_type = self.email_recipient_type_filter.selected_value or "all"
-    division_filter = self.email_division_filter.selected_value or "all"
     if not subject:
       self.email_status.text = "Enter an email subject."
       return
@@ -1554,72 +1589,48 @@ class Form1(Form1Template):
       self.email_status.text = "Enter a message."
       return
 
-    self._sending_tournament_email = True
-    self.send_with_google_button.enabled = False
+    self.send_tournament_email_button.enabled = False
+    recipient_type = self.email_recipient_type.selected_value or "all"
+    division_filter = self.email_division_filter.selected_value or "all"
     try:
-      self.email_status.text = "Connect your Google account to send email…"
-      try:
-        anvil.google.auth.login(
-          ["https://www.googleapis.com/auth/gmail.send"]
-        )
-      except anvil.server.InternalError as error:
-        if "you need to supply your own client ID and secret" not in str(error):
-          raise
-        self.email_status.text = (
-          "Google email sending needs an OAuth client ID and secret in the Google Service."
-        )
-        return
-
-      if not anvil.google.auth.get_user_email():
-        self.email_status.text = "Sign in with a Google account to send email."
-        return
-
       summary = anvil.server.call(
         "get_tournament_email_summary",
         self.current_event,
         recipient_type,
         division_filter,
       )
-      if not summary["ok"]:
-        self.email_status.text = summary["message"]
-        return
-      recipient_count = summary["recipient_count"]
-      if not recipient_count:
-        self.email_status.text = "No selected participants have a usable email address."
-        return
+    finally:
+      self.send_tournament_email_button.enabled = True
 
-      skipped_details = []
-      if summary["missing_count"]:
-        skipped_details.append(f"{summary['missing_count']} without an email address")
-      if summary["invalid_count"]:
-        skipped_details.append(f"{summary['invalid_count']} with an invalid email address")
-      skipped_message = (
-        " Participants with " + " and ".join(skipped_details) + " will be skipped."
-        if skipped_details else ""
-      )
-      if recipient_type == "non_players":
-        audience = "Non-players"
-      elif division_filter == "unassigned":
-        audience = "Players without a division"
-      elif division_filter.startswith("division:"):
-        audience = f"Players in {division_filter[len('division:'):]}"
-      elif recipient_type == "players":
-        audience = "Players"
-      else:
-        audience = "Everyone"
-      confirmed = confirm(
-        f"Send this message to {recipient_count} unique email addresses matching "
-        f"{audience} for "
-        f"{self.current_event['year']} · {self.current_event['course']} "
-        f"from {anvil.google.auth.get_user_email()}? "
-        f"Recipients will be BCCed.{skipped_message}",
-        title="Email tournament recipients",
-      )
-      if not confirmed:
-        self.email_status.text = "Email cancelled."
-        return
+    if not summary["ok"]:
+      self.email_status.text = summary["message"]
+      return
+    recipient_count = summary["recipient_count"]
+    if not recipient_count:
+      self.email_status.text = "No matching participants have a usable email address."
+      return
 
-      self.email_status.text = "Sending email through Google…"
+    skipped_details = []
+    if summary["missing_count"]:
+      skipped_details.append(f"{summary['missing_count']} without an email address")
+    if summary["invalid_count"]:
+      skipped_details.append(f"{summary['invalid_count']} with an invalid email address")
+    skipped_message = (
+      " Participants with " + " and ".join(skipped_details) + " will be skipped."
+      if skipped_details else ""
+    )
+    confirmed = confirm(
+      f"Send this message to {recipient_count} unique email addresses for "
+      f"{self.current_event['year']} · {self.current_event['course']}? "
+      f"Recipients will be BCCed.{skipped_message}",
+      title="Email tournament participants",
+    )
+    if not confirmed:
+      return
+
+    self.email_status.text = "Sending email…"
+    self.send_tournament_email_button.enabled = False
+    try:
       result = anvil.server.call(
         "send_tournament_email",
         self.current_event,
@@ -1628,22 +1639,10 @@ class Form1(Form1Template):
         recipient_type,
         division_filter,
       )
-      self.email_status.text = result["message"]
     finally:
-      self._sending_tournament_email = False
-      self.send_with_google_button.enabled = True
+      self.send_tournament_email_button.enabled = True
 
-  @handle("email_recipient_type_filter", "change")
-  def email_recipient_type_filter_change(self, **event_args):
-    recipient_type = self.email_recipient_type_filter.selected_value or "all"
-    if recipient_type == "non_players":
-      self.email_division_filter.selected_value = "all"
-    self.email_division_filter.enabled = recipient_type != "non_players"
-    self.email_status.text = ""
-
-  @handle("email_division_filter", "change")
-  def email_division_filter_change(self, **event_args):
-    self.email_status.text = ""
+    self.email_status.text = result["message"]
 
   @handle("add_budget_category_button", "click")
   def add_budget_category_button_click(self, **event_args):
