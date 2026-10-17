@@ -324,19 +324,17 @@
       </anvil-component>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="email_section" prop:role="tracker-view">
-      <div class="view-heading"><p class="eyebrow">TOURNAMENT UPDATES</p><h2>Email participants</h2><p class="muted-copy">Choose everyone, players, non-players, or a player division as the recipient group.</p></div>
+      <div class="view-heading"><p class="eyebrow">TOURNAMENT UPDATES</p><h2>Email participants</h2><p class="muted-copy">Choose which participants and division should receive your message.</p></div>
       <div class="tracker-card">
-        <p class="muted-copy">Matching addresses are sent as BCC. Entries without a usable email address are skipped.</p>
-        <div class="field-block"><label>From:</label><anvil-component type="TextBox" name="email_from_box" prop:placeholder="Link a Google account"></anvil-component></div>
-        <anvil-component type="Button" name="link_google_account_button" prop:text="Link Google account" prop:role="secondary-button"></anvil-component>
-        <anvil-component type="Label" name="email_account_status" prop:role="muted-text"></anvil-component>
-        <div class="inline-form">
-          <div class="field-block"><label>Recipients</label><anvil-component type="DropDown" name="email_recipient_type_filter"></anvil-component></div>
+        <p class="muted-copy">Participant addresses are sent as BCC. Entries without a usable email address are skipped.</p>
+        <anvil-component type="Label" name="email_from_line" prop:text="From: Google account connected to this app" prop:role="muted-text"></anvil-component>
+        <div class="form-grid form-grid-two">
+          <div class="field-block"><label>Participants</label><anvil-component type="DropDown" name="email_recipient_type"></anvil-component></div>
           <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="email_division_filter"></anvil-component></div>
         </div>
-        <div class="field-block"><label>Subject</label><anvil-component type="TextBox" name="email_subject" prop:placeholder="Tournament update"></anvil-component></div>
+        <div class="field-block"><label>Subject</label><anvil-component type="TextBox" name="email_subject" prop:placeholder="[RattlerMail tournament year]"></anvil-component></div>
         <div class="field-block"><label>Message</label><anvil-component type="TextArea" name="email_body" prop:placeholder="Write your message to tournament participants"></anvil-component></div>
-        <anvil-component type="Button" name="send_tournament_email_button" prop:text="Send email to selected recipients"></anvil-component>
+        <anvil-component type="Button" name="send_tournament_email_button" prop:text="Send email to participants"></anvil-component>
         <anvil-component type="Label" name="email_status" prop:role="status-text"></anvil-component>
       </div>
     </anvil-component>
