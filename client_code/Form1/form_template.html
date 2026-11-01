@@ -323,6 +323,8 @@
           <div class="field-block"><label>Participants</label><anvil-component type="DropDown" name="email_recipient_type"></anvil-component></div>
           <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="email_division_filter"></anvil-component></div>
         </div>
+        <anvil-component type="Button" name="export_email_list_button" prop:text="Export email list (CSV)" prop:role="secondary-button"></anvil-component>
+        <p class="muted-copy">Download names and unique email addresses for the selected filters. Missing or invalid addresses are skipped.</p>
         <div class="field-block"><label>Subject</label><anvil-component type="TextBox" name="email_subject" prop:placeholder="[RattlerMail tournament year]"></anvil-component></div>
         <div class="field-block"><label>Message</label><anvil-component type="TextArea" name="email_body" prop:placeholder="Write your message to tournament participants"></anvil-component></div>
         <anvil-component type="Button" name="send_tournament_email_button" prop:text="Send email to participants"></anvil-component>

@@ -3,6 +3,7 @@ from anvil import *
 import anvil.google.drive
 from anvil.google.drive import app_files
 import anvil.server
+import anvil.media
 import anvil.users
 from anvil.js.window import window
 
@@ -1511,6 +1512,27 @@ class Form1(Form1Template):
   def budget_payments_tab_button_click(self, **event_args):
     self._show_tournament_view("budget")
     self._show_budget_tab("payments")
+
+  @handle("export_email_list_button", "click")
+  def export_email_list_button_click(self, **event_args):
+    if self.current_event is None:
+      self.email_status.text = "Create or select a tournament first."
+      return
+    self.export_email_list_button.enabled = False
+    try:
+      result = anvil.server.call(
+        "export_tournament_email_list", self.current_event,
+        self.email_recipient_type.selected_value or "all",
+        self.email_division_filter.selected_value or "all",
+      )
+      if not result["ok"]:
+        self.email_status.text = result["message"]
+        return
+      anvil.media.download(result["file"])
+      skipped = result["missing_count"] + result["invalid_count"]
+      self.email_status.text = f"Exported {result['recipient_count']} unique email addresses. Skipped {skipped} participant(s) with missing or invalid email addresses."
+    finally:
+      self.export_email_list_button.enabled = True
 
   @handle("send_tournament_email_button", "click")
   def send_tournament_email_button_click(self, **event_args):

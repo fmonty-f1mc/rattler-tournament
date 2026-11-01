@@ -8,6 +8,7 @@ import re
 from datetime import datetime
 
 import anvil.server
+from anvil import BlobMedia
 from anvil.tables import app_tables
 
 
@@ -48,10 +49,7 @@ def _email_filter_error(tournament, recipient_type, division_filter):
   return None
 
 
-def _tournament_email_details(tournament, recipient_type="all", division_filter="all"):
-  recipient_by_address = {}
-  missing_count = 0
-  invalid_count = 0
+def _email_golfers(tournament, recipient_type="all", division_filter="all"):
   for entry in app_tables.tournament_entries.search(tournament=tournament):
     is_player = _entry_is_player(entry)
     if recipient_type == "players" and not is_player:
@@ -63,7 +61,14 @@ def _tournament_email_details(tournament, recipient_type="all", division_filter=
       continue
     if division_filter.startswith("division:") and division != division_filter[len("division:"):]:
       continue
-    golfer = entry["golfer"]
+    yield entry["golfer"]
+
+
+def _tournament_email_details(tournament, recipient_type="all", division_filter="all"):
+  recipient_by_address = {}
+  missing_count = 0
+  invalid_count = 0
+  for golfer in _email_golfers(tournament, recipient_type, division_filter):
     address = (golfer["email"] or "").strip()
     if not address:
       missing_count += 1
@@ -486,6 +491,39 @@ def get_tournament_email_summary(tournament, recipient_type="all", division_filt
     missing_count=missing_count,
     invalid_count=invalid_count,
   )
+
+
+@anvil.server.callable(require_user=True)
+def export_tournament_email_list(tournament, recipient_type="all", division_filter="all"):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  filter_error = _email_filter_error(tournament, recipient_type, division_filter)
+  if filter_error:
+    return _result(filter_error)
+  addresses, missing_count, invalid_count = _tournament_email_details(
+    tournament, recipient_type, division_filter
+  )
+  if not addresses:
+    return _result("No matching participants have a usable email address.")
+  names = {address.lower(): set() for address in addresses}
+  for golfer in _email_golfers(tournament, recipient_type, division_filter):
+    key = (golfer["email"] or "").strip().lower()
+    if key in names:
+      names[key].add((golfer["name"] or "").strip())
+  output = io.StringIO(newline="")
+  writer = csv.writer(output)
+  writer.writerow(["Name", "Email"])
+  for address in sorted(addresses, key=str.lower):
+    name = "; ".join(sorted(names[address.lower()], key=str.lower))
+    # Keep spreadsheet programs from interpreting names as formulas.
+    if name.startswith(("=", "+", "-", "@", "\t", "\r", "\n")):
+      name = "'" + name
+    safe_address = "'" + address if address.startswith(("=", "+", "-", "@")) else address
+    writer.writerow([name, safe_address])
+  media = BlobMedia("text/csv", output.getvalue().encode("utf-8-sig"),
+                    name="participant-emails.csv")
+  return _result(file=media, recipient_count=len(addresses),
+                 missing_count=missing_count, invalid_count=invalid_count)
 
 
 @anvil.server.callable(require_user=True)
