@@ -1,0 +1,53 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-view">
+  <div class="view-heading">
+    <p class="eyebrow">TOURNAMENT</p>
+    <h2>Details</h2>
+    <p class="muted-copy">Create a year and choose the players taking part.</p>
+  </div>
+  <anvil-component type="Label" name="field_summary" prop:role="summary-strip" prop:text="No players entered yet"></anvil-component>
+  <anvil-component type="ColumnPanel" name="selected_tournament_actions">
+    <anvil-component type="Button" name="edit_tournament_button" prop:text="Edit Tournament Details" prop:role="secondary-button" prop:align="left" container:grid_position="TFUTTL,NIACJP"></anvil-component>
+    <anvil-component type="Button" name="delete_tournament_button" prop:text="Delete selected tournament" prop:role="danger-button" prop:align="left" container:grid_position="WYHKZS,TSYKZN"></anvil-component>
+    <div class="tournament-delete-actions" anvil:container:grid_position="IAQGKE,GGNNPV">
+      <anvil-dropzone name="$dz_pbc934"></anvil-dropzone>
+    </div>
+  </anvil-component>
+  <anvil-component type="ColumnPanel" name="edit_tournament_panel" prop:role="tracker-card">
+    <p class="eyebrow">SELECTED TOURNAMENT</p>
+    <h2>Edit tournament details</h2>
+    <div class="form-grid form-grid-four">
+      <div class="field-block"><label>Year</label><anvil-component type="TextBox" name="edit_tournament_year"></anvil-component></div>
+      <div class="field-block"><label>Course</label><anvil-component type="TextBox" name="edit_course_name"></anvil-component></div>
+      <div class="field-block"><label>Date</label><anvil-component type="DatePicker" name="edit_event_date"></anvil-component></div>
+      <div class="field-block"><label>Notes</label><anvil-component type="TextBox" name="edit_tournament_notes" prop:placeholder="Optional details"></anvil-component></div>
+    </div>
+    <div class="inline-form">
+      <anvil-component type="Button" name="save_tournament_details_button" prop:text="Save details"></anvil-component>
+      <anvil-component type="Button" name="cancel_tournament_edit_button" prop:text="Cancel" prop:role="secondary-button"></anvil-component>
+    </div>
+  </anvil-component>
+  <anvil-component type="ColumnPanel" name="create_tournament_panel" prop:role="tracker-card">
+    <p class="eyebrow">NEW YEAR</p>
+    <h2>Set up a tournament</h2>
+    <p class="muted-copy">Each year keeps its own course, player list, divisions, Rattlercaps, and scores.</p>
+    <div class="form-grid form-grid-four">
+      <div class="field-block"><label>Year</label><anvil-component type="TextBox" name="tournament_year" prop:placeholder="2026"></anvil-component></div>
+      <div class="field-block"><label>Course</label><anvil-component type="TextBox" name="course_name" prop:placeholder="Course name"></anvil-component></div>
+      <div class="field-block"><label>Date</label><anvil-component type="DatePicker" name="event_date"></anvil-component></div>
+      <div class="field-block"><label>Notes</label><anvil-component type="TextBox" name="tournament_notes" prop:placeholder="Optional details"></anvil-component></div>
+    </div>
+    <anvil-component type="Button" name="create_tournament_button" prop:text="Create tournament"></anvil-component>
+  </anvil-component>
+  <anvil-component type="Label" name="event_status" prop:role="status-text"></anvil-component>
+  <anvil-component type="ColumnPanel" name="build_field_panel" prop:role="tracker-card">
+    <p class="eyebrow">BUILD THE FIELD</p>
+    <h2>Add players to this year</h2>
+    <p class="muted-copy">Select roster golfers who are not already in this tournament. Add them as players to include them in divisions and golf rounds, or as non-players to include them in expenses only.</p>
+    <anvil-component type="RepeatingPanel" name="entry_options" prop:item_template="rattler_tournament.Components.Tournament.EntryPlayerChoice" prop:role="entry-options"></anvil-component>
+    <div class="inline-form">
+      <anvil-component type="Button" name="add_players_button" prop:text="Add selected as players" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="add_non_players_button" prop:text="Add selected as non-players" prop:role="secondary-button"></anvil-component>
+    </div>
+    <anvil-component type="Label" name="entry_status" prop:role="status-text"></anvil-component>
+  </anvil-component>
+</anvil-form>

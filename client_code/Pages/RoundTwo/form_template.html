@@ -1,0 +1,23 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-view">
+  <div class="view-heading">
+    <p class="eyebrow">ROUND TWO · 9 HOLES</p>
+    <h2>Round two pairings and scores</h2>
+    <p class="muted-copy">Choose net or gross Round One scores to set the pairing order, then enter one shared score for each pair.</p>
+  </div>
+  <div class="tracker-card">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">PLAYER PAIRINGS</p>
+        <h2>Set the groups</h2>
+        <p class="muted-copy">Each preview matches first place with last, second with second-to-last, and so on. Enter one shared 9-hole score for each pair. Generated pairs and score edits are stored when you press Save pairs and scores. If the field is odd, the solo player gets one score field.</p>
+      </div>
+      <div class="round-two-pairing-actions">
+        <anvil-component type="Button" name="generate_round_two_net_pairings_button" prop:text="Preview by Net Score"></anvil-component>
+        <anvil-component type="Button" name="generate_round_two_gross_pairings_button" prop:text="Preview by Gross Score"></anvil-component>
+        <anvil-component type="Button" name="save_round_two_pairings_button" prop:text="Save pairs and scores" prop:role="secondary-button"></anvil-component>
+      </div>
+    </div>
+    <anvil-component type="RepeatingPanel" name="round_two_pairing_rows" prop:item_template="rattler_tournament.Components.Scoring.RoundTwoPairingRow" prop:role="round-two-pairing-list"></anvil-component>
+    <anvil-component type="Label" name="round_two_pairing_status" prop:role="status-text"></anvil-component>
+  </div>
+</anvil-form>

@@ -18,7 +18,7 @@
         <h2>Tournament standings</h2>
         <p class="muted-copy">Choose a tournament, then view overall standings or a division in one leaderboard.</p>
       </section>
-      <anvil-component type="RepeatingPanel" name="tournament_rows" prop:item_template="rattler_tournament.PublicTournamentStandings" prop:role="public-tournament-list"></anvil-component>
+      <anvil-component type="RepeatingPanel" name="tournament_rows" prop:item_template="rattler_tournament.Components.Public.PublicTournamentStandings" prop:role="public-tournament-list"></anvil-component>
       <anvil-component type="Label" name="empty_state" prop:role="muted-text" prop:text="No tournaments have been added yet."></anvil-component>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="news_section">
@@ -27,7 +27,7 @@
         <h2>News</h2>
         <p class="muted-copy">Updates from the Rattler Planning Committee.</p>
       </section>
-      <anvil-component type="RepeatingPanel" name="news_rows" prop:item_template="rattler_tournament.NewsPostCard" prop:role="public-news-list"></anvil-component>
+      <anvil-component type="RepeatingPanel" name="news_rows" prop:item_template="rattler_tournament.Components.Public.NewsPostCard" prop:role="public-news-list"></anvil-component>
       <anvil-component type="Label" name="news_empty_state" prop:role="muted-text" prop:text="There are no news posts yet."></anvil-component>
     </anvil-component>
     <anvil-component type="ColumnPanel" name="expenses_section">
@@ -49,7 +49,7 @@
         <div class="field-block"><label>Payment status</label><anvil-component type="DropDown" name="expense_payment_filter"></anvil-component></div>
       </div>
       <anvil-component type="Label" name="expense_filter_status" prop:role="muted-text"></anvil-component>
-      <anvil-component type="RepeatingPanel" name="budget_participant_rows" prop:item_template="rattler_tournament.PublicBudgetRow" prop:role="public-budget-participant-list"></anvil-component>
+      <anvil-component type="RepeatingPanel" name="budget_participant_rows" prop:item_template="rattler_tournament.Components.Public.PublicBudgetRow" prop:role="public-budget-participant-list"></anvil-component>
       <anvil-component type="Label" name="no_budget_participants_state" prop:role="muted-text" prop:text="No participant expense details have been added."></anvil-component>
     </anvil-component>
   </anvil-block>

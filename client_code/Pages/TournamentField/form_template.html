@@ -1,0 +1,48 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-view">
+  <div class="view-heading">
+    <p class="eyebrow">TOURNAMENT FIELD</p>
+    <h2>Divisions and player details</h2>
+    <p class="muted-copy">Create divisions for this tournament, then optionally assign each player's division and set their Rattlercap. Non-players are kept out of field and round setup.</p>
+  </div>
+  <div class="tracker-card">
+    <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and Rattlercaps together.</span></div>
+    <div class="inline-form player-details-control-row">
+      <label>Division</label>
+      <anvil-component type="DropDown" name="division_dropdown"></anvil-component>
+      <div class="division-action-buttons">
+        <anvil-component type="Button" name="delete_division_button" prop:text="Delete selected division" prop:role="danger-button"></anvil-component>
+        <anvil-component type="Button" name="apply_division_to_selected_button" prop:text="Apply division to selected players" prop:role="secondary-button"></anvil-component>
+      </div>
+      <div class="bulk-handicap-actions">
+        <label>Rattlercap for selected players</label>
+        <anvil-component type="TextBox" name="bulk_handicap_input" prop:type="number" prop:placeholder="e.g. 12.4"></anvil-component>
+        <anvil-component type="Button" name="apply_handicap_to_selected_button" prop:text="Apply Rattlercap to selected players" prop:role="secondary-button"></anvil-component>
+      </div>
+      <div class="player-actions-divider" role="separator" aria-orientation="vertical"></div>
+      <div class="player-maintenance-actions">
+        <anvil-component type="Button" name="remove_selected_field_entries_button" prop:text="Remove selected players" prop:role="danger-button"></anvil-component>
+        <anvil-component type="Button" name="save_field_details_button" prop:text="Save all player details" prop:role="player-details-save-button"></anvil-component>
+      </div>
+    </div>
+    <anvil-component type="ColumnPanel" name="create_division_panel">
+      <div class="inline-form">
+        <label>New division name</label>
+        <anvil-component type="TextBox" name="new_division_name" prop:placeholder="Division name"></anvil-component>
+        <anvil-component type="Button" name="create_division_button" prop:text="Create division"></anvil-component>
+      </div>
+    </anvil-component>
+    <anvil-component type="Label" name="division_status" prop:role="status-text"></anvil-component>
+    <anvil-component type="Label" name="field_status" prop:role="status-text"></anvil-component>
+    <div class="budget-bulk-controls">
+      <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="field_division_filter"></anvil-component></div>
+      <div class="field-block"><label>Search by name</label><anvil-component type="TextBox" name="field_search_box" prop:placeholder="Search players"></anvil-component></div>
+    </div>
+    <div class="budget-bulk-actions">
+      <anvil-component type="Button" name="select_matching_field_players_button" prop:text="Select all matching" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="clear_matching_field_players_button" prop:text="Clear matching" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Label" name="field_search_status" prop:role="muted-text"></anvil-component>
+      <anvil-component type="Label" name="field_selection_status" prop:role="muted-text"></anvil-component>
+    </div>
+    <anvil-component type="RepeatingPanel" name="field_rows" prop:item_template="rattler_tournament.Components.Tournament.EntryDetailsRow"></anvil-component>
+  </div>
+</anvil-form>

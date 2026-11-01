@@ -1,0 +1,13 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-view">
+  <div class="view-heading"><p class="eyebrow">PUBLIC UPDATES</p><h2>News editor</h2><p class="muted-copy">Write and manage posts for the selected tournament. They appear on the public News tab when that tournament is selected.</p></div>
+  <div class="tracker-card news-editor-card">
+    <div class="field-block"><label>Choose a post to edit</label><anvil-component type="DropDown" name="news_post_picker"></anvil-component></div>
+    <div class="field-block"><label>Title</label><anvil-component type="TextBox" name="news_post_title" prop:placeholder="News headline"></anvil-component></div>
+    <div class="field-block"><label>News</label><anvil-component type="TextArea" name="news_post_body" prop:placeholder="Write an update for the public News tab"></anvil-component></div>
+    <div class="inline-form">
+      <anvil-component type="Button" name="save_news_post_button" prop:text="Save and publish"></anvil-component>
+      <anvil-component type="Button" name="delete_news_post_button" prop:text="Delete post" prop:role="danger-button"></anvil-component>
+    </div>
+    <anvil-component type="Label" name="news_status" prop:role="status-text"></anvil-component>
+  </div>
+</anvil-form>
