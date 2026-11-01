@@ -4,7 +4,7 @@ import anvil.google.drive
 from anvil.google.drive import app_files
 import anvil.server
 import anvil.users
-from anvil.js.window import document, window
+from anvil.js.window import window
 
 
 class Form1(Form1Template):
@@ -20,8 +20,6 @@ class Form1(Form1Template):
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
     self._creating_tournament = False
-    self._tournament_menu_open = False
-    self._expanded_menu_group = None
     self._player_entries = []
     self._round_one_score_drafts = {}
     self._field_detail_drafts = {}
@@ -87,27 +85,12 @@ class Form1(Form1Template):
     anvil.users.logout(invalidate_client_objects=True)
     open_form("Form1")
 
-  def _close_menu_drawer(self):
-    page_menu = document.querySelector(".page-menu")
-    assert page_menu is not None
-    page_menu.removeAttribute("open")
-
   def _show_tournament_view(self, name):
-    self._tournament_menu_open = True
     self._show_view(name)
-    self._close_menu_drawer()
 
   def _show_view(self, name):
+    self._active_view = name
     show_tournament_context = name != "players"
-    field_scoring_views = {"event", "field"}
-    scoring_views = {"standings", "round_one", "round_two"}
-    communication_views = {"email", "news"}
-    active_group = (
-      "field_scoring" if name in field_scoring_views else
-      "scoring" if name in scoring_views else
-      "expenses" if name == "budget" else
-      "communication" if name in communication_views else None
-    )
     self.selected_tournament_name.visible = (
       show_tournament_context and not self._creating_tournament
       and self.current_event is not None
@@ -124,16 +107,6 @@ class Form1(Form1Template):
     self.budget_section.visible = name == "budget"
     self.email_section.visible = name == "email"
     self.news_section.visible = name == "news"
-    tournament_view = active_group is not None
-    self.tournament_menu.visible = self._tournament_menu_open and tournament_view
-    self.field_scoring_page_nav.visible = (
-      self._expanded_menu_group == "field_scoring"
-    )
-    self.scoring_page_nav.visible = self._expanded_menu_group == "scoring"
-    self.budget_tab_nav.visible = self._expanded_menu_group == "expenses"
-    self.communication_page_nav.visible = (
-      self._expanded_menu_group == "communication"
-    )
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
@@ -142,30 +115,34 @@ class Form1(Form1Template):
       ("round_two", self.round_two_nav),
       ("email", self.email_nav),
       ("news", self.news_nav),
+      ("players", self.players_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
       )
-    for group_name, button in (
-      ("field_scoring", self.field_scoring_nav),
-      ("scoring", self.scoring_nav),
-      ("expenses", self.expenses_nav),
-      ("communication", self.communication_nav),
+    self._update_budget_navigation()
+
+  def _update_budget_navigation(self):
+    for tab_name, button in (
+      ("categories", self.budget_categories_tab_button),
+      ("assign", self.budget_assignments_tab_button),
+      ("payments", self.budget_payments_tab_button),
     ):
       button.role = (
-        "tournament-subtab-active" if active_group == group_name else "tournament-subtab"
+        "tournament-subtab-active"
+        if self._active_view == "budget" and getattr(self, "_active_budget_tab", "categories") == tab_name
+        else "tournament-subtab"
       )
 
   def _show_budget_tab(self, name):
+    self._active_budget_tab = name
     for tab_name, panel, button in (
       ("categories", self.budget_categories_tab, self.budget_categories_tab_button),
       ("assign", self.budget_assignments_tab, self.budget_assignments_tab_button),
       ("payments", self.budget_payments_tab, self.budget_payments_tab_button),
     ):
       panel.visible = name == tab_name
-      button.role = (
-        "tournament-subtab-active" if name == tab_name else "tournament-subtab"
-      )
+    self._update_budget_navigation()
 
   def _load_news_posts(self, selected_post_id=None):
     tournament = self.current_event
@@ -1021,45 +998,9 @@ class Form1(Form1Template):
   def _amount(value):
     return "{:g}".format(value or 0)
 
-  @handle("event_nav", "click")
-  def event_nav_click(self, **event_args):
-    self._tournament_menu_open = True
-    self._expanded_menu_group = None
-    self.main_menu.visible = False
-    self._show_view("event")
-
-  @handle("main_menu_back_button", "click")
-  def main_menu_back_button_click(self, **event_args):
-    self._tournament_menu_open = False
-    self._expanded_menu_group = None
-    self.main_menu.visible = True
-    self.tournament_menu.visible = False
-
-  def _open_tournament_group(self, group, name):
-    self._expanded_menu_group = group
-    self._tournament_menu_open = True
-    self._show_view(name)
-
-  @handle("field_scoring_nav", "click")
-  def field_scoring_nav_click(self, **event_args):
-    self._open_tournament_group("field_scoring", "event")
-
-  @handle("scoring_nav", "click")
-  def scoring_nav_click(self, **event_args):
-    self._open_tournament_group("scoring", "standings")
-
   @handle("setup_nav", "click")
   def setup_nav_click(self, **event_args):
     self._show_tournament_view("event")
-
-  @handle("expenses_nav", "click")
-  def expenses_nav_click(self, **event_args):
-    self._open_tournament_group("expenses", "budget")
-    self._show_budget_tab("categories")
-
-  @handle("communication_nav", "click")
-  def communication_nav_click(self, **event_args):
-    self._open_tournament_group("communication", "email")
 
   @handle("email_nav", "click")
   def email_nav_click(self, **event_args):
@@ -1513,10 +1454,7 @@ class Form1(Form1Template):
 
   @handle("players_nav", "click")
   def players_nav_click(self, **event_args):
-    self._tournament_menu_open = False
-    self.main_menu.visible = True
     self._show_view("players")
-    self._close_menu_drawer()
 
   @handle("news_nav", "click")
   def news_nav_click(self, **event_args):
@@ -1830,14 +1768,12 @@ class Form1(Form1Template):
       )
       self._show_view("event")
       self._load_event_data()
-      self._close_menu_drawer()
       return
 
     self._creating_tournament = False
     self.current_event = selected_value
     self.edit_tournament_panel.visible = False
     self._load_event_data()
-    self._close_menu_drawer()
 
   @handle("edit_tournament_button", "click")
   def edit_tournament_button_click(self, **event_args):

@@ -1,19 +1,22 @@
-<div class="page-shell">
+<div class="page-shell" anvil:on-dom:keydown="self.navigation_keydown">
   <header class="page-header">
     <div>
       <p anvil:dom-node="subtitle_text" class="subtitle" style="min-height: 18px; min-width: 70px;">the Rattler Planning COMMITTEE presents </p>
       <anvil-slot name="title" placeholder="Add your title here"></anvil-slot>
     </div>
-    <details class="page-menu">
-      <summary class="page-menu-toggle">
-        <span class="page-menu-icon" aria-hidden="true"></span>
-        <span>Menu</span>
-      </summary>
-      <div class="page-actions">
-        <anvil-slot name="actions"></anvil-slot>
-      </div>
-    </details>
   </header>
+
+  <div class="mobile-navigation-bar">
+    <button type="button" class="mobile-navigation-toggle" anvil:dom-node="navigation_toggle"
+            aria-expanded="false" aria-controls="app-navigation"
+            anvil:on-dom:click="self.toggle_navigation">☰ Menu</button>
+  </div>
+  <aside id="app-navigation" class="page-navigation" aria-label="App navigation"
+         anvil:on-dom:click="self.navigation_click">
+    <div class="page-actions">
+      <anvil-slot name="actions"></anvil-slot>
+    </div>
+  </aside>
 
   <main class="page-main">
     <anvil-slot name="content" placeholder="Add content here"></anvil-slot>
