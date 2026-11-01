@@ -1,5 +1,6 @@
 from ._anvil_designer import PlayerRowTemplate
 from anvil import *
+import re
 import anvil.google.auth, anvil.google.drive
 from anvil.google.drive import app_files
 
@@ -100,3 +101,14 @@ class PlayerRow(PlayerRowTemplate):
   @handle("delete_button", "click")
   def delete_button_click(self, **event_args):
     self.parent.raise_event("x-delete-player", golfer=self.item)
+
+
+  def contact_check(self):
+    if not (self.item["name"] or "").strip():
+      return "Name missing"
+    email = (self.item["email"] or "").strip()
+    if not email:
+      return "Email missing"
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+      return "Check email format"
+    return "Name and email format OK"

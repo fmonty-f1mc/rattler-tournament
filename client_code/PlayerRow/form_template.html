@@ -11,6 +11,7 @@
         <div class="player-detail-cell">
           <span class="player-detail-label">Email</span>
           <anvil-component type="Label" name="email_label" bind:text="self.item['email']"></anvil-component>
+          <anvil-component type="Label" name="contact_check_label" bind:text="self.contact_check()" prop:role="muted-text"></anvil-component>
           <anvil-component type="TextBox" name="email_box" prop:placeholder="name@example.com"></anvil-component>
         </div>
         <div class="player-detail-cell">

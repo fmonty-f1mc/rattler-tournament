@@ -299,6 +299,14 @@ def import_golfers_from_csv(csv_file):
     (golfer["name"] or "").strip().lower()
     for golfer in app_tables.golfers.search()
   }
+  for line_number, row in enumerate(rows, start=2):
+    name = (row.get(name_header) or "").strip()
+    if name and name.lower() in existing_names:
+      continue
+    email = csv_value(row, "email")
+    if not name or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+      return _result(f"CSV row {line_number}: add a name and a valid email address before importing.")
+
   imported_count = 0
   skipped_count = 0
   for row in rows:
@@ -335,6 +343,11 @@ def create_golfer(name, email, phone, city, state, handicap=None):
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
+  email = (email or "").strip()
+  if not email:
+    return _result("Add an email address for this participant.")
+  if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+    return _result("Enter a valid email address, such as name@example.com.")
   if any(golfer["name"].strip().lower() == name.lower() for golfer in app_tables.golfers.search()):
     return _result("That player is already on the roster.")
   golfer = app_tables.golfers.add_row(
@@ -368,6 +381,11 @@ def update_golfer(golfer, name, email, phone, city, state, handicap=None):
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
+  email = (email or "").strip()
+  if not email:
+    return _result("Add an email address for this participant.")
+  if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+    return _result("Enter a valid email address, such as name@example.com.")
   if any(
     other.get_id() != golfer.get_id()
     and (other["name"] or "").strip().lower() == name.lower()
