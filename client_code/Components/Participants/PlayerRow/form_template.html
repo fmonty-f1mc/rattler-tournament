@@ -11,6 +11,7 @@
         <div class="player-detail-cell">
           <span class="player-detail-label">Email</span>
           <anvil-component type="Label" name="email_label" bind:text="self.item['email']"></anvil-component>
+          <anvil-component type="Label" name="contact_check_label" bind:text="self.contact_check()" prop:role="muted-text"></anvil-component>
           <anvil-component type="TextBox" name="email_box" prop:placeholder="name@example.com"></anvil-component>
         </div>
         <div class="player-detail-cell">
@@ -27,6 +28,11 @@
           <span class="player-detail-label">State</span>
           <anvil-component type="Label" name="state_label" bind:text="self.item['state']"></anvil-component>
           <anvil-component type="TextBox" name="state_box" prop:placeholder="State"></anvil-component>
+        </div>
+        <div class="player-detail-cell">
+          <span class="player-detail-label">Player handicap</span>
+          <anvil-component type="Label" name="handicap_label" bind:text="'Not set' if self.item['handicap'] is None else str(self.item['handicap'])"></anvil-component>
+          <anvil-component type="TextBox" name="handicap_box" prop:placeholder="Optional, e.g. 12.4"></anvil-component>
         </div>
         <div class="player-detail-cell">
           <span class="player-detail-label">Status</span>

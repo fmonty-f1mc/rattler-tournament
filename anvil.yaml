@@ -66,6 +66,10 @@ db_schema:
       client_hidden: null
       name: active
       type: bool
+    - admin_ui: {}
+      client_hidden: null
+      name: handicap
+      type: number
     indexes: []
     server: full
     title: Golfers

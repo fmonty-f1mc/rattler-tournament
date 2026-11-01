@@ -1,5 +1,6 @@
 from ._anvil_designer import PlayerRowTemplate
 from anvil import *
+import re
 import anvil.google.auth, anvil.google.drive
 from anvil.google.drive import app_files
 
@@ -12,6 +13,7 @@ class PlayerRow(PlayerRowTemplate):
     self.phone_box.text = self.item["phone"] or ""
     self.city_box.text = self.item["city"] or ""
     self.state_box.text = self.item["state"] or ""
+    self.handicap_box.text = "" if self.item["handicap"] is None else str(self.item["handicap"])
     self.active_picker.items = [("Active", True), ("Inactive", False)]
     self._load_active_state()
     self._set_editing(False)
@@ -32,6 +34,7 @@ class PlayerRow(PlayerRowTemplate):
       self.phone_label,
       self.city_label,
       self.state_label,
+      self.handicap_label,
       self.active_label,
     ):
       component.visible = not editing
@@ -42,6 +45,7 @@ class PlayerRow(PlayerRowTemplate):
       self.phone_box,
       self.city_box,
       self.state_box,
+      self.handicap_box,
       self.active_picker,
       self.save_button,
       self.cancel_button,
@@ -63,6 +67,7 @@ class PlayerRow(PlayerRowTemplate):
     self.phone_box.text = self.item["phone"] or ""
     self.city_box.text = self.item["city"] or ""
     self.state_box.text = self.item["state"] or ""
+    self.handicap_box.text = "" if self.item["handicap"] is None else str(self.item["handicap"])
     self._load_active_state()
 
   @handle("name_button", "click")
@@ -90,8 +95,20 @@ class PlayerRow(PlayerRowTemplate):
       city=self.city_box.text,
       state=self.state_box.text,
       active=self.active_picker.selected_value,
+      handicap=self.handicap_box.text,
     )
 
   @handle("delete_button", "click")
   def delete_button_click(self, **event_args):
     self.parent.raise_event("x-delete-player", golfer=self.item)
+
+
+  def contact_check(self):
+    if not (self.item["name"] or "").strip():
+      return "Name missing"
+    email = (self.item["email"] or "").strip()
+    if not email:
+      return "Email missing"
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+      return "Check email format"
+    return "Name and email format OK"

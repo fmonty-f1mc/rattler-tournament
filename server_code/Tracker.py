@@ -8,6 +8,7 @@ import re
 from datetime import datetime
 
 import anvil.server
+from anvil import BlobMedia
 from anvil.tables import app_tables
 
 
@@ -48,10 +49,7 @@ def _email_filter_error(tournament, recipient_type, division_filter):
   return None
 
 
-def _tournament_email_details(tournament, recipient_type="all", division_filter="all"):
-  recipient_by_address = {}
-  missing_count = 0
-  invalid_count = 0
+def _email_golfers(tournament, recipient_type="all", division_filter="all"):
   for entry in app_tables.tournament_entries.search(tournament=tournament):
     is_player = _entry_is_player(entry)
     if recipient_type == "players" and not is_player:
@@ -63,7 +61,14 @@ def _tournament_email_details(tournament, recipient_type="all", division_filter=
       continue
     if division_filter.startswith("division:") and division != division_filter[len("division:"):]:
       continue
-    golfer = entry["golfer"]
+    yield entry["golfer"]
+
+
+def _tournament_email_details(tournament, recipient_type="all", division_filter="all"):
+  recipient_by_address = {}
+  missing_count = 0
+  invalid_count = 0
+  for golfer in _email_golfers(tournament, recipient_type, division_filter):
     address = (golfer["email"] or "").strip()
     if not address:
       missing_count += 1
@@ -299,6 +304,14 @@ def import_golfers_from_csv(csv_file):
     (golfer["name"] or "").strip().lower()
     for golfer in app_tables.golfers.search()
   }
+  for line_number, row in enumerate(rows, start=2):
+    name = (row.get(name_header) or "").strip()
+    if name and name.lower() in existing_names:
+      continue
+    email = csv_value(row, "email")
+    if not name or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+      return _result(f"CSV row {line_number}: add a name and a valid email address before importing.")
+
   imported_count = 0
   skipped_count = 0
   for row in rows:
@@ -328,10 +341,18 @@ def import_golfers_from_csv(csv_file):
 
 
 @anvil.server.callable(require_user=True)
-def create_golfer(name, email, phone, city, state):
+def create_golfer(name, email, phone, city, state, handicap=None):
+  handicap_value = _number(handicap, "Player handicap", allow_blank=True)
+  if handicap is not None and str(handicap).strip() and handicap_value is None:
+    return _result("Enter a valid number for player handicap, or leave it blank.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
+  email = (email or "").strip()
+  if not email:
+    return _result("Add an email address for this participant.")
+  if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+    return _result("Enter a valid email address, such as name@example.com.")
   if any(golfer["name"].strip().lower() == name.lower() for golfer in app_tables.golfers.search()):
     return _result("That player is already on the roster.")
   golfer = app_tables.golfers.add_row(
@@ -340,6 +361,7 @@ def create_golfer(name, email, phone, city, state):
     phone=(phone or "").strip(),
     city=(city or "").strip(),
     state=(state or "").strip(),
+    handicap=handicap_value,
     active=True,
   )
   return _result(golfer=golfer)
@@ -354,13 +376,21 @@ def set_golfer_active(golfer, active):
 
 
 @anvil.server.callable(require_user=True)
-def update_golfer(golfer, name, email, phone, city, state):
+def update_golfer(golfer, name, email, phone, city, state, handicap=None):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
 
+  handicap_value = _number(handicap, "Player handicap", allow_blank=True)
+  if handicap is not None and str(handicap).strip() and handicap_value is None:
+    return _result("Enter a valid number for player handicap, or leave it blank.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
+  email = (email or "").strip()
+  if not email:
+    return _result("Add an email address for this participant.")
+  if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+    return _result("Enter a valid email address, such as name@example.com.")
   if any(
     other.get_id() != golfer.get_id()
     and (other["name"] or "").strip().lower() == name.lower()
@@ -374,6 +404,7 @@ def update_golfer(golfer, name, email, phone, city, state):
     phone=(phone or "").strip(),
     city=(city or "").strip(),
     state=(state or "").strip(),
+    handicap=handicap_value,
   )
   return _result()
 
@@ -460,6 +491,39 @@ def get_tournament_email_summary(tournament, recipient_type="all", division_filt
     missing_count=missing_count,
     invalid_count=invalid_count,
   )
+
+
+@anvil.server.callable(require_user=True)
+def export_tournament_email_list(tournament, recipient_type="all", division_filter="all"):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Select a tournament first.")
+  filter_error = _email_filter_error(tournament, recipient_type, division_filter)
+  if filter_error:
+    return _result(filter_error)
+  addresses, missing_count, invalid_count = _tournament_email_details(
+    tournament, recipient_type, division_filter
+  )
+  if not addresses:
+    return _result("No matching participants have a usable email address.")
+  names = {address.lower(): set() for address in addresses}
+  for golfer in _email_golfers(tournament, recipient_type, division_filter):
+    key = (golfer["email"] or "").strip().lower()
+    if key in names:
+      names[key].add((golfer["name"] or "").strip())
+  output = io.StringIO(newline="")
+  writer = csv.writer(output)
+  writer.writerow(["Name", "Email"])
+  for address in sorted(addresses, key=str.lower):
+    name = "; ".join(sorted(names[address.lower()], key=str.lower))
+    # Keep spreadsheet programs from interpreting names as formulas.
+    if name.startswith(("=", "+", "-", "@", "\t", "\r", "\n")):
+      name = "'" + name
+    safe_address = "'" + address if address.startswith(("=", "+", "-", "@")) else address
+    writer.writerow([name, safe_address])
+  media = BlobMedia("text/csv", output.getvalue().encode("utf-8-sig"),
+                    name="participant-emails.csv")
+  return _result(file=media, recipient_count=len(addresses),
+                 missing_count=missing_count, invalid_count=invalid_count)
 
 
 @anvil.server.callable(require_user=True)
@@ -656,7 +720,7 @@ def list_tournament_entries(tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
   for entry in entries:
-    if entry["handicap"] in (None, 0):
+    if entry["handicap"] is None:
       previous_handicap = _previous_year_handicap(tournament, entry["golfer"])
       if previous_handicap is not None:
         entry["handicap"] = previous_handicap
@@ -759,9 +823,10 @@ def save_tournament_entry_details_batch(tournament, entry_details):
     division = division.strip()
     if division and division not in divisions:
       return _result("Choose a division created for this tournament or leave it unassigned.")
-    handicap_value = _number(details.get("handicap"), "Handicap", allow_blank=True)
-    if handicap_value is None:
-      return _result("Enter a valid handicap for every tournament entry.")
+    handicap_input = details.get("handicap")
+    handicap_value = _number(handicap_input, "Rattlercap", allow_blank=True)
+    if handicap_value is None and handicap_input is not None and str(handicap_input).strip():
+      return _result(f"Enter a valid Rattlercap for {_entry_name(entry)} or leave it blank.")
     updates.append((entry, division, handicap_value))
 
   for entry, division, handicap in updates:
@@ -1181,7 +1246,7 @@ def save_round_two_pairings(tournament, assignments):
       )
     if score_value is not None:
       saved_score_count += 1
-    values = {
+    values: dict = {
       "tournament": tournament,
       "sequence": sequence,
       "pairing_basis": pairing_basis,
@@ -1753,7 +1818,7 @@ def _budget_summary(tournament, migrate_legacy=False):
     category_rows = _ensure_budget_categories(tournament, entries)
 
   if category_rows:
-    category_specs = [
+    category_specs: list = [
       {
         "key": category.get_id(),
         "name": category["name"],
@@ -1808,7 +1873,7 @@ def _budget_summary(tournament, migrate_legacy=False):
       if _entry_is_player(entry)
       else "Non-player · included in expenses"
     )
-    category_shares = [
+    category_shares: list = [
       {
         "category": spec["category"],
         "name": spec["name"],
