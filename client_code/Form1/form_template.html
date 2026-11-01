@@ -70,7 +70,7 @@
       <anvil-component type="ColumnPanel" name="create_tournament_panel" prop:role="tracker-card">
         <p class="eyebrow">NEW YEAR</p>
         <h2>Set up a tournament</h2>
-        <p class="muted-copy">Each year keeps its own course, player list, divisions, handicaps, and scores.</p>
+        <p class="muted-copy">Each year keeps its own course, player list, divisions, Rattlercaps, and scores.</p>
         <div class="form-grid form-grid-four">
           <div class="field-block"><label>Year</label><anvil-component type="TextBox" name="tournament_year" prop:placeholder="2026"></anvil-component></div>
           <div class="field-block"><label>Course</label><anvil-component type="TextBox" name="course_name" prop:placeholder="Course name"></anvil-component></div>
@@ -96,10 +96,10 @@
       <div class="view-heading">
         <p class="eyebrow">TOURNAMENT FIELD</p>
         <h2>Divisions and player details</h2>
-        <p class="muted-copy">Create divisions for this tournament, then optionally assign each player's division and set their handicap. Non-players are kept out of field and round setup.</p>
+        <p class="muted-copy">Create divisions for this tournament, then optionally assign each player's division and set their Rattlercap. Non-players are kept out of field and round setup.</p>
       </div>
       <div class="tracker-card">
-        <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and handicaps together.</span></div>
+        <div class="section-heading"><div><p class="eyebrow">PLAYER DETAILS</p><h2>Tournament entries</h2></div><span class="muted-copy">Save all player divisions and Rattlercaps together.</span></div>
         <div class="inline-form player-details-control-row">
           <label>Division</label>
           <anvil-component type="DropDown" name="division_dropdown"></anvil-component>
@@ -108,9 +108,9 @@
             <anvil-component type="Button" name="apply_division_to_selected_button" prop:text="Apply division to selected players" prop:role="secondary-button"></anvil-component>
           </div>
           <div class="bulk-handicap-actions">
-            <label>Handicap for selected players</label>
+            <label>Rattlercap for selected players</label>
             <anvil-component type="TextBox" name="bulk_handicap_input" prop:type="number" prop:placeholder="e.g. 12.4"></anvil-component>
-            <anvil-component type="Button" name="apply_handicap_to_selected_button" prop:text="Apply handicap to selected players" prop:role="secondary-button"></anvil-component>
+            <anvil-component type="Button" name="apply_handicap_to_selected_button" prop:text="Apply Rattlercap to selected players" prop:role="secondary-button"></anvil-component>
           </div>
           <div class="player-actions-divider" role="separator" aria-orientation="vertical"></div>
           <div class="player-maintenance-actions">
@@ -223,6 +223,7 @@
             <div class="field-block"><label>Phone</label><anvil-component type="TextBox" name="player_phone" prop:placeholder="Phone number"></anvil-component></div>
             <div class="field-block"><label>City</label><anvil-component type="TextBox" name="player_city" prop:placeholder="City"></anvil-component></div>
             <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
+            <div class="field-block"><label>Player handicap (optional)</label><anvil-component type="TextBox" name="player_handicap" prop:placeholder="e.g. 12.4"></anvil-component></div>
           </div>
           <div class="player-add-actions">
             <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>

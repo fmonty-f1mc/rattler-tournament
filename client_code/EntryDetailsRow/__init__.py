@@ -16,7 +16,7 @@ class EntryDetailsRow(EntryDetailsRowTemplate):
     division = self.item.get("division") or "No division"
     handicap = self.item.get("handicap") or "Not set"
     self.entry_details_summary.text = (
-      f"Division: {division} · Handicap: {handicap}"
+      f"Division: {division} · Rattlercap: {handicap}"
     )
 
   def set_division(self, division):

@@ -471,7 +471,7 @@ class Form1(Form1Template):
       )
     else:
       self.round_two_pairing_status.text = (
-        "Enter Round One scores first. Net pairing also requires a handicap for every player."
+        "Enter Round One scores first. Net pairing also requires a Rattlercap for every player."
       )
     foursomes = anvil.server.call("get_or_create_tournament_foursomes", tournament)
     self.foursome_group_rows.items = self._foursome_group_items(
@@ -1095,7 +1095,7 @@ class Form1(Form1Template):
       row_item["selected"] = False
       getattr(row, "select_player_checkbox").checked = False
     self._update_field_selection_status()
-    self.field_status.text = f"Division and handicap saved for {result['saved_count']} players."
+    self.field_status.text = f"Division and Rattlercap saved for {result['saved_count']} players."
 
   @handle("field_search_box", "change")
   def field_search_box_change(self, **event_args):
@@ -1174,7 +1174,7 @@ class Form1(Form1Template):
 
     handicap = self.bulk_handicap_input.text.strip()
     if not handicap:
-      self.field_status.text = "Enter a handicap to apply."
+      self.field_status.text = "Enter a Rattlercap to apply."
       return
 
     self._capture_field_detail_drafts()
@@ -1201,7 +1201,7 @@ class Form1(Form1Template):
         getattr(row, "set_handicap")(handicap)
     self._capture_field_detail_drafts()
     self.field_status.text = (
-      f"Applied handicap {handicap} to {len(selected_items)} selected players. "
+      f"Applied Rattlercap {handicap} to {len(selected_items)} selected players. "
       "Save all player details to keep the changes."
     )
 
@@ -1918,6 +1918,7 @@ class Form1(Form1Template):
       self.player_phone.text,
       self.player_city.text,
       self.player_state.text,
+      self.player_handicap.text,
     )
     if not result["ok"]:
       self.player_status.text = result["message"]
@@ -1927,6 +1928,7 @@ class Form1(Form1Template):
     self.player_phone.text = ""
     self.player_city.text = ""
     self.player_state.text = ""
+    self.player_handicap.text = ""
     self._load_players()
     self._load_event_data()
     self._show_player_add_mode(None)
@@ -1955,8 +1957,8 @@ class Form1(Form1Template):
     self.player_status.text = result["message"]
 
   @handle("player_rows", "x-save-player")
-  def player_rows_save_player(self, golfer, name, email, phone, city, state, active, **event_args):
-    result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state)
+  def player_rows_save_player(self, golfer, name, email, phone, city, state, active, handicap, **event_args):
+    result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state, handicap)
     if not result["ok"]:
       self.player_status.text = result["message"]
       return

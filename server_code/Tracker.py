@@ -328,7 +328,10 @@ def import_golfers_from_csv(csv_file):
 
 
 @anvil.server.callable(require_user=True)
-def create_golfer(name, email, phone, city, state):
+def create_golfer(name, email, phone, city, state, handicap=None):
+  handicap_value = _number(handicap, "Player handicap", allow_blank=True)
+  if handicap is not None and str(handicap).strip() and handicap_value is None:
+    return _result("Enter a valid number for player handicap, or leave it blank.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
@@ -340,6 +343,7 @@ def create_golfer(name, email, phone, city, state):
     phone=(phone or "").strip(),
     city=(city or "").strip(),
     state=(state or "").strip(),
+    handicap=handicap_value,
     active=True,
   )
   return _result(golfer=golfer)
@@ -354,10 +358,13 @@ def set_golfer_active(golfer, active):
 
 
 @anvil.server.callable(require_user=True)
-def update_golfer(golfer, name, email, phone, city, state):
+def update_golfer(golfer, name, email, phone, city, state, handicap=None):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
 
+  handicap_value = _number(handicap, "Player handicap", allow_blank=True)
+  if handicap is not None and str(handicap).strip() and handicap_value is None:
+    return _result("Enter a valid number for player handicap, or leave it blank.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
@@ -374,6 +381,7 @@ def update_golfer(golfer, name, email, phone, city, state):
     phone=(phone or "").strip(),
     city=(city or "").strip(),
     state=(state or "").strip(),
+    handicap=handicap_value,
   )
   return _result()
 
@@ -759,9 +767,9 @@ def save_tournament_entry_details_batch(tournament, entry_details):
     division = division.strip()
     if division and division not in divisions:
       return _result("Choose a division created for this tournament or leave it unassigned.")
-    handicap_value = _number(details.get("handicap"), "Handicap", allow_blank=True)
+    handicap_value = _number(details.get("handicap"), "Rattlercap", allow_blank=True)
     if handicap_value is None:
-      return _result("Enter a valid handicap for every tournament entry.")
+      return _result("Enter a valid Rattlercap for every tournament entry.")
     updates.append((entry, division, handicap_value))
 
   for entry, division, handicap in updates:
