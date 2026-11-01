@@ -7,6 +7,37 @@
         <anvil-component type="Button" name="open_bulk_player_add_button" prop:text="Bulk add" prop:role="secondary-button"></anvil-component>
       </anvil-component>
     </div>
+    <div class="directory-toolbar">
+      <anvil-component type="Button" name="edit_directory_button" prop:text="Edit spreadsheet"></anvil-component>
+      <anvil-component type="Button" name="export_directory_button" prop:text="Export CSV" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="open_directory_import_button" prop:text="Import updates" prop:role="secondary-button"></anvil-component>
+    </div>
+    <anvil-component type="ColumnPanel" name="directory_edit_actions" prop:visible="False">
+      <p class="muted-copy">Edit cells and use Tab to move across columns. Save all changes includes edited participants hidden by your filters. Player handicap changes here do not change tournament Rattlercaps.</p>
+      <div class="directory-toolbar">
+        <anvil-component type="Button" name="save_directory_button" prop:text="Save all changes"></anvil-component>
+        <anvil-component type="Button" name="cancel_directory_button" prop:text="Cancel" prop:role="secondary-button"></anvil-component>
+        <anvil-component type="Label" name="directory_draft_status" prop:role="muted-text"></anvil-component>
+      </div>
+    </anvil-component>
+    <anvil-component type="ColumnPanel" name="directory_import_panel" prop:visible="False" prop:role="player-add-panel">
+      <h3>Update from Google Sheets or Excel</h3>
+      <p class="muted-copy">Export CSV, open it in Google Sheets using File → Import, edit the details, then use File → Download → Comma-separated values (.csv). Keep participant_id and revision unchanged. Import columns as text (turn off conversion to numbers, dates and formulas) to preserve phone numbers. A leading apostrophe on exported text protects spreadsheet formulas and is removed on re-import.</p>
+      <p class="muted-copy">This updates existing participants only. Blank contact cells clear those values; email must remain valid when changed. Blank handicap clears it. Active accepts TRUE or FALSE. Omitted rows stay unchanged. Use Bulk add for new participants.</p>
+      <div class="directory-toolbar">
+        <anvil-component type="FileLoader" name="directory_csv_file" prop:text="Choose edited CSV" prop:file_types=".csv"></anvil-component>
+        <anvil-component type="Button" name="preview_directory_button" prop:text="Preview changes" prop:role="secondary-button"></anvil-component>
+        <anvil-component type="Button" name="close_directory_import_button" prop:text="Close" prop:role="secondary-button"></anvil-component>
+      </div>
+      <anvil-component type="Label" name="directory_import_status" prop:role="status-text"></anvil-component>
+      <anvil-component type="ColumnPanel" name="directory_preview_panel" prop:visible="False">
+        <div class="directory-preview-scroll">
+          <div class="directory-preview-row directory-column-headings"><span>Participant</span><span>Field</span><span>Before</span><span>After</span></div>
+          <anvil-component type="RepeatingPanel" name="directory_preview_rows" prop:item_template="rattler_tournament.Components.Participants.DirectoryImportChange" prop:role="directory-preview-list"></anvil-component>
+        </div>
+        <anvil-component type="Button" name="apply_directory_import_button" prop:text="Apply these updates" prop:enabled="False"></anvil-component>
+      </anvil-component>
+    </anvil-component>
     <anvil-component type="ColumnPanel" name="player_create_panel" prop:role="player-add-panel">
       <div class="section-heading"><div><p class="eyebrow">INDIVIDUAL ADD</p><h2>Add one player</h2></div></div>
       <div class="form-grid form-grid-five">
@@ -41,6 +72,14 @@
     </div>
     <anvil-component type="Label" name="player_filter_status" prop:role="muted-text"></anvil-component>
     <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="rattler_tournament.Components.Participants.PlayerRow" prop:role="player-list"></anvil-component>
+    <anvil-component type="ColumnPanel" name="directory_spreadsheet" prop:visible="False" prop:role="directory-spreadsheet">
+      <div class="directory-table-scroll" tabindex="0" role="region" aria-label="Participant directory spreadsheet">
+        <div class="directory-table-content">
+          <div class="directory-grid-row directory-column-headings"><span>Name</span><span>Email</span><span>Phone</span><span>City</span><span>State</span><span>Handicap</span><span>Status</span></div>
+          <anvil-component type="RepeatingPanel" name="directory_edit_rows" prop:item_template="rattler_tournament.Components.Participants.DirectoryEditRow" prop:role="directory-edit-list"></anvil-component>
+        </div>
+      </div>
+    </anvil-component>
     <anvil-component type="Label" name="no_player_matches" prop:role="muted-text"></anvil-component>
   </div>
 </anvil-form>

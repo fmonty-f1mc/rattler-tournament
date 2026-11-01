@@ -1,6 +1,8 @@
 from ._anvil_designer import ParticipantDirectoryTemplate
 from anvil import *
 import anvil.server
+import anvil.media
+from ...Components.Participants.DirectoryEditRow import DirectoryEditRow
 
 
 class ParticipantDirectory(ParticipantDirectoryTemplate):
@@ -10,16 +12,24 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
   def initialize(self, app):
     """Attach shared tournament context; keep edits local to this page."""
     self.app = app
+    self._editing_directory = False
+    self._directory_rows = []
+    self._directory_originals = {}
+    self._directory_revisions = {}
+    self._preview_file = None
+    self._preview_count = 0
     self.player_status.text = ""
     self._show_player_add_mode(None)
 
   def _refresh_player_rows(self):
+    self._commit_directory_cells()
     query = (self.player_search.text or "").strip().lower()
     email_unlisted = self.email_unlisted_filter.checked
     phone_unlisted = self.phone_unlisted_filter.checked
     matches = []
 
-    for golfer in self.app.golfers:
+    roster = self._directory_rows if self._editing_directory else self.app.golfers
+    for golfer in roster:
       name = (golfer["name"] or "").lower()
       email = (golfer["email"] or "").strip()
       phone = (golfer["phone"] or "").strip()
@@ -33,15 +43,194 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
         continue
       matches.append(golfer)
 
-    self.player_rows.items = matches
+    if self._editing_directory:
+      self.directory_edit_rows.items = matches
+    else:
+      self.player_rows.items = matches
     self.player_filter_status.text = (
-      f"Showing {len(matches)} of {len(self.app.golfers)} participants"
+      f"Showing {len(matches)} of {len(roster)} participants"
     )
     self.no_player_matches.visible = not matches
     self.no_player_matches.text = (
       "No participants in the roster yet."
-      if not self.app.golfers else "No participants match these filters."
+      if not roster else "No participants match these filters."
     )
+
+  def _commit_directory_cells(self):
+    if self._editing_directory:
+      for row_form in self.directory_edit_rows.get_components():
+        if isinstance(row_form, DirectoryEditRow):
+          row_form.commit()
+
+  def _directory_values(self, row):
+    return {field: (bool(row[field]) if field == "active" else row[field] if field == "handicap"
+                    else row[field] or "")
+            for field in ("name", "email", "phone", "city", "state", "handicap", "active")}
+
+  def _directory_dirty_rows(self):
+    return [row for row in self._directory_rows
+            if self._directory_values(row) != self._directory_originals[row.get_id()]]
+
+  @handle("directory_edit_rows", "x-directory-change")
+  def directory_cell_change(self, **event_args):
+    count = len(self._directory_dirty_rows())
+    self.directory_draft_status.text = f"{count} participant(s) with unsaved changes"
+
+  def _set_directory_busy(self, busy):
+    for name in ("edit_directory_button", "export_directory_button", "open_directory_import_button",
+                 "save_directory_button", "cancel_directory_button", "player_search",
+                 "email_unlisted_filter", "phone_unlisted_filter", "directory_csv_file",
+                 "preview_directory_button", "close_directory_import_button",
+                 "open_individual_player_add_button", "open_bulk_player_add_button",
+                 "create_player_button", "import_players_button"):
+      getattr(self, name).enabled = not busy
+    self.apply_directory_import_button.enabled = not busy and self._preview_count > 0
+    for row_form in self.directory_edit_rows.get_components():
+      if isinstance(row_form, DirectoryEditRow):
+        row_form.set_enabled(not busy)
+
+  def _finish_directory_editing(self):
+    # Buffers provide Cancel without writing to the database.
+    for row in self._directory_rows:
+      row.reset()
+      row.buffer_changes(False)
+    self._directory_rows = []
+    self._directory_originals = {}
+    self._directory_revisions = {}
+    self.directory_edit_rows.items = []
+    self._editing_directory = False
+    self.directory_edit_actions.visible = False
+    self.directory_spreadsheet.visible = False
+    self.player_rows.visible = True
+    self.edit_directory_button.visible = True
+    self.export_directory_button.visible = True
+    self.open_directory_import_button.visible = True
+    self._show_player_add_mode(None)
+
+  @handle("edit_directory_button", "click")
+  def edit_directory_button_click(self, **event_args):
+    self._set_directory_busy(True)
+    try:
+      result = anvil.server.call("load_directory_for_editing")
+    finally:
+      self._set_directory_busy(False)
+    self._directory_rows = result["rows"]
+    self._directory_revisions = result["revisions"]
+    self._directory_originals = {row.get_id(): self._directory_values(row) for row in self._directory_rows}
+    for row in self._directory_rows:
+      row.buffer_changes(True)
+    self._editing_directory = True
+    self._clear_directory_preview()
+    self.directory_import_panel.visible = False
+    self._show_player_add_mode(None)
+    self.player_add_options.visible = False
+    self.directory_edit_actions.visible = True
+    self.directory_spreadsheet.visible = True
+    self.player_rows.visible = False
+    self.edit_directory_button.visible = False
+    self.export_directory_button.visible = False
+    self.open_directory_import_button.visible = False
+    self.directory_draft_status.text = "Edit any cell, then save all changes."
+    self._refresh_player_rows()
+
+  @handle("cancel_directory_button", "click")
+  def cancel_directory_button_click(self, **event_args):
+    self._commit_directory_cells()
+    if self._directory_dirty_rows() and not confirm("Discard all unsaved directory changes?", title="Cancel spreadsheet edits"):
+      return
+    self._finish_directory_editing()
+    self.app._load_players()
+    self.player_status.text = "Spreadsheet edits discarded."
+
+  @handle("save_directory_button", "click")
+  def save_directory_button_click(self, **event_args):
+    self._commit_directory_cells()
+    updates = [{"participant_id": row.get_id(), "revision": self._directory_revisions[row.get_id()],
+                "values": self._directory_values(row)} for row in self._directory_dirty_rows()]
+    self._set_directory_busy(True)
+    try:
+      result = anvil.server.call("save_directory_updates", updates)
+      if not result["ok"]:
+        self.player_status.text = result["message"]
+        return
+      self._finish_directory_editing()
+      self.app._load_players()
+      self.app._load_event_data()
+      self.player_status.text = f"Saved changes to {result['updated_count']} participant(s)."
+    finally:
+      self._set_directory_busy(False)
+
+  @handle("export_directory_button", "click")
+  def export_directory_button_click(self, **event_args):
+    self._set_directory_busy(True)
+    try:
+      anvil.media.download(anvil.server.call("export_participant_directory"))
+      self.player_status.text = "Exported the full directory, including participants hidden by filters."
+    finally:
+      self._set_directory_busy(False)
+
+  def _clear_directory_preview(self):
+    self._preview_file = None
+    self._preview_count = 0
+    self.directory_preview_rows.items = []
+    self.directory_preview_panel.visible = False
+    self.directory_import_status.text = ""
+    self.apply_directory_import_button.enabled = False
+
+  @handle("open_directory_import_button", "click")
+  def open_directory_import_button_click(self, **event_args):
+    self._show_player_add_mode(None)
+    self.player_add_options.visible = False
+    self._clear_directory_preview()
+    self.directory_import_panel.visible = True
+
+  @handle("close_directory_import_button", "click")
+  def close_directory_import_button_click(self, **event_args):
+    self._clear_directory_preview()
+    self.directory_import_panel.visible = False
+    self._show_player_add_mode(None)
+
+  @handle("directory_csv_file", "change")
+  def directory_csv_file_change(self, **event_args):
+    self._clear_directory_preview()
+
+  @handle("preview_directory_button", "click")
+  def preview_directory_button_click(self, **event_args):
+    self._clear_directory_preview()
+    csv_file = self.directory_csv_file.file
+    self._set_directory_busy(True)
+    try:
+      result = anvil.server.call("preview_directory_csv", csv_file)
+      if not result["ok"]:
+        self.directory_import_status.text = result["message"]
+        return
+      self._preview_file = csv_file
+      self._preview_count = result["updated_count"]
+      self.directory_preview_rows.items = result["changes"]
+      self.directory_preview_panel.visible = self._preview_count > 0
+      self.directory_import_status.text = (
+        f"{self._preview_count} participant(s), {len(result['changes'])} cell change(s). Review below before applying."
+        if self._preview_count else "No changes found."
+      )
+    finally:
+      self._set_directory_busy(False)
+
+  @handle("apply_directory_import_button", "click")
+  def apply_directory_import_button_click(self, **event_args):
+    if self._preview_file is None or not self._preview_count:
+      return
+    self._set_directory_busy(True)
+    try:
+      result = anvil.server.call("apply_directory_csv", self._preview_file)
+      self._clear_directory_preview()
+      if not result["ok"]:
+        self.directory_import_status.text = result["message"]
+        return
+      self.app._load_players()
+      self.app._load_event_data()
+      self.directory_import_status.text = f"Updated {result['updated_count']} participant(s)."
+    finally:
+      self._set_directory_busy(False)
 
   @handle("player_search", "change")
   def player_search_change(self, **event_args):

@@ -2097,3 +2097,134 @@ input.anvil-role-budget-paid-input:disabled {
   .field-save-bar > div { width: 100%; }
   .field-save-bar .budget-bulk-actions { justify-content: space-between; }
 }
+
+/* Directory spreadsheet and CSV review share fixed columns inside scroll areas. */
+.directory-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.directory-toolbar > .anvil-button {
+  margin: 0;
+}
+
+.anvil-role-directory-spreadsheet {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  contain: inline-size;
+}
+
+.directory-table-scroll,
+.directory-preview-scroll {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+  max-height: 65vh;
+  border: 1px solid var(--blank-border);
+  border-radius: 8px;
+}
+
+.directory-table-scroll {
+  overflow: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--blank-primary) var(--blank-surface-muted);
+  scrollbar-width: auto;
+}
+
+.directory-table-scroll::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.directory-table-scroll::-webkit-scrollbar-track,
+.directory-table-scroll::-webkit-scrollbar-corner {
+  background: var(--blank-surface-muted);
+}
+
+.directory-table-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid var(--blank-surface-muted);
+  border-radius: 8px;
+  background: var(--blank-primary);
+}
+
+.directory-table-scroll:focus-visible {
+  outline: 2px solid var(--blank-primary);
+  outline-offset: 2px;
+}
+
+.directory-table-content {
+  width: 1100px;
+  min-width: 100%;
+}
+
+.directory-grid-row {
+  display: grid;
+  grid-template-columns: 200px 250px 170px 160px 90px 100px 130px;
+  min-width: 1100px;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--blank-border);
+}
+
+.directory-grid-row > * {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.directory-grid-row input.anvil-text-box,
+.directory-grid-row .anvil-dropdown select {
+  min-height: 42px;
+  border: 0;
+  border-right: 1px solid var(--blank-border);
+  border-radius: 0;
+  background: var(--blank-surface);
+}
+
+.directory-grid-row input.anvil-text-box:focus,
+.directory-grid-row .anvil-dropdown select:focus {
+  position: relative;
+  outline: 2px solid var(--blank-primary);
+  outline-offset: -2px;
+  background: var(--blank-surface-muted);
+}
+
+.anvil-role-directory-edit-list > div,
+.anvil-role-directory-preview-list > div {
+  display: block;
+}
+
+.directory-column-headings {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--blank-surface-muted);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blank-primary-dark);
+}
+
+.directory-column-headings > span {
+  padding: 10px 12px;
+}
+
+.directory-preview-row {
+  display: grid;
+  grid-template-columns: 190px 140px minmax(230px, 1fr) minmax(230px, 1fr);
+  min-width: 790px;
+  border-bottom: 1px solid var(--blank-border);
+}
+
+.directory-preview-row > .anvil-label {
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+}

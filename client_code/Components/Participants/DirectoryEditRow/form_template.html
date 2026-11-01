@@ -1,0 +1,11 @@
+<anvil-form container="ColumnPanel">
+  <div class="directory-grid-row">
+    <anvil-component type="TextBox" name="name_box" prop:placeholder="Name" writeback:text="self.item['name']"></anvil-component>
+    <anvil-component type="TextBox" name="email_box" prop:placeholder="Email" writeback:text="self.item['email']"></anvil-component>
+    <anvil-component type="TextBox" name="phone_box" prop:placeholder="Phone" writeback:text="self.item['phone']"></anvil-component>
+    <anvil-component type="TextBox" name="city_box" prop:placeholder="City" writeback:text="self.item['city']"></anvil-component>
+    <anvil-component type="TextBox" name="state_box" prop:placeholder="State" writeback:text="self.item['state']"></anvil-component>
+    <anvil-component type="TextBox" name="handicap_box" prop:placeholder="Handicap" bind:text="'' if self.item['handicap'] is None else str(self.item['handicap'])"></anvil-component>
+    <anvil-component type="DropDown" name="active_picker" writeback:selected_value="self.item['active']"></anvil-component>
+  </div>
+</anvil-form>
