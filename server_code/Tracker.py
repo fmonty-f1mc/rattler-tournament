@@ -720,7 +720,7 @@ def list_tournament_entries(tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
   for entry in entries:
-    if entry["handicap"] in (None, 0):
+    if entry["handicap"] is None:
       previous_handicap = _previous_year_handicap(tournament, entry["golfer"])
       if previous_handicap is not None:
         entry["handicap"] = previous_handicap

@@ -1,6 +1,7 @@
 from ._anvil_designer import TournamentFieldTemplate
 from anvil import *
 import anvil.server
+import math
 
 
 class TournamentField(TournamentFieldTemplate):
@@ -41,6 +42,7 @@ class TournamentField(TournamentFieldTemplate):
     self.apply_division_to_selected_button.enabled = False
     self.bulk_handicap_input.enabled = False
     self.apply_handicap_to_selected_button.enabled = False
+    self.generate_rattlercaps_button.enabled = False
     self.remove_selected_field_entries_button.enabled = False
     self._division_selection = None
     self.create_division_panel.visible = True
@@ -148,6 +150,7 @@ class TournamentField(TournamentFieldTemplate):
     total_count = len(self._field_detail_items)
     self.apply_division_to_selected_button.enabled = selected_count > 0
     self.apply_handicap_to_selected_button.enabled = selected_count > 0
+    self.generate_rattlercaps_button.enabled = selected_count > 0
     self.remove_selected_field_entries_button.enabled = selected_count > 0
     self.field_selection_status.text = (
       f"{selected_count} selected · {matching_count} matching · {total_count} players"
@@ -418,6 +421,47 @@ class TournamentField(TournamentFieldTemplate):
       f"Applied {division_label} to {len(selected_items)} selected players. "
       "Press Save changes to keep the changes."
     )
+
+  @handle("generate_rattlercaps_button", "click")
+  def generate_rattlercaps_click(self, **event_args):
+    if self.app.current_event is None:
+      self.field_status.text = "Create or select a tournament first."
+      return
+    self._capture_field_detail_drafts()
+    selected_items = [item for item in self._field_detail_items if item["selected"]]
+    if not selected_items:
+      self.field_status.text = "Select players first, or use Select all matching to generate for the whole list."
+      return
+
+    generated_count = 0
+    skipped_names = []
+    for item in selected_items:
+      golfer = item["entry"]["golfer"]
+      player_handicap = self._cap_key(golfer["handicap"])
+      if not isinstance(player_handicap, (int, float)) or not math.isfinite(player_handicap * 1.5):
+        skipped_names.append(golfer["name"])
+        continue
+      rattlercap = str(min(20, math.ceil(player_handicap * 1.5)))
+      item["handicap"] = rattlercap
+      self._field_detail_drafts[item["entry"].get_id()] = {
+        "division": item["division"],
+        "handicap": rattlercap,
+      }
+      generated_count += 1
+
+    self._refresh_field_rows()
+    self.field_status.text = (
+      f"Generated Rattlercaps for {generated_count} selected players. Review the values, then press Save changes."
+      if generated_count else "No Rattlercaps generated."
+    )
+    if skipped_names:
+      names = ", ".join(skipped_names[:5])
+      if len(skipped_names) > 5:
+        names += f" and {len(skipped_names) - 5} more"
+      self.field_status.text += (
+        f" Skipped {len(skipped_names)} without a valid player handicap: {names}. "
+        "Set their player handicaps in the participant roster and try again. Existing Rattlercaps were kept."
+      )
 
   @handle("apply_handicap_to_selected_button", "click")
   def apply_handicap_to_selected_button_click(self, **event_args):

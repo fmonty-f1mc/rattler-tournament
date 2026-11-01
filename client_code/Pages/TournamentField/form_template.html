@@ -42,6 +42,14 @@
           <anvil-component type="Button" name="apply_handicap_to_selected_button" prop:text="Apply Rattlercap" prop:role="secondary-button"></anvil-component>
         </div>
       </div>
+      <div class="setup-next-step">
+        <div>
+          <p class="eyebrow">RATTLERCAP GENERATOR</p>
+          <p class="muted-copy">Player handicap × 150%, rounded up to a whole number, with a maximum of 20. For example: 9 → 14, 12.4 → 19, 18 → 20.</p>
+          <p class="muted-copy">Uses player handicaps from the participant roster. Replaces Rattlercaps for selected players; skips missing handicaps. Select all matching to generate for everyone in the current list. Review the results before saving.</p>
+        </div>
+        <anvil-component type="Button" name="generate_rattlercaps_button" prop:text="Generate Rattlercaps for selected" prop:role="secondary-button" prop:enabled="false"></anvil-component>
+      </div>
     </div>
     <anvil-component type="Label" name="field_search_status" prop:role="muted-text"></anvil-component>
     <div class="field-save-bar" aria-live="polite">

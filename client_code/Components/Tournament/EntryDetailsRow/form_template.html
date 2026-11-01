@@ -6,6 +6,7 @@
           <anvil-component type="CheckBox" name="select_player_checkbox" writeback:checked="self.item['selected']"></anvil-component>
           <anvil-component type="Label" name="player_label" prop:role="row-title" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
         </div>
+        <anvil-component type="Label" name="player_handicap_label" prop:role="muted-text" bind:text="'Player handicap: ' + (str(self.item['entry']['golfer']['handicap']) if self.item['entry']['golfer']['handicap'] is not None else 'Not set')"></anvil-component>
         <anvil-component type="Label" name="entry_details_summary" prop:role="muted-text"></anvil-component>
       </div>
     </div>
