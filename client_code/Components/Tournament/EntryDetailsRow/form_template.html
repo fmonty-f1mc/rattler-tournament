@@ -1,5 +1,5 @@
 <anvil-form container="ColumnPanel">
-  <div class="entry-details-row">
+  <div class="entry-details-row field-inline-row">
     <div class="field-player">
       <div class="entry-player-copy">
         <div class="entry-player-heading">
@@ -9,10 +9,7 @@
         <anvil-component type="Label" name="entry_details_summary" prop:role="muted-text"></anvil-component>
       </div>
     </div>
-    <div class="entry-row-actions">
-      <anvil-component type="Button" name="edit_button" prop:text="Edit" prop:role="primary-button"></anvil-component>
-    </div>
-    <anvil-component type="ColumnPanel" name="entry_edit_fields" prop:role="entry-edit-fields">
+    <anvil-component type="ColumnPanel" name="entry_edit_fields" prop:role="field-inline-inputs">
       <div class="entry-editor-grid">
         <div class="score-input-block">
           <label>Division (optional)</label>

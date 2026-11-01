@@ -10,6 +10,10 @@ class TournamentDetails(TournamentDetailsTemplate):
   def initialize(self, app):
     """Attach shared tournament context; keep edits local to this page."""
     self.app = app
+    self._entry_options: list = []
+    self._entry_tournament_id = None
+    self.entry_roster_filter.items = [("Active roster", "active"), ("All roster", "all"), ("Inactive roster", "inactive")]
+    self.entry_roster_filter.selected_value = "active"
     self.edit_tournament_panel.visible = False
     self.create_tournament_panel.visible = False
     self.event_status.text = ""
@@ -64,21 +68,30 @@ class TournamentDetails(TournamentDetailsTemplate):
 
   def _load_entry_options(self, entries):
     if self.app.current_event is None:
+      self._entry_options = []
+      self._entry_tournament_id = None
       self.entry_options.items = []
       self.entry_status.text = "Create or select a tournament before adding participants."
       return
 
+    tournament_id = self.app.current_event.get_id()
+    selected_ids = {
+      option["golfer"].get_id() for option in self._entry_options if option["selected"]
+    } if self._entry_tournament_id == tournament_id else set()
+    if self._entry_tournament_id != tournament_id:
+      self.entry_search.text = ""
+    self._entry_tournament_id = tournament_id
     entered_ids = {entry["golfer"].get_id() for entry in entries}
     self._entry_options = [
       {
         "golfer": golfer,
         "label": golfer["name"] + (" · inactive" if not golfer["active"] else ""),
-        "selected": False,
+        "selected": golfer.get_id() in selected_ids,
       }
       for golfer in self.app.golfers
       if golfer.get_id() not in entered_ids
     ]
-    self.entry_options.items = self._entry_options
+    self._refresh_entry_options()
     if not self._entry_options:
       self.entry_status.text = (
         "Add golfers to the roster first."
@@ -87,6 +100,55 @@ class TournamentDetails(TournamentDetailsTemplate):
       )
     else:
       self.entry_status.text = ""
+
+  def _matching_entry_options(self):
+    query = (self.entry_search.text or "").strip().lower()
+    roster_filter = self.entry_roster_filter.selected_value or "active"
+    return [option for option in self._entry_options
+      if (not query or query in (option["golfer"]["name"] or "").lower())
+      and (roster_filter == "all" or bool(option["golfer"]["active"]) == (roster_filter == "active"))]
+
+  def _update_entry_selection(self):
+    count = sum(1 for option in self._entry_options if option["selected"])
+    matching_count = len(self._matching_entry_options())
+    self.entry_selection_status.text = f"{count} selected across all filters · {matching_count} matching"
+    self.add_players_button.enabled = count > 0
+    self.add_non_players_button.enabled = count > 0
+    self.add_players_button.text = f"Add {count} as players" if count else "Add selected as players"
+    self.add_non_players_button.text = f"Add {count} as non-players" if count else "Add selected as non-players"
+    self.clear_entry_selection_button.enabled = count > 0
+    self.select_matching_entries_button.enabled = matching_count > 0
+
+  def _refresh_entry_options(self):
+    matches = self._matching_entry_options()
+    self.entry_options.items = matches
+    self.entry_empty_status.text = "" if matches else "No available participants match. Try another name or choose All roster."
+    self._update_entry_selection()
+
+  @handle("entry_search", "change")
+  @handle("entry_roster_filter", "change")
+  def entry_filters_change(self, **event_args):
+    self._refresh_entry_options()
+
+  @handle("entry_options", "x-entry-selection-changed")
+  def entry_selection_changed(self, **event_args):
+    self._update_entry_selection()
+
+  @handle("select_matching_entries_button", "click")
+  def select_matching_entries_click(self, **event_args):
+    for option in self._matching_entry_options():
+      option["selected"] = True
+    self._refresh_entry_options()
+
+  @handle("clear_entry_selection_button", "click")
+  def clear_entry_selection_click(self, **event_args):
+    for option in self._entry_options:
+      option["selected"] = False
+    self._refresh_entry_options()
+
+  @handle("continue_to_field_button", "click")
+  def continue_to_field_click(self, **event_args):
+    self.app._show_tournament_view("field")
 
   @handle("edit_tournament_button", "click")
   def edit_tournament_button_click(self, **event_args):
@@ -172,12 +234,20 @@ class TournamentDetails(TournamentDetailsTemplate):
       self.entry_status.text = "Create or select a tournament first."
       return
     selected_golfers = [option["golfer"] for option in self._entry_options if option["selected"]]
-    result = anvil.server.call(
-      "add_golfers_to_tournament",
-      self.app.current_event,
-      selected_golfers,
-      is_player,
-    )
+    if not selected_golfers:
+      self.entry_status.text = "Select at least one participant to add."
+      return
+    self.add_players_button.enabled = False
+    self.add_non_players_button.enabled = False
+    try:
+      result = anvil.server.call(
+        "add_golfers_to_tournament",
+        self.app.current_event,
+        selected_golfers,
+        is_player,
+      )
+    finally:
+      self._update_entry_selection()
     if not result["ok"]:
       self.entry_status.text = result["message"]
       return

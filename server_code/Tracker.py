@@ -823,9 +823,10 @@ def save_tournament_entry_details_batch(tournament, entry_details):
     division = division.strip()
     if division and division not in divisions:
       return _result("Choose a division created for this tournament or leave it unassigned.")
-    handicap_value = _number(details.get("handicap"), "Rattlercap", allow_blank=True)
-    if handicap_value is None:
-      return _result("Enter a valid Rattlercap for every tournament entry.")
+    handicap_input = details.get("handicap")
+    handicap_value = _number(handicap_input, "Rattlercap", allow_blank=True)
+    if handicap_value is None and handicap_input is not None and str(handicap_input).strip():
+      return _result(f"Enter a valid Rattlercap for {_entry_name(entry)} or leave it blank.")
     updates.append((entry, division, handicap_value))
 
   for entry, division, handicap in updates:
@@ -1245,7 +1246,7 @@ def save_round_two_pairings(tournament, assignments):
       )
     if score_value is not None:
       saved_score_count += 1
-    values = {
+    values: dict = {
       "tournament": tournament,
       "sequence": sequence,
       "pairing_basis": pairing_basis,
@@ -1817,7 +1818,7 @@ def _budget_summary(tournament, migrate_legacy=False):
     category_rows = _ensure_budget_categories(tournament, entries)
 
   if category_rows:
-    category_specs = [
+    category_specs: list = [
       {
         "key": category.get_id(),
         "name": category["name"],
@@ -1872,7 +1873,7 @@ def _budget_summary(tournament, migrate_legacy=False):
       if _entry_is_player(entry)
       else "Non-player · included in expenses"
     )
-    category_shares = [
+    category_shares: list = [
       {
         "category": spec["category"],
         "name": spec["name"],

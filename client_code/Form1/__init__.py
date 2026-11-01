@@ -242,6 +242,14 @@ class Form1(Form1Template):
       self._load_event_data()
       return
 
+    if self.current_event is not None and selected_value is not None and selected_value.get_id() != self.current_event.get_id():
+      self.tournament_field_page._capture_field_detail_drafts()
+      if self.tournament_field_page._changed_field_items() and not confirm(
+        "Switch tournaments and discard unsaved division and Rattlercap changes?",
+        title="Unsaved player details",
+      ):
+        self.event_picker.selected_value = self.current_event
+        return
     self._creating_tournament = False
     self.current_event = selected_value
     self.tournament_details_page.edit_tournament_panel.visible = False

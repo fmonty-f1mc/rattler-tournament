@@ -7,8 +7,6 @@ class TournamentField(TournamentFieldTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
 
-  _CREATE_DIVISION_PICKER_OPTION = "__create_division__"
-
   def initialize(self, app):
     """Attach shared tournament context; keep edits local to this page."""
     self.app = app
@@ -19,10 +17,15 @@ class TournamentField(TournamentFieldTemplate):
     self._division_selection = None
     self.field_status.text = ""
     self.division_status.text = ""
-    self.create_division_panel.visible = False
+    self.create_division_panel.visible = True
 
   def clear(self):
     self._field_detail_items = []
+    self._field_detail_drafts = {}
+    self.field_readiness.text = "Select a tournament to set up players."
+    self.field_pending_status.text = "No unsaved changes"
+    self.save_field_details_button.enabled = False
+    self.discard_field_changes_button.enabled = False
     self.field_search_box.text = ""
     self.field_search_box.enabled = False
     self.field_division_filter.items = [("All divisions", "all")]
@@ -40,7 +43,7 @@ class TournamentField(TournamentFieldTemplate):
     self.apply_handicap_to_selected_button.enabled = False
     self.remove_selected_field_entries_button.enabled = False
     self._division_selection = None
-    self.create_division_panel.visible = False
+    self.create_division_panel.visible = True
     self.delete_division_button.enabled = False
     self.field_rows.items = []
     self._selected_field_entry_ids = set()
@@ -49,15 +52,14 @@ class TournamentField(TournamentFieldTemplate):
   def reset_status(self):
     self.field_status.text = ""
     self.division_status.text = ""
-    self.create_division_panel.visible = False
+    self.create_division_panel.visible = True
 
   def load(self, tournament, player_entries):
     division_values = [value for _, value in self.app.division_choices]
     if self._division_selection not in division_values:
       self._division_selection = None
     self.division_dropdown.items = (
-      [("Choose a division", None)] + self.app.division_choices +
-      [("Create new division…", self._CREATE_DIVISION_PICKER_OPTION)]
+      [("Choose a division", None)] + self.app.division_choices
     )
     self.division_dropdown.selected_value = self._division_selection
     self.division_dropdown.enabled = True
@@ -68,11 +70,13 @@ class TournamentField(TournamentFieldTemplate):
       self._field_selection_tournament_id = tournament_id
       self.field_search_box.text = ""
       self.field_division_filter.selected_value = "all"
+      self.bulk_handicap_input.text = ""
     self.field_search_box.enabled = bool(player_entries)
     self.field_division_filter.enabled = bool(player_entries)
     field_division_options = [
       ("All divisions", "all"),
       ("Players without division", "unassigned"),
+      ("Players without Rattlercap", "missing_cap"),
     ] + [
       (division, "division:" + division)
       for division in sorted(self.app.division_options, key=lambda value: value.lower())
@@ -107,6 +111,8 @@ class TournamentField(TournamentFieldTemplate):
         "handicap": handicap,
         "selected": entry_id in self._selected_field_entry_ids,
       })
+    active_ids = {entry.get_id() for entry in player_entries}
+    self._field_detail_drafts = {key: value for key, value in self._field_detail_drafts.items() if key in active_ids}
     self._field_detail_items = field_items
     self._refresh_field_rows()
 
@@ -120,6 +126,8 @@ class TournamentField(TournamentFieldTemplate):
       if query and query not in name:
         continue
       if division_filter == "unassigned" and division:
+        continue
+      if division_filter == "missing_cap" and str(item["handicap"]).strip():
         continue
       if division_filter.startswith("division:") and division != division_filter[len("division:"):]:
         continue
@@ -138,6 +146,9 @@ class TournamentField(TournamentFieldTemplate):
     selected_count = len(self._selected_field_entry_ids)
     matching_count = len(self._matching_field_items())
     total_count = len(self._field_detail_items)
+    self.apply_division_to_selected_button.enabled = selected_count > 0
+    self.apply_handicap_to_selected_button.enabled = selected_count > 0
+    self.remove_selected_field_entries_button.enabled = selected_count > 0
     self.field_selection_status.text = (
       f"{selected_count} selected · {matching_count} matching · {total_count} players"
     )
@@ -157,6 +168,7 @@ class TournamentField(TournamentFieldTemplate):
     else:
       self.field_search_status.text = ""
     self._update_field_selection_status()
+    self._update_pending_status()
 
   def _capture_field_detail_drafts(self):
     for row in self.field_rows.get_components():
@@ -166,10 +178,13 @@ class TournamentField(TournamentFieldTemplate):
       item["division"] = getattr(row, "division_dropdown").selected_value
       item["handicap"] = getattr(row, "handicap_box").text
       item["selected"] = getattr(row, "select_player_checkbox").checked
-      self._field_detail_drafts[entry_id] = {
-        "division": item["division"],
-        "handicap": item["handicap"],
-      }
+      if (item["division"] or "") != (entry["division"] or "") or self._cap_key(item["handicap"]) != self._cap_key(entry["handicap"]):
+        self._field_detail_drafts[entry_id] = {
+          "division": item["division"],
+          "handicap": item["handicap"],
+        }
+      else:
+        self._field_detail_drafts.pop(entry_id, None)
       if item["selected"]:
         self._selected_field_entry_ids.add(entry_id)
       else:
@@ -183,6 +198,7 @@ class TournamentField(TournamentFieldTemplate):
         item["handicap"] = draft["handicap"]
       item["selected"] = entry_id in self._selected_field_entry_ids
     self._update_field_selection_status()
+    self._update_pending_status()
 
   def _current_field_detail_values(self):
     self._capture_field_detail_drafts()
@@ -195,17 +211,56 @@ class TournamentField(TournamentFieldTemplate):
       for item in self._field_detail_items
     ]
 
+  @staticmethod
+  def _cap_key(value):
+    text = "" if value is None else str(value).strip()
+    if not text:
+      return ""
+    try:
+      return float(text)
+    except (TypeError, ValueError):
+      return text
+
+  def _changed_field_items(self):
+    return [item for item in self._field_detail_items
+      if (item["division"] or "") != (item["entry"]["division"] or "")
+      or self._cap_key(item["handicap"]) != self._cap_key(item["entry"]["handicap"])]
+
+  def _update_pending_status(self):
+    count = len(self._changed_field_items())
+    self.field_pending_status.text = (f"{count} player" + ("s" if count != 1 else "") + " with unsaved changes") if count else "No unsaved changes"
+    self.save_field_details_button.text = f"Save changes ({count})" if count else "Save changes"
+    self.save_field_details_button.enabled = count > 0
+    self.discard_field_changes_button.enabled = count > 0
+    missing_divisions = sum(1 for item in self._field_detail_items if not item["division"])
+    missing_caps = sum(1 for item in self._field_detail_items if self._cap_key(item["handicap"]) == "")
+    self.field_readiness.text = (
+      f"{len(self._field_detail_items)} players · {missing_divisions} without division · {missing_caps} without Rattlercap"
+      if self._field_detail_items else "No players yet. Go back to tournament entries to add players."
+    )
+
+  @handle("field_rows", "x-field-details-changed")
+  def field_details_changed(self, **event_args):
+    self._capture_field_detail_drafts()
+    self.field_status.text = "Changes are ready to review and save."
+
+  @handle("back_to_entries_button", "click")
+  def back_to_entries_click(self, **event_args):
+    self.app._show_tournament_view("event")
+
+  @handle("discard_field_changes_button", "click")
+  def discard_field_changes_click(self, **event_args):
+    if not confirm("Discard all unsaved division and Rattlercap edits, including players hidden by filters?", title="Discard changes"):
+      return
+    self._field_detail_drafts.clear()
+    self.load(self.app.current_event, self.app._player_entries)
+    self.field_status.text = "Unsaved changes discarded."
+
   @handle("division_dropdown", "change")
   def division_dropdown_change(self, **event_args):
     selected_division = self.division_dropdown.selected_value
-    if selected_division == self._CREATE_DIVISION_PICKER_OPTION:
-      self.create_division_panel.visible = True
-      self.new_division_name.text = ""
-      self.division_dropdown.selected_value = self._division_selection
-      return
-
     self._division_selection = selected_division
-    self.create_division_panel.visible = False
+    self.create_division_panel.visible = True
     self.delete_division_button.enabled = selected_division in self.app.division_options
 
   @handle("create_division_button", "click")
@@ -222,7 +277,7 @@ class TournamentField(TournamentFieldTemplate):
       self.division_status.text = result["message"]
       return
     self.new_division_name.text = ""
-    self.create_division_panel.visible = False
+    self.create_division_panel.visible = True
     self._division_selection = result["division_name"]
     self.app._load_event_data()
     self.division_status.text = f"{result['division_name']} created for this tournament."
@@ -259,19 +314,32 @@ class TournamentField(TournamentFieldTemplate):
     if self.app.current_event is None:
       self.field_status.text = "Create or select a tournament first."
       return
-    entry_details = self._current_field_detail_values()
+    self._capture_field_detail_drafts()
+    entry_details = [{"entry": item["entry"], "division": item["division"], "handicap": item["handicap"]}
+      for item in self._changed_field_items()]
     if not entry_details:
-      self.field_status.text = "Add players to this tournament before saving field details."
+      self.field_status.text = "No unsaved changes to save."
       return
-    result = anvil.server.call(
-      "save_tournament_entry_details_batch",
-      self.app.current_event,
-      entry_details,
-    )
+    for details in entry_details:
+      cap = self._cap_key(details["handicap"])
+      if cap != "" and (not isinstance(cap, (int, float)) or cap != cap or cap in (float("inf"), -float("inf"))):
+        self.field_status.text = f"Enter a valid Rattlercap for {details['entry']['golfer']['name']} before saving."
+        return
+    self.save_field_details_button.enabled = False
+    self.save_field_details_button.text = "Saving…"
+    try:
+      result = anvil.server.call(
+        "save_tournament_entry_details_batch",
+        self.app.current_event,
+        entry_details,
+      )
+    finally:
+      self._update_pending_status()
     if not result["ok"]:
       self.field_status.text = result["message"]
       return
-    self.app._load_event_data()
+    self._field_detail_drafts.clear()
+    self.app._load_event_data(capture_field_detail_drafts=False)
     self._selected_field_entry_ids.clear()
     for item in self._field_detail_items:
       item["selected"] = False
@@ -280,7 +348,7 @@ class TournamentField(TournamentFieldTemplate):
       row_item["selected"] = False
       getattr(row, "select_player_checkbox").checked = False
     self._update_field_selection_status()
-    self.field_status.text = f"Division and Rattlercap saved for {result['saved_count']} players."
+    self.field_status.text = f"Saved changes for {result['saved_count']} player" + ("s." if result["saved_count"] != 1 else ".")
 
   @handle("field_search_box", "change")
   def field_search_box_change(self, **event_args):
@@ -348,7 +416,7 @@ class TournamentField(TournamentFieldTemplate):
     division_label = division or "No division"
     self.field_status.text = (
       f"Applied {division_label} to {len(selected_items)} selected players. "
-      "Save all player details to keep the changes."
+      "Press Save changes to keep the changes."
     )
 
   @handle("apply_handicap_to_selected_button", "click")
@@ -360,6 +428,10 @@ class TournamentField(TournamentFieldTemplate):
     handicap = self.bulk_handicap_input.text.strip()
     if not handicap:
       self.field_status.text = "Enter a Rattlercap to apply."
+      return
+    cap = self._cap_key(handicap)
+    if not isinstance(cap, (int, float)) or cap != cap or cap in (float("inf"), -float("inf")):
+      self.field_status.text = "Enter a valid number for the Rattlercap."
       return
 
     self._capture_field_detail_drafts()
@@ -387,7 +459,7 @@ class TournamentField(TournamentFieldTemplate):
     self._capture_field_detail_drafts()
     self.field_status.text = (
       f"Applied Rattlercap {handicap} to {len(selected_items)} selected players. "
-      "Save all player details to keep the changes."
+      "Press Save changes to keep the changes."
     )
 
   @handle("remove_selected_field_entries_button", "click")
