@@ -18,7 +18,6 @@ unique_ids:
     Components.Public.NewsPostCard: '1791397673384.230293561165'
     Components.Public.PublicAwardCard: '1793820697819.5188086661810142'
     Components.Public.PublicBudgetRow: '1791318770792.5415975477550241'
-    Components.Public.PublicPairLabelPart: '1793819697842.5973014819977843'
     Components.Public.PublicRoundOneGroup: '1791404258397.8358901605594857'
     Components.Public.PublicRoundTwoPair: '1791318564388.994434568983809'
     Components.Public.PublicStandingRow: '1793819697844.8039672726367866'

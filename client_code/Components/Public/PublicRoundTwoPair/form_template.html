@@ -1,6 +1,6 @@
 <anvil-form container="ColumnPanel">
   <div class="pairing-row public-round-two-row">
-    <anvil-component type="RepeatingPanel" name="pair_label_parts" prop:item_template="rattler_tournament.Components.Public.PublicPairLabelPart" prop:role="public-pair-label" bind:items="self.item['label_parts']"></anvil-component>
+    <anvil-component type="Label" name="pair_label" prop:role="row-title" bind:text="self.item['pair_label']"></anvil-component>
     <anvil-component type="Label" name="score_label" prop:role="accent-text" bind:text="self.item['score_display']"></anvil-component>
   </div>
 </anvil-form>
