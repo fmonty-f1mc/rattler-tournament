@@ -426,6 +426,8 @@ def update_golfer(golfer, name, email, phone, city, state, handicap=None, handic
 def delete_golfer(golfer):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
+  if any(app_tables.tournament_awards.search(golfer=golfer)):
+    return _result("This player has award history. Mark them inactive to keep their awards, or remove their award records before deleting them.")
 
   entries = list(app_tables.tournament_entries.search(golfer=golfer))
   cleared_tournaments = set()
@@ -461,6 +463,8 @@ def list_tournaments():
 def delete_tournament(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
+  if any(app_tables.tournament_awards.search(tournament=tournament)):
+    return _result("This tournament has award history. Remove its award records on the Awards page before deleting it.")
 
   rattler_pairings = list(app_tables.rattler_pairings.search(tournament=tournament))
   round_two_pairings = list(app_tables.round_two_pairings.search(tournament=tournament))

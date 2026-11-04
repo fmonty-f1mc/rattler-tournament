@@ -1,0 +1,10 @@
+<anvil-form container="ColumnPanel">
+  <div class="entry-details-row">
+    <div>
+      <anvil-component type="Label" name="year_label" prop:role="muted-text" bind:text="str(int(self.item['tournament']['year'])) + ' · ' + self.item['tournament']['course']"></anvil-component>
+      <anvil-component type="Label" name="award_label" prop:bold="True" bind:text="self.item['award']['name']"></anvil-component>
+      <anvil-component type="Label" name="player_label" bind:text="self.item['golfer']['name']"></anvil-component>
+    </div>
+    <anvil-component type="Button" name="remove_button" prop:text="Remove" prop:role="danger-button"></anvil-component>
+  </div>
+</anvil-form>

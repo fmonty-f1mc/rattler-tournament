@@ -1,5 +1,19 @@
 allow_embedding: false
 db_schema:
+  awards:
+    client: none
+    columns:
+    - admin_ui: {}
+      name: name
+      type: string
+    - admin_ui: {}
+      name: is_champion
+      type: bool
+    - admin_ui: {}
+      name: archived
+      type: bool
+    server: full
+    title: Awards
   budget_categories:
     client: none
     columns:
@@ -202,6 +216,23 @@ db_schema:
     indexes: []
     server: full
     title: Round Two Pairings
+  tournament_awards:
+    client: none
+    columns:
+    - admin_ui: {}
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      name: award
+      target: awards
+      type: link_single
+    - admin_ui: {}
+      name: golfer
+      target: golfers
+      type: link_single
+    server: full
+    title: Tournament Awards
   tournament_divisions:
     client: none
     columns:

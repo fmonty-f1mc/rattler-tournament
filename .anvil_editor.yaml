@@ -2,6 +2,7 @@ unique_ids:
   assets:
     theme.css: QQ6EPFGIB3VEEBJAFRVA2V3JVWAPCDP2
   forms:
+    Components.Awards.AwardHistoryRow: '1793808099310.09892418423537008'
     Components.Budget.BudgetCategoryRow: '1791380408602.4466026699611114'
     Components.Budget.BudgetCategoryShareRow: '1791380416665.6267139668808642'
     Components.Budget.BudgetParticipantSelectRow: '1791387094705.13277772548966282'
@@ -25,6 +26,7 @@ unique_ids:
     Components.Tournament.EntryPlayerChoice: '1791306318500.9372481296223683'
     Form1: '1791304507329.6814374389396824'
     Layouts.BaseLayout: JYHQPOA43T2JJW2SMSPKFEKIWSKTQEO6
+    Pages.Awards: '1793808099312.12086636149982577'
     Pages.EmailParticipants: '1793563389515.7024912687057083'
     Pages.Expenses: '1793563389516.498357282422366'
     Pages.NewsEditor: '1793563389517.4266070572323982'
@@ -38,6 +40,7 @@ unique_ids:
   modules:
     CodeGuide: '1793563484806.9643350640037152'
     Components: '1793563389512.07091583595152984'
+    Components.Awards: '1793808099311.746734596586784'
     Components.Budget: '1793563389508.1774349133966614'
     Components.Participants: '1793563389508.9143901584151658'
     Components.Public: '1793563389509.8094456878837192'
@@ -47,5 +50,6 @@ unique_ids:
     Pages: '1793563389525.5955366433943148'
   scripts: {}
   server_modules:
+    Awards: '1793808099313.24912534654270302'
     ParticipantDirectory: '1793566281542.9493653983699222'
     Tracker: '1791304309742.430426342457112'

@@ -39,6 +39,7 @@ class Form1(Form1Template):
       self.expenses_page,
       self.email_participants_page,
       self.news_editor_page,
+      self.awards_page,
     )
 
   def _load_event_data(self, capture_field_detail_drafts=True):
@@ -46,6 +47,8 @@ class Form1(Form1Template):
     if capture_field_detail_drafts:
       self.tournament_field_page._capture_field_detail_drafts()
     self.news_editor_page._load_news_posts()
+    if self._active_view == "awards":
+      self.awards_page.load()
     self.tournament_field_page.reset_status()
     if self._creating_tournament:
       self.email_participants_page._load_email_filters(None, [])
@@ -136,6 +139,7 @@ class Form1(Form1Template):
     self.expenses_page.visible = name == "budget"
     self.email_participants_page.visible = name == "email"
     self.news_editor_page.visible = name == "news"
+    self.awards_page.visible = name == "awards"
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
@@ -145,11 +149,14 @@ class Form1(Form1Template):
       ("email", self.email_nav),
       ("news", self.news_nav),
       ("players", self.players_nav),
+      ("awards", self.awards_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
       )
     self.expenses_page._update_budget_navigation()
+    if name == "awards":
+      self.awards_page.load()
 
   def _load_players(self):
     self.golfers = anvil.server.call("list_golfers")
@@ -208,6 +215,10 @@ class Form1(Form1Template):
   @handle("news_nav", "click")
   def news_nav_click(self, **event_args):
     self._show_tournament_view("news")
+
+  @handle("awards_nav", "click")
+  def awards_nav_click(self, **event_args):
+    self._show_view("awards")
 
   @handle("public_view_nav", "click")
   def public_view_nav_click(self, **event_args):
