@@ -1,0 +1,7 @@
+<anvil-form container="ColumnPanel">
+  <article class="tracker-card">
+    <anvil-component type="Label" name="award_name" prop:role="h2" bind:text="self.item['award_name']"></anvil-component>
+    <anvil-component type="Label" name="champion_label" prop:text="Tournament champion" prop:role="muted-text" bind:visible="self.item['is_champion']"></anvil-component>
+    <anvil-component type="Label" name="winner_name" prop:role="row-title" bind:text="self.item['player_name']"></anvil-component>
+  </article>
+</anvil-form>

@@ -1097,6 +1097,27 @@ def get_public_tournament_standings():
     public_standings.append({
       "title": f"{tournament['year']} · {tournament['course']}",
       "date_label": _format_tournament_date(tournament["event_date"]),
+      "awards": [
+        {
+          "award_name": record["award"]["name"],
+          "player_name": record["golfer"]["name"],
+          "is_champion": bool(record["award"]["is_champion"]),
+        }
+        for record in sorted(
+          (
+            record for record in app_tables.tournament_awards.search(q.fetch_only(
+              award=q.fetch_only("name", "is_champion"),
+              golfer=q.fetch_only("name"),
+            ), tournament=tournament)
+            if record["award"] is not None and record["golfer"] is not None
+          ),
+          key=lambda record: (
+            not record["award"]["is_champion"],
+            record["award"]["name"].casefold(),
+            record["golfer"]["name"].casefold(),
+          ),
+        )
+      ],
       "news_posts": [
         {"title": post["title"], "body": post["body"]}
         for post in sorted(

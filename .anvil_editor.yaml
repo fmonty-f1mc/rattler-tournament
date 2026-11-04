@@ -16,6 +16,7 @@ unique_ids:
     Components.Participants.PlayerHistoryRow: '1793816085232.8448598451160146'
     Components.Participants.PlayerRow: '1791304403912.5890310321155386'
     Components.Public.NewsPostCard: '1791397673384.230293561165'
+    Components.Public.PublicAwardCard: '1793820697819.5188086661810142'
     Components.Public.PublicBudgetRow: '1791318770792.5415975477550241'
     Components.Public.PublicPairLabelPart: '1793819697842.5973014819977843'
     Components.Public.PublicRoundOneGroup: '1791404258397.8358901605594857'

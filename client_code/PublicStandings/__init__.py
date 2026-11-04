@@ -30,6 +30,7 @@ class PublicStandings(PublicStandingsTemplate):
     for tab_name, panel, button in (
       ("news", self.news_section, self.news_tab_button),
       ("standings", self.standings_section, self.standings_tab_button),
+      ("awards", self.awards_section, self.awards_tab_button),
       ("expenses", self.expenses_section, self.expenses_tab_button),
     ):
       panel.visible = name == tab_name
@@ -53,6 +54,13 @@ class PublicStandings(PublicStandingsTemplate):
       "No news has been posted for this tournament yet."
       if tournament
       else "No tournaments have been added yet."
+    )
+    awards = tournament["awards"] if tournament else []
+    self.award_rows.items = awards
+    self.awards_empty_state.visible = not awards
+    self.awards_empty_state.text = (
+      "No award winners have been recorded for this tournament yet."
+      if tournament else "No tournaments have been added yet."
     )
     self._load_selected_tournament_expenses(tournament)
 
@@ -153,6 +161,10 @@ class PublicStandings(PublicStandingsTemplate):
   @handle("expenses_tab_button", "click")
   def expenses_tab_button_click(self, **event_args):
     self._show_public_tab("expenses")
+
+  @handle("awards_tab_button", "click")
+  def awards_tab_button_click(self, **event_args):
+    self._show_public_tab("awards")
 
   @handle("expense_search", "change")
   def expense_search_change(self, **event_args):
