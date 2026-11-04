@@ -2159,14 +2159,20 @@ input.anvil-role-budget-paid-input:disabled {
 }
 
 .directory-table-content {
-  width: 1100px;
+  --directory-columns: 200px 250px 170px 160px 90px 100px 150px 130px;
+  --directory-width: 1250px;
+  width: var(--directory-width);
   min-width: 100%;
 }
 
 .directory-grid-row {
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 200px 250px 170px 160px 90px 100px 130px;
-  min-width: 1100px;
+  grid-template-columns: var(--directory-columns);
+  width: 100%;
+  min-width: var(--directory-width);
+  margin: 0;
+  padding: 0;
   align-items: center;
   gap: 0;
   border-bottom: 1px solid var(--blank-border);
@@ -2179,11 +2185,27 @@ input.anvil-role-budget-paid-input:disabled {
   margin: 0;
 }
 
-.directory-grid-row input.anvil-text-box,
-.directory-grid-row .anvil-dropdown select {
-  min-height: 42px;
-  border: 0;
+.directory-cell {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
   border-right: 1px solid var(--blank-border);
+  background: var(--blank-surface);
+}
+
+.directory-cell > .anvil-dropdown {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.directory-cell input.anvil-text-box,
+.directory-cell .anvil-dropdown select {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  margin: 0;
+  border: 0;
   border-radius: 0;
   background: var(--blank-surface);
 }
@@ -2194,6 +2216,17 @@ input.anvil-role-budget-paid-input:disabled {
   outline: 2px solid var(--blank-primary);
   outline-offset: -2px;
   background: var(--blank-surface-muted);
+}
+
+.anvil-role-directory-edit-list {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.anvil-role-directory-edit-list > div {
+  margin: 0;
+  padding: 0;
 }
 
 .anvil-role-directory-edit-list > div,

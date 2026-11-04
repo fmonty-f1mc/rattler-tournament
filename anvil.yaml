@@ -70,6 +70,10 @@ db_schema:
       client_hidden: null
       name: handicap
       type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: handicap_official
+      type: bool
     indexes: []
     server: full
     title: Golfers

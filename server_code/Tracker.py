@@ -327,6 +327,7 @@ def import_golfers_from_csv(csv_file):
       phone=csv_value(row, "phone"),
       city=csv_value(row, "city"),
       state=csv_value(row, "state"),
+      handicap_official=False,
       active=True,
     )
     existing_names.add(name_key)
@@ -341,10 +342,14 @@ def import_golfers_from_csv(csv_file):
 
 
 @anvil.server.callable(require_user=True)
-def create_golfer(name, email, phone, city, state, handicap=None):
+def create_golfer(name, email, phone, city, state, handicap=None, handicap_official=False):
   handicap_value = _number(handicap, "Player handicap", allow_blank=True)
   if handicap is not None and str(handicap).strip() and handicap_value is None:
     return _result("Enter a valid number for player handicap, or leave it blank.")
+  if not isinstance(handicap_official, bool):
+    return _result("Official handicap must be true or false.")
+  if handicap_official and handicap_value is None:
+    return _result("Enter a player handicap before marking it official.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
@@ -362,6 +367,7 @@ def create_golfer(name, email, phone, city, state, handicap=None):
     city=(city or "").strip(),
     state=(state or "").strip(),
     handicap=handicap_value,
+    handicap_official=handicap_official,
     active=True,
   )
   return _result(golfer=golfer)
@@ -376,13 +382,19 @@ def set_golfer_active(golfer, active):
 
 
 @anvil.server.callable(require_user=True)
-def update_golfer(golfer, name, email, phone, city, state, handicap=None):
+def update_golfer(golfer, name, email, phone, city, state, handicap=None, handicap_official=None):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
 
   handicap_value = _number(handicap, "Player handicap", allow_blank=True)
   if handicap is not None and str(handicap).strip() and handicap_value is None:
     return _result("Enter a valid number for player handicap, or leave it blank.")
+  if handicap_official is None:
+    handicap_official = bool(golfer["handicap_official"])
+  if not isinstance(handicap_official, bool):
+    return _result("Official handicap must be true or false.")
+  if handicap_official and handicap_value is None:
+    return _result("Enter a player handicap before marking it official.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
@@ -405,6 +417,7 @@ def update_golfer(golfer, name, email, phone, city, state, handicap=None):
     city=(city or "").strip(),
     state=(state or "").strip(),
     handicap=handicap_value,
+    handicap_official=handicap_official,
   )
   return _result()
 

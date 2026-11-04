@@ -11,14 +11,15 @@ from anvil import BlobMedia
 from anvil.tables import app_tables, in_transaction
 
 
-FIELDS = ("name", "email", "phone", "city", "state", "handicap", "active")
+FIELDS = ("name", "email", "phone", "city", "state", "handicap", "handicap_official", "active")
 HEADERS = ("participant_id", "revision") + FIELDS
 LABELS = {"name": "Name", "email": "Email", "phone": "Phone", "city": "City",
-          "state": "State", "handicap": "Player handicap", "active": "Active"}
+          "state": "State", "handicap": "Player handicap",
+          "handicap_official": "Official handicap", "active": "Active"}
 
 
 def _values(row):
-  return {key: (bool(row[key]) if key == "active" else row[key] if key == "handicap"
+  return {key: (bool(row[key]) if key in ("active", "handicap_official") else row[key] if key == "handicap"
                 else row[key] or "") for key in FIELDS}
 
 
@@ -54,6 +55,11 @@ def _normalize(values, current):
       return None, "Player handicap must be a number or blank."
     if not math.isfinite(result["handicap"]):
       return None, "Player handicap must be a finite number."
+  if not isinstance(values["handicap_official"], bool):
+    return None, "Official handicap must be TRUE or FALSE."
+  if values["handicap_official"] and result["handicap"] is None:
+    return None, "Enter a player handicap before marking it official."
+  result["handicap_official"] = values["handicap_official"]
   if not isinstance(values["active"], bool):
     return None, "Active must be TRUE or FALSE."
   result["active"] = values["active"]
@@ -157,10 +163,11 @@ def _csv_plan(csv_file):
       if not any(record.values()):
         continue
       values = {key: _read_cell(record[key]) for key in FIELDS}
-      active = values["active"].strip().lower()
-      if active not in ("true", "false"):
-        return None, f"CSV row {line_number}: active must be TRUE or FALSE."
-      values["active"] = active == "true"
+      for field in ("active", "handicap_official"):
+        flag = values[field].strip().lower()
+        if flag not in ("true", "false"):
+          return None, f"CSV row {line_number}: {field} must be TRUE or FALSE."
+        values[field] = flag == "true"
       updates.append({"participant_id": record["participant_id"].strip(),
                       "revision": record["revision"].strip(), "values": values})
   except UnicodeDecodeError:
@@ -175,6 +182,8 @@ def _csv_plan(csv_file):
 def _display(value, field):
   if field == "active":
     return "Active" if value else "Inactive"
+  if field == "handicap_official":
+    return "Official" if value else "Not official"
   return "(blank)" if value is None or value == "" else str(value)
 
 

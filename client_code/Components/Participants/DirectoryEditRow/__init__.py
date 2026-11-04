@@ -6,6 +6,7 @@ class DirectoryEditRow(DirectoryEditRowTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
     self.active_picker.items = [("Active", True), ("Inactive", False)]
+    self.official_picker.items = [("Not official", False), ("Official", True)]
     self.refresh_data_bindings()
     self.active_picker.selected_value = bool(self.item["active"])
 
@@ -22,6 +23,8 @@ class DirectoryEditRow(DirectoryEditRowTemplate):
           pass  # Keep invalid input staged so the server can explain the error.
       if self.item[field] != value:
         self.item[field] = value
+    if bool(self.item["handicap_official"]) != self.official_picker.selected_value:
+      self.item["handicap_official"] = self.official_picker.selected_value
     if self.item["active"] != self.active_picker.selected_value:
       self.item["active"] = self.active_picker.selected_value
 
@@ -29,6 +32,7 @@ class DirectoryEditRow(DirectoryEditRowTemplate):
     for field in ("name", "email", "phone", "city", "state", "handicap"):
       getattr(self, field + "_box").enabled = enabled
     self.active_picker.enabled = enabled
+    self.official_picker.enabled = enabled
 
   @handle("name_box", "change")
   @handle("email_box", "change")
@@ -37,6 +41,7 @@ class DirectoryEditRow(DirectoryEditRowTemplate):
   @handle("state_box", "change")
   @handle("handicap_box", "change")
   @handle("active_picker", "change")
+  @handle("official_picker", "change")
   def cell_change(self, **event_args):
     self.commit()
     self.parent.raise_event("x-directory-change")

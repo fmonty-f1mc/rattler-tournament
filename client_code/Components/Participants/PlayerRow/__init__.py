@@ -14,6 +14,7 @@ class PlayerRow(PlayerRowTemplate):
     self.city_box.text = self.item["city"] or ""
     self.state_box.text = self.item["state"] or ""
     self.handicap_box.text = "" if self.item["handicap"] is None else str(self.item["handicap"])
+    self.official_checkbox.checked = bool(self.item["handicap_official"])
     self.active_picker.items = [("Active", True), ("Inactive", False)]
     self._load_active_state()
     self._set_editing(False)
@@ -46,6 +47,7 @@ class PlayerRow(PlayerRowTemplate):
       self.city_box,
       self.state_box,
       self.handicap_box,
+      self.official_checkbox,
       self.active_picker,
       self.save_button,
       self.cancel_button,
@@ -68,6 +70,7 @@ class PlayerRow(PlayerRowTemplate):
     self.city_box.text = self.item["city"] or ""
     self.state_box.text = self.item["state"] or ""
     self.handicap_box.text = "" if self.item["handicap"] is None else str(self.item["handicap"])
+    self.official_checkbox.checked = bool(self.item["handicap_official"])
     self._load_active_state()
 
   @handle("name_button", "click")
@@ -96,6 +99,7 @@ class PlayerRow(PlayerRowTemplate):
       state=self.state_box.text,
       active=self.active_picker.selected_value,
       handicap=self.handicap_box.text,
+      handicap_official=self.official_checkbox.checked,
     )
 
   @handle("delete_button", "click")

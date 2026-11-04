@@ -1,11 +1,26 @@
-<anvil-form container="ColumnPanel">
-  <div class="directory-grid-row">
+<div class="directory-grid-row directory-edit-row">
+  <div class="directory-cell">
     <anvil-component type="TextBox" name="name_box" prop:placeholder="Name" writeback:text="self.item['name']"></anvil-component>
+  </div>
+  <div class="directory-cell">
     <anvil-component type="TextBox" name="email_box" prop:placeholder="Email" writeback:text="self.item['email']"></anvil-component>
+  </div>
+  <div class="directory-cell">
     <anvil-component type="TextBox" name="phone_box" prop:placeholder="Phone" writeback:text="self.item['phone']"></anvil-component>
+  </div>
+  <div class="directory-cell">
     <anvil-component type="TextBox" name="city_box" prop:placeholder="City" writeback:text="self.item['city']"></anvil-component>
+  </div>
+  <div class="directory-cell">
     <anvil-component type="TextBox" name="state_box" prop:placeholder="State" writeback:text="self.item['state']"></anvil-component>
+  </div>
+  <div class="directory-cell">
     <anvil-component type="TextBox" name="handicap_box" prop:placeholder="Handicap" bind:text="'' if self.item['handicap'] is None else str(self.item['handicap'])"></anvil-component>
+  </div>
+  <div class="directory-cell">
+    <anvil-component type="DropDown" name="official_picker" bind:selected_value="bool(self.item['handicap_official'])"></anvil-component>
+  </div>
+  <div class="directory-cell">
     <anvil-component type="DropDown" name="active_picker" writeback:selected_value="self.item['active']"></anvil-component>
   </div>
-</anvil-form>
+</div>
