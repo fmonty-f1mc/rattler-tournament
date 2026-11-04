@@ -1,6 +1,6 @@
 from ._anvil_designer import PlayerRowTemplate
 from anvil import *
-import re
+import anvil.server
 import anvil.google.auth, anvil.google.drive
 from anvil.google.drive import app_files
 
@@ -61,7 +61,27 @@ class PlayerRow(PlayerRowTemplate):
     self.details_panel.visible = expanded
     name = self.item["name"] or "Unnamed player"
     marker = "▾" if expanded else "▸"
-    self.name_button.text = f"{name}  {marker}"
+    self.name_button.text = f"{marker}  {name}"
+    if expanded:
+      self._load_history()
+
+  def _load_history(self):
+    # Fetch only when opened, and refresh on reopening after awards/caps change.
+    self.name_button.enabled = False
+    try:
+      result = anvil.server.call("get_participant_history", self.item)
+      if not result["ok"]:
+        self.history_table.visible = False
+        self.history_status.text = result["message"]
+        self.history_status.visible = True
+        return
+      years = result["years"]
+      self.history_rows.items = years
+      self.history_table.visible = bool(years)
+      self.history_status.text = "No tournament history recorded yet."
+      self.history_status.visible = not years
+    finally:
+      self.name_button.enabled = True
 
   def _restore_item_values(self):
     self.name_box.text = self.item["name"] or ""
@@ -105,14 +125,3 @@ class PlayerRow(PlayerRowTemplate):
   @handle("delete_button", "click")
   def delete_button_click(self, **event_args):
     self.parent.raise_event("x-delete-player", golfer=self.item)
-
-
-  def contact_check(self):
-    if not (self.item["name"] or "").strip():
-      return "Name missing"
-    email = (self.item["email"] or "").strip()
-    if not email:
-      return "Email missing"
-    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-      return "Check email format"
-    return "Name and email format OK"

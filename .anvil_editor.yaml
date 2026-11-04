@@ -13,6 +13,7 @@ unique_ids:
     Components.Imports.ImportedYearRow: '1793810584932.17848771935949814'
     Components.Participants.DirectoryEditRow: '1793566326546.6981261410245456'
     Components.Participants.DirectoryImportChange: '1793566326547.6572370347820944'
+    Components.Participants.PlayerHistoryRow: '1793816085232.8448598451160146'
     Components.Participants.PlayerRow: '1791304403912.5890310321155386'
     Components.Public.NewsPostCard: '1791397673384.230293561165'
     Components.Public.PublicBudgetRow: '1791318770792.5415975477550241'

@@ -9,6 +9,9 @@ import re
 import anvil.server
 from anvil import BlobMedia
 from anvil.tables import app_tables, in_transaction
+import anvil.tables.query as q
+
+from Tracker import _entry_net_score, _valid_row
 
 
 FIELDS = ("name", "email", "phone", "city", "state", "handicap", "handicap_official", "active")
@@ -106,6 +109,36 @@ def _plan(updates):
 def load_directory_for_editing():
   rows = sorted(app_tables.golfers.search(), key=lambda row: (row["name"] or "").lower())
   return {"rows": rows, "revisions": {row.get_id(): _revision(row) for row in rows}}
+
+
+@anvil.server.callable(require_user=True)
+def get_participant_history(golfer):
+  """Join tournament entries and awards without copying persisted row fields."""
+  if not _valid_row(app_tables.golfers, golfer):
+    return _error("This participant no longer exists. Refresh the directory.")
+
+  years: dict[str, dict] = {}
+  for entry in app_tables.tournament_entries.search(
+    q.fetch_only("handicap", "is_player", "gross_18", "net_18", tournament=q.fetch_only("year")),
+    golfer=golfer,
+  ):
+    tournament = entry["tournament"]
+    # Imported source nets are historical records; live scores use the standings calculation.
+    net = entry["net_18"] if entry["net_18"] is not None else _entry_net_score(entry)
+    years[tournament.get_id()] = {"tournament": tournament, "entry": entry, "awards": [], "net": net}
+
+  for record in app_tables.tournament_awards.search(
+    q.fetch_only(tournament=q.fetch_only("year"), award=q.fetch_only("name", "is_champion")),
+    golfer=golfer,
+  ):
+    tournament = record["tournament"]
+    year = years.setdefault(tournament.get_id(), {"tournament": tournament, "entry": None, "awards": [], "net": None})
+    year["awards"].append(record["award"])
+
+  for year in years.values():
+    # Archived awards remain part of a participant's history.
+    year["awards"].sort(key=lambda award: (not award["is_champion"], award["name"].lower()))
+  return {"ok": True, "years": sorted(years.values(), key=lambda year: year["tournament"]["year"], reverse=True)}
 
 
 @anvil.server.callable(require_user=True)

@@ -1,0 +1,19 @@
+<anvil-form container="ColumnPanel" prop:role="player-history-item">
+  <div class="player-history-grid" role="row">
+    <div class="player-history-cell" role="cell">
+      <anvil-component type="Label" name="year_label" prop:role="row-title" bind:text="str(int(self.item['tournament']['year']))"></anvil-component>
+    </div>
+    <div class="player-history-cell" role="cell">
+      <anvil-component type="Label" name="awards_label" prop:role="player-history-awards" bind:text="'\n'.join(award['name'] for award in self.item['awards']) or '—'"></anvil-component>
+    </div>
+    <div class="player-history-cell" role="cell">
+      <anvil-component type="Label" name="rattlercap_label" bind:text="self.rattlercap_text()"></anvil-component>
+    </div>
+    <div class="player-history-cell" role="cell">
+      <anvil-component type="Label" name="gross_label" bind:text="self.score_text('gross')"></anvil-component>
+    </div>
+    <div class="player-history-cell" role="cell">
+      <anvil-component type="Label" name="net_label" bind:text="self.score_text('net')"></anvil-component>
+    </div>
+  </div>
+</anvil-form>
