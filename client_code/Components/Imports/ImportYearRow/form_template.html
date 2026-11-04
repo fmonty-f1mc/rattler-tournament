@@ -1,0 +1,7 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-card">
+  <anvil-component type="CheckBox" name="select_year" bind:text="self.item['summary']" writeback:checked="self.item['selected']" bind:enabled="not self.item['errors']"></anvil-component>
+  <anvil-component type="Label" name="course_label" prop:text="Course for this year"></anvil-component>
+  <anvil-component type="TextBox" name="course_name" writeback:text="self.item['course']" prop:placeholder="Enter the course if it was not found"></anvil-component>
+  <anvil-component type="Label" name="year_notices" prop:role="muted-text" bind:text="self.item['notices']"></anvil-component>
+  <anvil-component type="Button" name="review_button" prop:text="Review players &amp; original results" prop:role="secondary-button"></anvil-component>
+</anvil-form>

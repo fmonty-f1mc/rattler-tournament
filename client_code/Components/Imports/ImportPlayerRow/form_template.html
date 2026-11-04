@@ -1,0 +1,6 @@
+<anvil-form container="ColumnPanel">
+  <anvil-component type="Label" name="source_name" prop:role="row-title" bind:text="'Row ' + str(self.item['row']) + ' · Source: ' + self.item['source_name']"></anvil-component>
+  <anvil-component type="Label" name="name_label" prop:text="Import as (use the same name as the participant directory)"></anvil-component>
+  <anvil-component type="TextBox" name="import_name" writeback:text="self.item['name']" bind:enabled="self.item['editable']"></anvil-component>
+  <anvil-component type="Label" name="source_scores" prop:role="muted-text" bind:text="self.item['scores']"></anvil-component>
+</anvil-form>

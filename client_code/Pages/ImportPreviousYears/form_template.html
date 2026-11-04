@@ -1,0 +1,45 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-view">
+  <div class="view-heading">
+    <p class="eyebrow">APP · TOURNAMENT HISTORY</p>
+    <h2>Import Previous years</h2>
+    <p class="muted-copy">Bring in one year or several together. Preview first, review the original values, then choose which years to save.</p>
+  </div>
+  <div class="tracker-card">
+    <h2>Choose a workbook</h2>
+    <p class="muted-copy">Use an Excel .xlsx file or a shared Google Sheets link. Each year needs its own tab named with the year and columns such as Name, Gross, HC/RC, Net, Alt. Shot, and Total. A champions summary can supply venues and award winners.</p>
+    <div class="field-block">
+      <label>Google Sheets workbook link</label>
+      <anvil-component type="TextBox" name="workbook_link" prop:text="https://docs.google.com/spreadsheets/d/17iWSw_ZqNOLFu1nuFD9KD7MXUJNPf3Vi/edit" prop:placeholder="Paste a shared Google Sheets link"></anvil-component>
+    </div>
+    <anvil-component type="Button" name="preview_link_button" prop:text="Preview link" prop:role="secondary-button"></anvil-component>
+    <p class="muted-copy">Or upload the workbook directly (up to 15 MB).</p>
+    <anvil-component type="FileLoader" name="workbook_file" prop:text="Choose Excel workbook" prop:file_types=".xlsx"></anvil-component>
+    <anvil-component type="Button" name="preview_file_button" prop:text="Preview file" prop:role="secondary-button"></anvil-component>
+    <anvil-component type="Label" name="import_status" prop:role="status-text"></anvil-component>
+  </div>
+  <anvil-component type="ColumnPanel" name="preview_panel" prop:visible="False">
+    <h2>Choose years to import</h2>
+    <p class="muted-copy">Review warnings and correct course or player names before importing. Names match the participant directory regardless of case. Contact details and current directory handicaps are kept. Conflicting saved scores stop the entire selected batch without changes.</p>
+    <p class="muted-copy">WD, DQ, starred values, and source notes remain in the saved original results. Missing scores stay blank. Live first-round standings calculate net from gross and handicap.</p>
+    <anvil-component type="FlowPanel" name="selection_actions">
+      <anvil-component type="Button" name="select_all_button" prop:text="Select all available years" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="clear_selection_button" prop:text="Clear selection" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Label" name="selection_status" prop:role="muted-text"></anvil-component>
+    </anvil-component>
+    <anvil-component type="RepeatingPanel" name="year_rows" prop:item_template="rattler_tournament.Components.Imports.ImportYearRow"></anvil-component>
+    <anvil-component type="Button" name="import_years_button" prop:text="Import selected years" prop:enabled="False"></anvil-component>
+  </anvil-component>
+  <anvil-component type="ColumnPanel" name="review_panel" prop:role="tracker-card" prop:visible="False">
+    <anvil-component type="Label" name="review_heading" prop:role="h2"></anvil-component>
+    <p class="muted-copy">The score line shows the workbook's original values. In a preview, edit “Import as” to match an existing participant or correct a name. Saved originals are read-only.</p>
+    <anvil-component type="Label" name="review_notes" prop:role="muted-text"></anvil-component>
+    <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="rattler_tournament.Components.Imports.ImportPlayerRow"></anvil-component>
+    <anvil-component type="Button" name="close_review_button" prop:text="Close results review" prop:role="secondary-button"></anvil-component>
+  </anvil-component>
+  <div class="tracker-card">
+    <h2>Imported years &amp; original results</h2>
+    <p class="muted-copy">Saved imports stay available here when you reopen the app. Previewing never changes saved records, and repeating the same import does not add duplicates.</p>
+    <anvil-component type="Label" name="empty_history" prop:text="No workbook imports have been saved here yet." prop:role="muted-text"></anvil-component>
+    <anvil-component type="RepeatingPanel" name="import_history" prop:item_template="rattler_tournament.Components.Imports.ImportedYearRow"></anvil-component>
+  </div>
+</anvil-form>

@@ -484,6 +484,8 @@ def delete_tournament(tournament):
     entry.delete()
   for division in divisions:
     division.delete()
+  for record in app_tables.historical_imports.search(tournament=tournament):
+    record.delete()
   tournament.delete()
 
   return _result(
@@ -736,8 +738,9 @@ def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
+  historical = any(app_tables.historical_imports.search(tournament=tournament))
   for entry in entries:
-    if entry["handicap"] is None:
+    if entry["handicap"] is None and not historical:
       previous_handicap = _previous_year_handicap(tournament, entry["golfer"])
       if previous_handicap is not None:
         entry["handicap"] = previous_handicap
@@ -1423,6 +1426,8 @@ def get_or_create_tournament_foursomes(tournament):
   existing_groups = list_tournament_foursomes(tournament)
   if existing_groups:
     return existing_groups
+  if any(app_tables.historical_imports.search(tournament=tournament)):
+    return []
   entries = [
     entry for entry in list_tournament_entries(tournament)
     if _entry_is_player(entry)

@@ -33,7 +33,9 @@ class RoundOne(RoundOneTemplate):
     )
     self.round_one_status.text = (
       "Tee times are ready. Enter gross scores in each group."
-      if self.foursome_group_rows.items
+      if len(foursomes) > 0
+      else "No tee groups are saved. Review the imported source or generate groups."
+      if player_entries
       else "Add players to this tournament to create tee time groups."
     )
 

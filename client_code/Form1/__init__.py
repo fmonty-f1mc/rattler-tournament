@@ -40,6 +40,7 @@ class Form1(Form1Template):
       self.email_participants_page,
       self.news_editor_page,
       self.awards_page,
+      self.imports_page,
     )
 
   def _load_event_data(self, capture_field_detail_drafts=True):
@@ -122,7 +123,7 @@ class Form1(Form1Template):
 
   def _show_view(self, name):
     self._active_view = name
-    show_tournament_context = name != "players"
+    show_tournament_context = name not in ("players", "imports")
     self.selected_tournament_name.visible = (
       show_tournament_context and not self._creating_tournament
       and self.current_event is not None
@@ -140,6 +141,9 @@ class Form1(Form1Template):
     self.email_participants_page.visible = name == "email"
     self.news_editor_page.visible = name == "news"
     self.awards_page.visible = name == "awards"
+    self.imports_page.visible = name == "imports"
+    self.tournament_selection_label.visible = name != "imports"
+    self.event_picker.visible = name != "imports"
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
@@ -150,6 +154,7 @@ class Form1(Form1Template):
       ("news", self.news_nav),
       ("players", self.players_nav),
       ("awards", self.awards_nav),
+      ("imports", self.imports_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
@@ -157,6 +162,8 @@ class Form1(Form1Template):
     self.expenses_page._update_budget_navigation()
     if name == "awards":
       self.awards_page.load()
+    if name == "imports":
+      self.imports_page.load_history()
 
   def _load_players(self):
     self.golfers = anvil.server.call("list_golfers")
@@ -219,6 +226,10 @@ class Form1(Form1Template):
   @handle("awards_nav", "click")
   def awards_nav_click(self, **event_args):
     self._show_view("awards")
+
+  @handle("imports_nav", "click")
+  def imports_nav_click(self, **event_args):
+    self._show_view("imports")
 
   @handle("public_view_nav", "click")
   def public_view_nav_click(self, **event_args):
