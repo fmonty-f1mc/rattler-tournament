@@ -5,7 +5,7 @@ import io
 import math
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from time import monotonic
 
 import anvil.server
@@ -32,7 +32,7 @@ def _valid_row(table, candidate):
   if candidate is None or not hasattr(candidate, "get_id"):
     return False
   candidate_id = candidate.get_id()
-  return any(row.get_id() == candidate_id for row in table.search())
+  return any(row.get_id() == candidate_id for row in table.search(q.fetch_only()))
 
 
 def _email_filter_error(tournament, recipient_type, division_filter):
@@ -234,6 +234,16 @@ def _delete_budget_shares_for_entries(entries):
       share.delete()
 
 
+def _news_post_sort_key(post):
+  """Sort dated news newest first, with undated legacy posts last."""
+  created_at = post["created_at"]
+  if created_at is None:
+    return -math.inf
+  if created_at.tzinfo is None:
+    created_at = created_at.replace(tzinfo=timezone.utc)
+  return created_at.timestamp()
+
+
 @anvil.server.callable(require_user=True)
 def list_committee_news_posts(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
@@ -242,7 +252,7 @@ def list_committee_news_posts(tournament):
   posts.extend(app_tables.news_posts.search(tournament=None))
   return sorted(
     posts,
-    key=lambda post: post["created_at"] or datetime.min,
+    key=_news_post_sort_key,
     reverse=True,
   )
 
@@ -765,21 +775,31 @@ def remove_tournament_entry(tournament, entry):
 def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
+  context = f"[tournament entries] tournament={tournament.get_id()}"
+  print(f"{context} loading entries", flush=True)
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
-  historical = any(app_tables.historical_imports.search(tournament=tournament))
+  # Existence checks must not fetch the archived workbook data.
+  historical = any(app_tables.historical_imports.search(q.fetch_only(), tournament=tournament))
+  print(f"{context} entries={len(entries)} historical={historical}; checking handicaps", flush=True)
   for entry in entries:
     if entry["handicap"] is None and not historical:
       previous_handicap = _previous_year_handicap(tournament, entry["golfer"])
       if previous_handicap is not None:
         entry["handicap"] = previous_handicap
-  return sorted(entries, key=_entry_sort_key)
+  result = sorted(entries, key=_entry_sort_key)
+  print(f"{context} response ready", flush=True)
+  return result
 
 
 @anvil.server.callable(require_user=True)
 def list_tournament_divisions(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
-  return _division_names(tournament)
+  context = f"[tournament divisions] tournament={tournament.get_id()}"
+  print(f"{context} loading divisions", flush=True)
+  divisions = _division_names(tournament)
+  print(f"{context} response ready", flush=True)
+  return divisions
 
 
 @anvil.server.callable(require_user=True)
@@ -1181,7 +1201,7 @@ def get_public_tournament_standings(tournament_id):
     {"title": post["title"], "body": post["body"]}
     for post in sorted(
       app_tables.news_posts.search(tournament=tournament),
-      key=lambda post: post["created_at"] or datetime.min,
+      key=_news_post_sort_key,
       reverse=True,
     )
   ]
@@ -1618,7 +1638,7 @@ def get_or_create_tournament_foursomes(tournament):
   existing_groups = list_tournament_foursomes(tournament)
   if existing_groups:
     return existing_groups
-  if any(app_tables.historical_imports.search(tournament=tournament)):
+  if any(app_tables.historical_imports.search(q.fetch_only(), tournament=tournament)):
     return []
   entries = [
     entry for entry in list_tournament_entries(tournament)
@@ -2118,4 +2138,8 @@ def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True)
 
 @anvil.server.callable(require_user=True)
 def get_budget_summary(tournament):
-  return _budget_summary(tournament, migrate_legacy=True)
+  tournament_id = tournament.get_id() if tournament is not None else None
+  print(f"[budget] tournament={tournament_id} loading summary", flush=True)
+  summary = _budget_summary(tournament, migrate_legacy=True)
+  print(f"[budget] tournament={tournament_id} response ready", flush=True)
+  return summary
