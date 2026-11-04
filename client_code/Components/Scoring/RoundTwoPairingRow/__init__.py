@@ -17,6 +17,20 @@ class RoundTwoPairingRow(RoundTwoPairingRowTemplate):
   def _display_score(value):
     return "" if value is None or value <= 0 else str(value)
 
+  def capture_score(self):
+    # Include the focused score even if its change event has not fired yet.
+    score = self.score_box.text or ""
+    value = self.item["score_9"]
+    displayed_score = str(value) if value is not None else ""
+    if score != displayed_score:
+      self.item["score_9"] = score
+      self.item["score_changed"] = True
+
+  def set_enabled(self, enabled):
+    self.first_player.enabled = enabled
+    self.second_player.enabled = enabled
+    self.score_box.enabled = enabled
+
   def _pairing_changed(self):
     self.item["first_entry"] = self.first_player.selected_value
     self.item["second_entry"] = self.second_player.selected_value

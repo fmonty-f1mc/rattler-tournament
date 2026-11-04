@@ -1,6 +1,7 @@
 import anvil.google.drive, anvil.google.mail
 from anvil.google.drive import app_files
 import csv
+import faulthandler
 import io
 import math
 import random
@@ -10,8 +11,11 @@ from time import monotonic
 
 import anvil.server
 from anvil import BlobMedia
-from anvil.tables import app_tables
+from anvil.tables import app_tables, in_transaction
 import anvil.tables.query as q
+
+# Emit Python stacks to the runtime's stderr if a native fault kills the process.
+faulthandler.enable()
 
 
 def _result(message=None, **values):
@@ -31,8 +35,7 @@ def _number(value, label, allow_blank=False):
 def _valid_row(table, candidate):
   if candidate is None or not hasattr(candidate, "get_id"):
     return False
-  candidate_id = candidate.get_id()
-  return any(row.get_id() == candidate_id for row in table.search(q.fetch_only()))
+  return table.has_row(candidate)
 
 
 def _email_filter_error(tournament, recipient_type, division_filter):
@@ -120,12 +123,12 @@ def _entry_sort_key(entry):
 def _division_names(tournament):
   names = {
     division["name"].strip()
-    for division in app_tables.tournament_divisions.search(tournament=tournament)
+    for division in app_tables.tournament_divisions.search(q.fetch_only("name"), tournament=tournament)
     if division["name"] and division["name"].strip()
   }
   names.update(
     entry["division"].strip()
-    for entry in app_tables.tournament_entries.search(tournament=tournament)
+    for entry in app_tables.tournament_entries.search(q.fetch_only("is_player", "division"), tournament=tournament)
     if _entry_is_player(entry) and entry["division"] and entry["division"].strip()
   )
   return sorted(names, key=str.lower)
@@ -300,7 +303,13 @@ def delete_news_post(post, tournament):
 
 @anvil.server.callable(require_user=True)
 def list_golfers():
-  return sorted(app_tables.golfers.search(), key=lambda golfer: (not golfer["active"], golfer["name"].lower()))
+  started = monotonic()
+  print("[golfers] loading roster", flush=True)
+  golfers = list(app_tables.golfers.search())
+  print(f"[golfers] rows={len(golfers)}; sorting roster", flush=True)
+  golfers.sort(key=lambda golfer: (not golfer["active"], golfer["name"].lower()))
+  print(f"[golfers] elapsed={monotonic() - started:.3f}s response ready", flush=True)
+  return golfers
 
 
 @anvil.server.callable(require_user=True)
@@ -793,6 +802,7 @@ def list_tournament_entries(tournament):
 
 @anvil.server.callable(require_user=True)
 def list_tournament_divisions(tournament):
+  print("[tournament divisions] validating tournament", flush=True)
   if not _valid_row(app_tables.tournaments, tournament):
     return []
   context = f"[tournament divisions] tournament={tournament.get_id()}"
@@ -1366,6 +1376,7 @@ def list_round_two_pairings(tournament):
 
 
 @anvil.server.callable(require_user=True)
+@in_transaction
 def save_round_two_pairings(tournament, assignments):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -1451,30 +1462,20 @@ def save_round_two_pairings(tournament, assignments):
     pairing["sequence"]: pairing
     for pairing in app_tables.round_two_pairings.search(tournament=tournament)
   }
-  saved_pairings = list(existing_rows.values())
+  # Snapshot scores before updating rows so reordering pairs cannot lose them.
+  saved_scores = {
+    frozenset((pairing["first_entry"].get_id(), _entry_id_or_none(pairing["second_entry"]))): pairing["score_9"]
+    for pairing in existing_rows.values()
+  }
+  saved_pairings = []
   saved_score_count = 0
   for sequence, (first_entry, second_entry, score_value, score_changed) in enumerate(
     normalized_assignments, 1
   ):
     existing = existing_rows.pop(sequence, None)
     if not score_changed:
-      matching_saved_pair = next(
-        (
-          pairing
-          for pairing in saved_pairings
-          if _same_round_two_pair(
-            first_entry,
-            second_entry,
-            pairing["first_entry"],
-            pairing["second_entry"],
-          )
-        ),
-        None,
-      )
-      score_value = (
-        matching_saved_pair["score_9"]
-        if matching_saved_pair is not None
-        else None
+      score_value = saved_scores.get(
+        frozenset((first_entry.get_id(), _entry_id_or_none(second_entry)))
       )
     if score_value is not None:
       saved_score_count += 1
@@ -1493,12 +1494,19 @@ def save_round_two_pairings(tournament, assignments):
       app_tables.round_two_pairings.add_row(**values)
     else:
       existing.update(**values)
+    # Confirm normalized display values without another client-side reload.
+    saved_pairings.append({
+      "sequence": sequence,
+      "pair_label": values["pair_label"],
+      "score_9": score_value,
+    })
 
   for stale_pairing in existing_rows.values():
     stale_pairing.delete()
   return _result(
     pair_count=len(normalized_assignments),
     scored_pair_count=saved_score_count,
+    saved_pairings=saved_pairings,
   )
 
 

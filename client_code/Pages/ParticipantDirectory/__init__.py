@@ -139,7 +139,8 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
     if self._directory_dirty_rows() and not confirm("Discard all unsaved directory changes?", title="Cancel spreadsheet edits"):
       return
     self._finish_directory_editing()
-    self.app._load_players()
+    # The buffers were reset above; Cancel only needs to redraw the cached roster.
+    self._refresh_player_rows()
     self.player_status.text = "Spreadsheet edits discarded."
 
   @handle("save_directory_button", "click")
