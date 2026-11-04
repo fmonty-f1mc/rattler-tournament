@@ -947,8 +947,30 @@ def save_round_one_scores_batch(tournament, scores):
 
 @anvil.server.callable(require_user=True)
 def get_net_standings(tournament):
-  entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
-  return _net_standings(entries, _tournament_round_two_scores(tournament))
+  return _tournament_standings(tournament)
+
+
+def _tournament_standings(tournament, division=None):
+  """Read leaderboard data without initializing or changing handicaps."""
+  print("[standings] validating tournament", flush=True)
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  context = f"[standings] tournament={tournament.get_id()} scope={'overall' if division is None else 'division'}"
+  if division is not None:
+    print(f"{context} validating division", flush=True)
+    if division not in _division_names(tournament):
+      return []
+  print(f"{context} loading entries", flush=True)
+  entries = [
+    entry for entry in app_tables.tournament_entries.search(tournament=tournament)
+    if _entry_is_player(entry) and (division is None or entry["division"] == division)
+  ]
+  print(f"{context} entries={len(entries)} loading round-two scores", flush=True)
+  round_two_scores = _tournament_round_two_scores(tournament)
+  print(f"{context} calculating rankings", flush=True)
+  standings = _net_standings(entries, round_two_scores)
+  print(f"{context} complete rows={len(standings)}", flush=True)
+  return standings
 
 
 def _net_standings(entries, round_two_scores, previous_awards=None):
@@ -1611,16 +1633,9 @@ def save_tournament_foursomes(tournament, assignments):
 
 @anvil.server.callable(require_user=True)
 def get_division_standings(tournament, division):
-  if not _valid_row(app_tables.tournaments, tournament):
+  if division is None:
     return []
-  if division not in _division_names(tournament):
-    return []
-  entries = [
-    entry
-    for entry in list_tournament_entries(tournament)
-    if _entry_is_player(entry) and entry["division"] == division
-  ]
-  return _net_standings(entries, _tournament_round_two_scores(tournament))
+  return _tournament_standings(tournament, division)
 
 
 @anvil.server.callable(require_user=True)

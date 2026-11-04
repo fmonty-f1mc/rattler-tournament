@@ -27,6 +27,11 @@ class Standings(StandingsTemplate):
     self.standings_status.text = "Create or select a tournament to see standings."
 
   def load(self, tournament):
+    # Do not leave another tournament's results visible if loading fails.
+    self._overall_standings = []
+    self._active_standings = []
+    self.standings_rows.items = []
+    self.standings_status.text = ""
     selected_scope = self.standings_scope_picker.selected_value or "overall"
     scopes = [("Overall", "overall")] + [
       ("Division: " + division, "division:" + division)

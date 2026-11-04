@@ -90,7 +90,8 @@ class Form1(Form1Template):
     self.tournament_field_page.load(tournament, self._player_entries)
     self.round_two_page.load(tournament, self._player_entries)
     self.round_one_page.load(tournament, self._player_entries)
-    self.standings_page.load(tournament)
+    if self._active_view == "standings":
+      self.standings_page.load(tournament)
     self.expenses_page.load(tournament)
 
   @staticmethod
@@ -160,6 +161,11 @@ class Form1(Form1Template):
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
       )
     self.expenses_page._update_budget_navigation()
+    if name == "standings":
+      if self.current_event is not None and not self._creating_tournament:
+        self.standings_page.load(self.current_event)
+      else:
+        self.standings_page.clear()
     if name == "awards":
       self.awards_page.load()
     if name == "imports":
