@@ -1,8 +1,8 @@
 <anvil-form container="ColumnPanel" prop:role="tracker-view">
   <div class="view-heading">
     <p class="eyebrow">LEADERBOARDS</p>
-    <h2>First-round standings</h2>
-    <p class="muted-copy">View the overall leaderboard or choose a division.</p>
+    <h2>Tournament standings</h2>
+    <p class="muted-copy">View the overall leaderboard or choose a division. Rattler Score = Net + Round 2 score; shown when both scores are recorded.</p>
   </div>
   <div class="tracker-card">
     <div class="section-heading">
@@ -16,7 +16,7 @@
         <anvil-component type="DropDown" name="standings_sort_by"></anvil-component>
       </div>
     </div>
-    <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
+    <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span><span>Rattler Score</span></div>
     <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.Components.Scoring.StandingRow" prop:role="standing-list"></anvil-component>
     <anvil-component type="Label" name="standings_status" prop:role="muted-text"></anvil-component>
   </div>

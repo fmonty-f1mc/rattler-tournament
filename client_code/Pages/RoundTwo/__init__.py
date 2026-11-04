@@ -1,6 +1,7 @@
 from ._anvil_designer import RoundTwoTemplate
 from anvil import *
 import anvil.server
+from ...Components.Scoring.RoundTwoPairingRow import RoundTwoPairingRow
 
 
 class RoundTwo(RoundTwoTemplate):
@@ -104,11 +105,28 @@ class RoundTwo(RoundTwoTemplate):
   def round_two_pairing_rows_pairing_changed(self, **event_args):
     self.round_two_pairing_status.text = "Pairing or score changes are not saved yet."
 
+  def _set_saving(self, saving):
+    controls = (
+      self.save_round_two_pairings_button,
+      self.generate_round_two_net_pairings_button,
+      self.generate_round_two_gross_pairings_button,
+      self.app.event_picker,
+    ) + self.app._navigation_buttons()
+    for control in controls:
+      control.enabled = not saving
+    for row in self.round_two_pairing_rows.get_components():
+      assert isinstance(row, RoundTwoPairingRow)
+      row.set_enabled(not saving)
+
   @handle("save_round_two_pairings_button", "click")
   def save_round_two_pairings_button_click(self, **event_args):
     if self.app.current_event is None:
       self.round_two_pairing_status.text = "Create or select a tournament first."
       return
+    for row in self.round_two_pairing_rows.get_components():
+      assert isinstance(row, RoundTwoPairingRow)
+      row.capture_score()
+    pairings = self.round_two_pairing_rows.items or []
     assignments = [
       {
         "first_entry": pairing["first_entry"],
@@ -117,15 +135,27 @@ class RoundTwo(RoundTwoTemplate):
         "score_9": pairing["score_9"],
         "score_changed": pairing["score_changed"],
       }
-      for pairing in (self.round_two_pairing_rows.items or [])
+      for pairing in pairings
     ]
-    result = anvil.server.call(
-      "save_round_two_pairings",
-      self.app.current_event,
-      assignments,
-    )
+    self._set_saving(True)
+    try:
+      result = anvil.server.call(
+        "save_round_two_pairings",
+        self.app.current_event,
+        assignments,
+      )
+    finally:
+      self._set_saving(False)
     if not result["ok"]:
       self.round_two_pairing_status.text = result["message"]
       return
-    self.app._load_event_data()
+    for pairing, saved in zip(pairings, result["saved_pairings"]):
+      pairing["sequence"] = saved["sequence"]
+      pairing["pair_label"] = saved["pair_label"]
+      pairing["score_9"] = saved["score_9"]
+      pairing["score_changed"] = False
+    self.round_two_pairing_rows.items = self._round_two_pairing_items(
+      pairings, self.app._player_entries,
+    )
+    self.app._loaded_event_views.discard("standings")
     self.round_two_pairing_status.text = "Round Two pairs and shared scores saved."

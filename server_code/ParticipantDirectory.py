@@ -9,16 +9,23 @@ import re
 import anvil.server
 from anvil import BlobMedia
 from anvil.tables import app_tables, in_transaction
+import anvil.tables.query as q
+
+from Tracker import (
+  _entry_net_score, _entry_round_two_score, _rattler_score,
+  _tournament_round_two_scores, _valid_row,
+)
 
 
-FIELDS = ("name", "email", "phone", "city", "state", "handicap", "active")
+FIELDS = ("name", "email", "phone", "city", "state", "handicap", "handicap_official", "active")
 HEADERS = ("participant_id", "revision") + FIELDS
 LABELS = {"name": "Name", "email": "Email", "phone": "Phone", "city": "City",
-          "state": "State", "handicap": "Player handicap", "active": "Active"}
+          "state": "State", "handicap": "Player handicap",
+          "handicap_official": "Official handicap", "active": "Active"}
 
 
 def _values(row):
-  return {key: (bool(row[key]) if key == "active" else row[key] if key == "handicap"
+  return {key: (bool(row[key]) if key in ("active", "handicap_official") else row[key] if key == "handicap"
                 else row[key] or "") for key in FIELDS}
 
 
@@ -54,6 +61,11 @@ def _normalize(values, current):
       return None, "Player handicap must be a number or blank."
     if not math.isfinite(result["handicap"]):
       return None, "Player handicap must be a finite number."
+  if not isinstance(values["handicap_official"], bool):
+    return None, "Official handicap must be TRUE or FALSE."
+  if values["handicap_official"] and result["handicap"] is None:
+    return None, "Enter a player handicap before marking it official."
+  result["handicap_official"] = values["handicap_official"]
   if not isinstance(values["active"], bool):
     return None, "Active must be TRUE or FALSE."
   result["active"] = values["active"]
@@ -100,6 +112,42 @@ def _plan(updates):
 def load_directory_for_editing():
   rows = sorted(app_tables.golfers.search(), key=lambda row: (row["name"] or "").lower())
   return {"rows": rows, "revisions": {row.get_id(): _revision(row) for row in rows}}
+
+
+@anvil.server.callable(require_user=True)
+def get_participant_history(golfer):
+  """Join tournament entries and awards without copying persisted row fields."""
+  if not _valid_row(app_tables.golfers, golfer):
+    return _error("This participant no longer exists. Refresh the directory.")
+
+  years: dict[str, dict] = {}
+  for entry in app_tables.tournament_entries.search(
+    q.fetch_only("handicap", "is_player", "gross_18", "net_18", "gross_9", tournament=q.fetch_only("year")),
+    golfer=golfer,
+  ):
+    tournament = entry["tournament"]
+    # Imported source nets are historical records; live scores use the standings calculation.
+    net = entry["net_18"] if entry["net_18"] is not None else _entry_net_score(entry)
+    round_two = _entry_round_two_score(entry, _tournament_round_two_scores(tournament))
+    years[tournament.get_id()] = {
+      "tournament": tournament, "entry": entry, "awards": [], "net": net,
+      "rattler": _rattler_score(net, round_two),
+    }
+
+  for record in app_tables.tournament_awards.search(
+    q.fetch_only(tournament=q.fetch_only("year"), award=q.fetch_only("name", "is_champion")),
+    golfer=golfer,
+  ):
+    tournament = record["tournament"]
+    year = years.setdefault(tournament.get_id(), {
+      "tournament": tournament, "entry": None, "awards": [], "net": None, "rattler": None,
+    })
+    year["awards"].append(record["award"])
+
+  for year in years.values():
+    # Archived awards remain part of a participant's history.
+    year["awards"].sort(key=lambda award: (not award["is_champion"], award["name"].lower()))
+  return {"ok": True, "years": sorted(years.values(), key=lambda year: year["tournament"]["year"], reverse=True)}
 
 
 @anvil.server.callable(require_user=True)
@@ -157,10 +205,11 @@ def _csv_plan(csv_file):
       if not any(record.values()):
         continue
       values = {key: _read_cell(record[key]) for key in FIELDS}
-      active = values["active"].strip().lower()
-      if active not in ("true", "false"):
-        return None, f"CSV row {line_number}: active must be TRUE or FALSE."
-      values["active"] = active == "true"
+      for field in ("active", "handicap_official"):
+        flag = values[field].strip().lower()
+        if flag not in ("true", "false"):
+          return None, f"CSV row {line_number}: {field} must be TRUE or FALSE."
+        values[field] = flag == "true"
       updates.append({"participant_id": record["participant_id"].strip(),
                       "revision": record["revision"].strip(), "values": values})
   except UnicodeDecodeError:
@@ -175,6 +224,8 @@ def _csv_plan(csv_file):
 def _display(value, field):
   if field == "active":
     return "Active" if value else "Inactive"
+  if field == "handicap_official":
+    return "Official" if value else "Not official"
   return "(blank)" if value is None or value == "" else str(value)
 
 

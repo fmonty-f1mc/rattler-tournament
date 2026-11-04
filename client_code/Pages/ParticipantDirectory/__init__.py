@@ -63,9 +63,9 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
           row_form.commit()
 
   def _directory_values(self, row):
-    return {field: (bool(row[field]) if field == "active" else row[field] if field == "handicap"
+    return {field: (bool(row[field]) if field in ("active", "handicap_official") else row[field] if field == "handicap"
                     else row[field] or "")
-            for field in ("name", "email", "phone", "city", "state", "handicap", "active")}
+            for field in ("name", "email", "phone", "city", "state", "handicap", "handicap_official", "active")}
 
   def _directory_dirty_rows(self):
     return [row for row in self._directory_rows
@@ -139,7 +139,8 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
     if self._directory_dirty_rows() and not confirm("Discard all unsaved directory changes?", title="Cancel spreadsheet edits"):
       return
     self._finish_directory_editing()
-    self.app._load_players()
+    # The buffers were reset above; Cancel only needs to redraw the cached roster.
+    self._refresh_player_rows()
     self.player_status.text = "Spreadsheet edits discarded."
 
   @handle("save_directory_button", "click")
@@ -276,6 +277,7 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
       self.player_city.text,
       self.player_state.text,
       self.player_handicap.text,
+      self.player_handicap_official.checked,
     )
     if not result["ok"]:
       self.player_status.text = result["message"]
@@ -286,6 +288,7 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
     self.player_city.text = ""
     self.player_state.text = ""
     self.player_handicap.text = ""
+    self.player_handicap_official.checked = False
     self.app._load_players()
     self.app._load_event_data()
     self._show_player_add_mode(None)
@@ -314,8 +317,8 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
     self.player_status.text = result["message"]
 
   @handle("player_rows", "x-save-player")
-  def player_rows_save_player(self, golfer, name, email, phone, city, state, active, handicap, **event_args):
-    result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state, handicap)
+  def player_rows_save_player(self, golfer, name, email, phone, city, state, active, handicap, handicap_official, **event_args):
+    result = anvil.server.call("update_golfer", golfer, name, email, phone, city, state, handicap, handicap_official)
     if not result["ok"]:
       self.player_status.text = result["message"]
       return

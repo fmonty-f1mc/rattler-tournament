@@ -1,38 +1,45 @@
 <anvil-form container="ColumnPanel">
   <div class="player-row">
-    <anvil-component type="Button" name="name_button" prop:role="player-name-button"></anvil-component>
+    <div class="player-card-heading">
+      <anvil-component type="Button" name="name_button" prop:role="player-name-button"></anvil-component>
+      <anvil-component type="Label" name="status_summary" prop:role="player-status-badge" bind:text="'Active' if self.item['active'] else 'Inactive'"></anvil-component>
+    </div>
     <anvil-component type="ColumnPanel" name="details_panel" prop:role="player-details">
+      <h3 class="player-detail-heading">Contact details</h3>
       <div class="player-details-grid">
-        <div class="player-detail-cell">
+        <div class="player-detail-cell player-detail-wide">
           <span class="player-detail-label">Name</span>
           <anvil-component type="Label" name="name_label" prop:role="row-title" bind:text="self.item['name']"></anvil-component>
           <anvil-component type="TextBox" name="name_box" prop:placeholder="Full name"></anvil-component>
         </div>
         <div class="player-detail-cell">
           <span class="player-detail-label">Email</span>
-          <anvil-component type="Label" name="email_label" bind:text="self.item['email']"></anvil-component>
-          <anvil-component type="Label" name="contact_check_label" bind:text="self.contact_check()" prop:role="muted-text"></anvil-component>
+          <anvil-component type="Label" name="email_label" bind:text="self.item['email'] or 'Not provided'"></anvil-component>
           <anvil-component type="TextBox" name="email_box" prop:placeholder="name@example.com"></anvil-component>
         </div>
         <div class="player-detail-cell">
           <span class="player-detail-label">Phone</span>
-          <anvil-component type="Label" name="phone_label" bind:text="self.item['phone']"></anvil-component>
+          <anvil-component type="Label" name="phone_label" bind:text="self.item['phone'] or 'Not provided'"></anvil-component>
           <anvil-component type="TextBox" name="phone_box" prop:placeholder="Phone number"></anvil-component>
         </div>
         <div class="player-detail-cell">
           <span class="player-detail-label">City</span>
-          <anvil-component type="Label" name="city_label" bind:text="self.item['city']"></anvil-component>
+          <anvil-component type="Label" name="city_label" bind:text="self.item['city'] or 'Not provided'"></anvil-component>
           <anvil-component type="TextBox" name="city_box" prop:placeholder="City"></anvil-component>
         </div>
         <div class="player-detail-cell">
           <span class="player-detail-label">State</span>
-          <anvil-component type="Label" name="state_label" bind:text="self.item['state']"></anvil-component>
+          <anvil-component type="Label" name="state_label" bind:text="self.item['state'] or 'Not provided'"></anvil-component>
           <anvil-component type="TextBox" name="state_box" prop:placeholder="State"></anvil-component>
         </div>
+      </div>
+      <h3 class="player-detail-heading">Player details</h3>
+      <div class="player-details-grid">
         <div class="player-detail-cell">
           <span class="player-detail-label">Player handicap</span>
-          <anvil-component type="Label" name="handicap_label" bind:text="'Not set' if self.item['handicap'] is None else str(self.item['handicap'])"></anvil-component>
+          <anvil-component type="Label" name="handicap_label" bind:text="'Not set' if self.item['handicap'] is None else str(self.item['handicap']) + (' · Official' if self.item['handicap_official'] else '')"></anvil-component>
           <anvil-component type="TextBox" name="handicap_box" prop:placeholder="Optional, e.g. 12.4"></anvil-component>
+          <anvil-component type="CheckBox" name="official_checkbox" prop:text="Official handicap"></anvil-component>
         </div>
         <div class="player-detail-cell">
           <span class="player-detail-label">Status</span>
@@ -41,11 +48,30 @@
         </div>
       </div>
       <div class="player-row-actions">
-        <anvil-component type="Button" name="edit_button" prop:text="Edit" prop:role="secondary-button"></anvil-component>
-        <anvil-component type="Button" name="save_button" prop:text="Save" prop:role="secondary-button"></anvil-component>
+        <anvil-component type="Button" name="edit_button" prop:text="Edit participant" prop:role="secondary-button"></anvil-component>
+        <anvil-component type="Button" name="save_button" prop:text="Save changes"></anvil-component>
         <anvil-component type="Button" name="cancel_button" prop:text="Cancel" prop:role="secondary-button"></anvil-component>
         <anvil-component type="Button" name="delete_button" prop:text="Delete" prop:role="danger-button"></anvil-component>
       </div>
+      <section class="player-history-section">
+        <h3 class="player-detail-heading">Awards, Rattlercaps &amp; Scores</h3>
+        <anvil-component type="Label" name="history_status" prop:role="muted-text" prop:visible="False"></anvil-component>
+        <anvil-component type="ColumnPanel" name="history_table" prop:visible="False" prop:role="player-history-table">
+          <div class="player-history-scroll" tabindex="0" role="region" aria-label="Awards, Rattlercaps and scores by year">
+            <div class="player-history-content" role="table" aria-label="Participant tournament history">
+              <div class="player-history-grid player-history-headings" role="row">
+                <span role="columnheader">Year</span>
+                <span role="columnheader">Awards</span>
+                <span role="columnheader">Rattlercap</span>
+                <span role="columnheader">Gross (18)</span>
+                <span role="columnheader">Net (18)</span>
+                <span role="columnheader">Rattler Score</span>
+              </div>
+              <anvil-component type="RepeatingPanel" name="history_rows" prop:item_template="rattler_tournament.Components.Participants.PlayerHistoryRow" prop:role="player-history-list"></anvil-component>
+            </div>
+          </div>
+        </anvil-component>
+      </section>
     </anvil-component>
   </div>
 </anvil-form>

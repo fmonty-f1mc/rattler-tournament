@@ -1,0 +1,34 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-view">
+  <div class="view-heading"><p class="eyebrow">THE RATTLER HONOURS</p><h2>Awards</h2><p class="muted-copy">Keep a record of each year's champion and award winners. Use the selected tournament in the menu to record awards for past years.</p></div>
+  <div class="tracker-card">
+    <h2>Record a winner</h2>
+    <anvil-component type="Label" name="champion_label" prop:role="h2"></anvil-component>
+    <p class="muted-copy">The champion award tracks one winner per year, even if you rename it. Recording a new champion replaces the previous champion for that year. Other awards can have multiple winners.</p>
+    <div class="form-grid form-grid-two">
+      <div class="field-block"><label>Award</label><anvil-component type="DropDown" name="award_picker"></anvil-component></div>
+      <div class="field-block"><label>Player</label><anvil-component type="DropDown" name="player_picker"></anvil-component></div>
+    </div>
+    <p class="muted-copy">All players in the participant directory are available, including inactive players, so you can fill in historical winners.</p>
+    <div class="inline-form"><anvil-component type="Button" name="assign_award_button" prop:text="Record award"></anvil-component></div>
+    <anvil-component type="Label" name="award_status" prop:role="status-text"></anvil-component>
+  </div>
+  <div class="tracker-card">
+    <h2>Manage awards</h2>
+    <p class="muted-copy">Choose New award to create one, or select an existing award to rename or delete it. Renaming updates its history; deleting keeps past winners recorded. Creating an award with a deleted name restores it.</p>
+    <div class="form-grid form-grid-two">
+      <div class="field-block"><label>New or existing award</label><anvil-component type="DropDown" name="edit_award_picker"></anvil-component></div>
+      <div class="field-block"><label>Award name</label><anvil-component type="TextBox" name="edit_award_name" prop:placeholder="Award name"></anvil-component></div>
+    </div>
+    <div class="inline-form">
+      <anvil-component type="Button" name="save_award_button" prop:text="Create award" prop:role="secondary-button"></anvil-component>
+      <anvil-component type="Button" name="delete_award_button" prop:text="Delete award" prop:role="danger-button" prop:visible="False"></anvil-component>
+    </div>
+    <anvil-component type="Label" name="edit_award_status" prop:role="status-text"></anvil-component>
+  </div>
+  <div class="tracker-card">
+    <h2>Award history</h2>
+    <div class="field-block"><label>Show</label><anvil-component type="DropDown" name="history_scope"></anvil-component></div>
+    <anvil-component type="Label" name="empty_history" prop:text="No awards recorded yet for this selection." prop:role="muted-text"></anvil-component>
+    <anvil-component type="RepeatingPanel" name="award_history" prop:item_template="rattler_tournament.Components.Awards.AwardHistoryRow"></anvil-component>
+  </div>
+</anvil-form>

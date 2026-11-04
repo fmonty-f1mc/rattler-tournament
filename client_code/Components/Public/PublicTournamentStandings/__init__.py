@@ -12,7 +12,7 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
       for division in self.item["divisions"]
     ]
     self.standings_scope_picker.selected_value = "overall"
-    self.standings_sort_by.items = [("Net", "net"), ("Gross", "gross")]
+    self.standings_sort_by.items = [("Net", "net"), ("Gross", "gross"), ("Rattler Score", "rattler")]
     self.standings_sort_by.selected_value = "net"
     round_one_groups = self.item["round_one_groups"]
     self.round_one_group_rows.items = round_one_groups
@@ -60,12 +60,16 @@ class PublicTournamentStandings(PublicTournamentStandingsTemplate):
     sorted_rows = sorted(
       rows,
       key=lambda row: (
-        row[sort_by],
+        row[sort_by] is None,
+        row[sort_by] if row[sort_by] is not None else 0,
         row[other_score],
         row["player_name"].lower(),
       ),
     )
-    return [dict(row, rank=index + 1) for index, row in enumerate(sorted_rows)]
+    return [
+      dict(row, rank=index + 1 if row[sort_by] is not None else "—")
+      for index, row in enumerate(sorted_rows)
+    ]
 
   @handle("standings_scope_picker", "change")
   def standings_scope_picker_change(self, **event_args):

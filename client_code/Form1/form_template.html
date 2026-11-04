@@ -30,6 +30,8 @@
       <div class="navigation-group">
         <p class="navigation-group-label">App</p>
         <anvil-component type="Button" name="players_nav" prop:text="Participant directory" prop:role="tournament-subtab"></anvil-component>
+        <anvil-component type="Button" name="awards_nav" prop:text="Awards" prop:role="tournament-subtab"></anvil-component>
+        <anvil-component type="Button" name="imports_nav" prop:text="Import Previous years" prop:role="tournament-subtab"></anvil-component>
         <anvil-component type="Button" name="public_view_nav" prop:text="Public view" prop:role="tournament-subtab"></anvil-component>
       </div>
     </nav>
@@ -48,6 +50,8 @@
     <anvil-component type="rattler_tournament.Pages.Expenses" name="expenses_page"></anvil-component>
     <anvil-component type="rattler_tournament.Pages.EmailParticipants" name="email_participants_page"></anvil-component>
     <anvil-component type="rattler_tournament.Pages.NewsEditor" name="news_editor_page"></anvil-component>
+    <anvil-component type="rattler_tournament.Pages.Awards" name="awards_page"></anvil-component>
+    <anvil-component type="rattler_tournament.Pages.ImportPreviousYears" name="imports_page"></anvil-component>
   </anvil-block>
   <anvil-block slot="title">
     <anvil-component type="Label" name="page_title" prop:role="h1" prop:text="The Rattler Invitational"></anvil-component>

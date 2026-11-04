@@ -5,40 +5,137 @@ from anvil.google.drive import app_files
 import anvil.server
 import anvil.users
 
+# This documented exception is missing from older client API stubs.
+RuntimeUnavailableError = getattr(anvil.server, "RuntimeUnavailableError")
+
 
 class PublicStandings(PublicStandingsTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
-    if anvil.users.get_user() is not None:
-      self.sign_in_button.text = "Committee dashboard"
-    self.tournaments = anvil.server.call("get_public_tournament_standings")
-    self.tournament_picker.items = [
-      (tournament["title"], tournament)
-      for tournament in self.tournaments
-    ]
-    self.tournament_picker.visible = bool(self.tournaments)
-    self.tournament_label.visible = bool(self.tournaments)
-    self.tournament_rows.items = []
+    self.tournaments = []
+    self._tournaments_loaded = False
+    self._current_tournament = None
+    self._expenses_loaded = False
+    self._loading = False
+    self._active_public_tab = "news"
+    self.tournament_picker.items = []
+    self.tournament_picker.visible = False
+    self.tournament_label.visible = False
     self._expense_participants = []
-    self.empty_state.visible = not self.tournaments
-    if self.tournaments:
-      self.tournament_picker.selected_value = self.tournaments[0]
-    self._show_selected_tournament()
+    self._render_tournament(None)
+    self._render_expenses(None)
     self._show_public_tab("news")
 
   def _show_public_tab(self, name):
+    if self._loading:
+      return
+    self._active_public_tab = name
+    self._update_public_sections()
+    self._load_public_data()
+
+  def _update_public_sections(self):
+    ready = self._tournaments_loaded and (
+      not self.tournaments or self._current_tournament is not None
+    )
     for tab_name, panel, button in (
       ("news", self.news_section, self.news_tab_button),
       ("standings", self.standings_section, self.standings_tab_button),
+      ("awards", self.awards_section, self.awards_tab_button),
       ("expenses", self.expenses_section, self.expenses_tab_button),
     ):
-      panel.visible = name == tab_name
+      panel.visible = self._active_public_tab == tab_name and ready and (
+        tab_name != "expenses" or not self.tournaments or self._expenses_loaded
+      )
       button.role = (
-        "tournament-subtab-active" if name == tab_name else "tournament-subtab"
+        "tournament-subtab-active"
+        if self._active_public_tab == tab_name else "tournament-subtab"
       )
 
+  def _load_public_data(self):
+    if self._loading:
+      return
+    self._loading = True
+    self.load_status.text = "Loading tournament data…"
+    self.load_status.visible = True
+    self.retry_button.visible = False
+    controls = (
+      self.tournament_picker, self.news_tab_button, self.standings_tab_button,
+      self.awards_tab_button, self.expenses_tab_button, self.retry_button,
+      self.sign_in_button,
+    )
+    for control in controls:
+      control.enabled = False
+    try:
+      if not self._tournaments_loaded:
+        if anvil.users.get_user() is not None:
+          self.sign_in_button.text = "Committee dashboard"
+        self.tournaments = anvil.server.call("list_public_tournaments")
+        self.tournament_picker.items = [
+          (tournament["title"], tournament["id"])
+          for tournament in self.tournaments
+        ]
+        self.tournament_picker.visible = bool(self.tournaments)
+        self.tournament_label.visible = bool(self.tournaments)
+        self.tournament_picker.selected_value = (
+          self.tournaments[0]["id"] if self.tournaments else None
+        )
+        self._tournaments_loaded = True
+      tournament_id = self.tournament_picker.selected_value
+      if tournament_id is not None:
+        if self._current_tournament is None:
+          tournament = anvil.server.call(
+            "get_public_tournament_standings", tournament_id
+          )
+          if tournament is None:
+            self._tournament_unavailable()
+            return
+          self._current_tournament = tournament
+          self._render_tournament(tournament)
+        if self._active_public_tab == "expenses" and not self._expenses_loaded:
+          budget = anvil.server.call("get_public_tournament_expenses", tournament_id)
+          if budget is None:
+            self._tournament_unavailable()
+            return
+          self._render_expenses(budget)
+          self._expenses_loaded = True
+      else:
+        self._render_tournament(None)
+        self._render_expenses(None)
+      self.load_status.visible = False
+    except RuntimeUnavailableError:
+      self.load_status.text = (
+        "Expenses are temporarily unavailable. Please retry."
+        if self._active_public_tab == "expenses"
+        else "Tournament data is temporarily unavailable. Please retry."
+      )
+      self.retry_button.visible = True
+    finally:
+      self._loading = False
+      for control in controls:
+        control.enabled = True
+      self._update_public_sections()
+
+  def _tournament_unavailable(self):
+    # A committee member may delete a tournament after the picker was loaded.
+    self._tournaments_loaded = False
+    self._current_tournament = None
+    self._expenses_loaded = False
+    self._render_tournament(None)
+    self._render_expenses(None)
+    self.load_status.text = "This tournament is no longer available. Retry to refresh the list."
+    self.retry_button.visible = True
+
   def _show_selected_tournament(self):
-    tournament = self.tournament_picker.selected_value
+    if self._loading:
+      return
+    self._current_tournament = None
+    self._expenses_loaded = False
+    self._render_tournament(None)
+    self._render_expenses(None)
+    self._update_public_sections()
+    self._load_public_data()
+
+  def _render_tournament(self, tournament):
     self.selected_tournament_name.text = (
       tournament["title"]
       + (f" · {tournament['date_label']}" if tournament["date_label"] else "")
@@ -46,6 +143,7 @@ class PublicStandings(PublicStandingsTemplate):
     )
     self.selected_tournament_name.visible = tournament is not None
     self.tournament_rows.items = [tournament] if tournament else []
+    self.empty_state.visible = not self.tournaments
     self.news_posts = tournament["news_posts"] if tournament else []
     self.news_rows.items = self.news_posts
     self.news_empty_state.visible = not self.news_posts
@@ -54,14 +152,19 @@ class PublicStandings(PublicStandingsTemplate):
       if tournament
       else "No tournaments have been added yet."
     )
-    self._load_selected_tournament_expenses(tournament)
+    awards = tournament["awards"] if tournament else []
+    self.award_rows.items = awards
+    self.awards_empty_state.visible = not awards
+    self.awards_empty_state.text = (
+      "No award winners have been recorded for this tournament yet."
+      if tournament else "No tournaments have been added yet."
+    )
 
   @staticmethod
   def _money(value):
     return "${:,.2f}".format(value or 0)
 
-  def _load_selected_tournament_expenses(self, tournament):
-    budget = tournament["budget_summary"] if tournament else None
+  def _render_expenses(self, budget):
     self.budget_total.text = self._money(budget["total"] if budget else 0)
     self.budget_paid.text = self._money(budget["paid"] if budget else 0)
     self.budget_balance.text = self._money(budget["balance"] if budget else 0)
@@ -142,6 +245,10 @@ class PublicStandings(PublicStandingsTemplate):
   def tournament_picker_change(self, **event_args):
     self._show_selected_tournament()
 
+  @handle("retry_button", "click")
+  def retry_button_click(self, **event_args):
+    self._load_public_data()
+
   @handle("standings_tab_button", "click")
   def standings_tab_button_click(self, **event_args):
     self._show_public_tab("standings")
@@ -153,6 +260,10 @@ class PublicStandings(PublicStandingsTemplate):
   @handle("expenses_tab_button", "click")
   def expenses_tab_button_click(self, **event_args):
     self._show_public_tab("expenses")
+
+  @handle("awards_tab_button", "click")
+  def awards_tab_button_click(self, **event_args):
+    self._show_public_tab("awards")
 
   @handle("expense_search", "change")
   def expense_search_change(self, **event_args):

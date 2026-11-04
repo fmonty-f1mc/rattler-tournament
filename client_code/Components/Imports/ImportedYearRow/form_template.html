@@ -1,0 +1,8 @@
+<anvil-form container="ColumnPanel" prop:role="tracker-card">
+  <anvil-component type="Label" name="year_label" prop:role="row-title" bind:text="str(int(self.item['year'])) + ' · ' + self.item['source_sheet']"></anvil-component>
+  <anvil-component type="Label" name="file_label" prop:role="muted-text" bind:text="self.item['source_name'] + ' · ' + str(self.item['imported_at'])"></anvil-component>
+  <anvil-component type="FlowPanel" name="history_actions">
+    <anvil-component type="Button" name="view_source_button" prop:text="View original results" prop:role="secondary-button"></anvil-component>
+    <anvil-component type="Button" name="open_tournament_button" prop:text="Open tournament" prop:role="secondary-button" bind:enabled="self.item['tournament'] is not None"></anvil-component>
+  </anvil-component>
+</anvil-form>

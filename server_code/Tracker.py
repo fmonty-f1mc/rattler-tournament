@@ -1,15 +1,21 @@
 import anvil.google.drive, anvil.google.mail
 from anvil.google.drive import app_files
 import csv
+import faulthandler
 import io
 import math
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timezone
+from time import monotonic
 
 import anvil.server
 from anvil import BlobMedia
-from anvil.tables import app_tables
+from anvil.tables import app_tables, in_transaction
+import anvil.tables.query as q
+
+# Emit Python stacks to the runtime's stderr if a native fault kills the process.
+faulthandler.enable()
 
 
 def _result(message=None, **values):
@@ -29,8 +35,7 @@ def _number(value, label, allow_blank=False):
 def _valid_row(table, candidate):
   if candidate is None or not hasattr(candidate, "get_id"):
     return False
-  candidate_id = candidate.get_id()
-  return any(row.get_id() == candidate_id for row in table.search())
+  return table.has_row(candidate)
 
 
 def _email_filter_error(tournament, recipient_type, division_filter):
@@ -118,12 +123,12 @@ def _entry_sort_key(entry):
 def _division_names(tournament):
   names = {
     division["name"].strip()
-    for division in app_tables.tournament_divisions.search(tournament=tournament)
+    for division in app_tables.tournament_divisions.search(q.fetch_only("name"), tournament=tournament)
     if division["name"] and division["name"].strip()
   }
   names.update(
     entry["division"].strip()
-    for entry in app_tables.tournament_entries.search(tournament=tournament)
+    for entry in app_tables.tournament_entries.search(q.fetch_only("is_player", "division"), tournament=tournament)
     if _entry_is_player(entry) and entry["division"] and entry["division"].strip()
   )
   return sorted(names, key=str.lower)
@@ -135,6 +140,32 @@ def _entry_net_score(entry):
   if gross is None or gross <= 0 or handicap is None:
     return None
   return round(gross - handicap, 10)
+
+
+def _tournament_round_two_scores(tournament, pairings=None):
+  """Map both players to their shared score, including unposted pair scores."""
+  if pairings is None:
+    pairings = app_tables.round_two_pairings.search(tournament=tournament)
+  scores = {}
+  for pairing in pairings:
+    for slot in ("first_entry", "second_entry"):
+      entry = pairing[slot]
+      if entry is not None:
+        scores[entry.get_id()] = pairing["score_9"]
+  return scores
+
+
+def _entry_round_two_score(entry, pair_scores):
+  # An assigned pair takes precedence, even when its score has been cleared.
+  # Imported years without pairings retain their individual alternate-shot score.
+  score = pair_scores.get(entry.get_id(), entry["gross_9"])
+  return score if score is not None and score > 0 else None
+
+
+def _rattler_score(net, round_two):
+  if net is None or round_two is None:
+    return None
+  return round(net + round_two, 10)
 
 
 def _ranked_entries(entries):
@@ -206,6 +237,16 @@ def _delete_budget_shares_for_entries(entries):
       share.delete()
 
 
+def _news_post_sort_key(post):
+  """Sort dated news newest first, with undated legacy posts last."""
+  created_at = post["created_at"]
+  if created_at is None:
+    return -math.inf
+  if created_at.tzinfo is None:
+    created_at = created_at.replace(tzinfo=timezone.utc)
+  return created_at.timestamp()
+
+
 @anvil.server.callable(require_user=True)
 def list_committee_news_posts(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
@@ -214,7 +255,7 @@ def list_committee_news_posts(tournament):
   posts.extend(app_tables.news_posts.search(tournament=None))
   return sorted(
     posts,
-    key=lambda post: post["created_at"] or datetime.min,
+    key=_news_post_sort_key,
     reverse=True,
   )
 
@@ -262,7 +303,13 @@ def delete_news_post(post, tournament):
 
 @anvil.server.callable(require_user=True)
 def list_golfers():
-  return sorted(app_tables.golfers.search(), key=lambda golfer: (not golfer["active"], golfer["name"].lower()))
+  started = monotonic()
+  print("[golfers] loading roster", flush=True)
+  golfers = list(app_tables.golfers.search())
+  print(f"[golfers] rows={len(golfers)}; sorting roster", flush=True)
+  golfers.sort(key=lambda golfer: (not golfer["active"], golfer["name"].lower()))
+  print(f"[golfers] elapsed={monotonic() - started:.3f}s response ready", flush=True)
+  return golfers
 
 
 @anvil.server.callable(require_user=True)
@@ -327,6 +374,7 @@ def import_golfers_from_csv(csv_file):
       phone=csv_value(row, "phone"),
       city=csv_value(row, "city"),
       state=csv_value(row, "state"),
+      handicap_official=False,
       active=True,
     )
     existing_names.add(name_key)
@@ -341,10 +389,14 @@ def import_golfers_from_csv(csv_file):
 
 
 @anvil.server.callable(require_user=True)
-def create_golfer(name, email, phone, city, state, handicap=None):
+def create_golfer(name, email, phone, city, state, handicap=None, handicap_official=False):
   handicap_value = _number(handicap, "Player handicap", allow_blank=True)
   if handicap is not None and str(handicap).strip() and handicap_value is None:
     return _result("Enter a valid number for player handicap, or leave it blank.")
+  if not isinstance(handicap_official, bool):
+    return _result("Official handicap must be true or false.")
+  if handicap_official and handicap_value is None:
+    return _result("Enter a player handicap before marking it official.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
@@ -362,6 +414,7 @@ def create_golfer(name, email, phone, city, state, handicap=None):
     city=(city or "").strip(),
     state=(state or "").strip(),
     handicap=handicap_value,
+    handicap_official=handicap_official,
     active=True,
   )
   return _result(golfer=golfer)
@@ -376,13 +429,19 @@ def set_golfer_active(golfer, active):
 
 
 @anvil.server.callable(require_user=True)
-def update_golfer(golfer, name, email, phone, city, state, handicap=None):
+def update_golfer(golfer, name, email, phone, city, state, handicap=None, handicap_official=None):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
 
   handicap_value = _number(handicap, "Player handicap", allow_blank=True)
   if handicap is not None and str(handicap).strip() and handicap_value is None:
     return _result("Enter a valid number for player handicap, or leave it blank.")
+  if handicap_official is None:
+    handicap_official = bool(golfer["handicap_official"])
+  if not isinstance(handicap_official, bool):
+    return _result("Official handicap must be true or false.")
+  if handicap_official and handicap_value is None:
+    return _result("Enter a player handicap before marking it official.")
   name = (name or "").strip()
   if not name:
     return _result("Add a player name.")
@@ -405,6 +464,7 @@ def update_golfer(golfer, name, email, phone, city, state, handicap=None):
     city=(city or "").strip(),
     state=(state or "").strip(),
     handicap=handicap_value,
+    handicap_official=handicap_official,
   )
   return _result()
 
@@ -413,6 +473,8 @@ def update_golfer(golfer, name, email, phone, city, state, handicap=None):
 def delete_golfer(golfer):
   if not _valid_row(app_tables.golfers, golfer):
     return _result("Choose a player from the roster.")
+  if any(app_tables.tournament_awards.search(golfer=golfer)):
+    return _result("This player has award history. Mark them inactive to keep their awards, or remove their award records before deleting them.")
 
   entries = list(app_tables.tournament_entries.search(golfer=golfer))
   cleared_tournaments = set()
@@ -448,6 +510,8 @@ def list_tournaments():
 def delete_tournament(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament.")
+  if any(app_tables.tournament_awards.search(tournament=tournament)):
+    return _result("This tournament has award history. Remove its award records on the Awards page before deleting it.")
 
   rattler_pairings = list(app_tables.rattler_pairings.search(tournament=tournament))
   round_two_pairings = list(app_tables.round_two_pairings.search(tournament=tournament))
@@ -467,6 +531,8 @@ def delete_tournament(tournament):
     entry.delete()
   for division in divisions:
     division.delete()
+  for record in app_tables.historical_imports.search(tournament=tournament):
+    record.delete()
   tournament.delete()
 
   return _result(
@@ -718,20 +784,32 @@ def remove_tournament_entry(tournament, entry):
 def list_tournament_entries(tournament):
   if not _valid_row(app_tables.tournaments, tournament):
     return []
+  context = f"[tournament entries] tournament={tournament.get_id()}"
+  print(f"{context} loading entries", flush=True)
   entries = list(app_tables.tournament_entries.search(tournament=tournament))
+  # Existence checks must not fetch the archived workbook data.
+  historical = any(app_tables.historical_imports.search(q.fetch_only(), tournament=tournament))
+  print(f"{context} entries={len(entries)} historical={historical}; checking handicaps", flush=True)
   for entry in entries:
-    if entry["handicap"] is None:
+    if entry["handicap"] is None and not historical:
       previous_handicap = _previous_year_handicap(tournament, entry["golfer"])
       if previous_handicap is not None:
         entry["handicap"] = previous_handicap
-  return sorted(entries, key=_entry_sort_key)
+  result = sorted(entries, key=_entry_sort_key)
+  print(f"{context} response ready", flush=True)
+  return result
 
 
 @anvil.server.callable(require_user=True)
 def list_tournament_divisions(tournament):
+  print("[tournament divisions] validating tournament", flush=True)
   if not _valid_row(app_tables.tournaments, tournament):
     return []
-  return _division_names(tournament)
+  context = f"[tournament divisions] tournament={tournament.get_id()}"
+  print(f"{context} loading divisions", flush=True)
+  divisions = _division_names(tournament)
+  print(f"{context} response ready", flush=True)
+  return divisions
 
 
 @anvil.server.callable(require_user=True)
@@ -900,11 +978,33 @@ def save_round_one_scores_batch(tournament, scores):
 
 @anvil.server.callable(require_user=True)
 def get_net_standings(tournament):
-  entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
-  return _net_standings(entries)
+  return _tournament_standings(tournament)
 
 
-def _net_standings(entries):
+def _tournament_standings(tournament, division=None):
+  """Read leaderboard data without initializing or changing handicaps."""
+  print("[standings] validating tournament", flush=True)
+  if not _valid_row(app_tables.tournaments, tournament):
+    return []
+  context = f"[standings] tournament={tournament.get_id()} scope={'overall' if division is None else 'division'}"
+  if division is not None:
+    print(f"{context} validating division", flush=True)
+    if division not in _division_names(tournament):
+      return []
+  print(f"{context} loading entries", flush=True)
+  entries = [
+    entry for entry in app_tables.tournament_entries.search(tournament=tournament)
+    if _entry_is_player(entry) and (division is None or entry["division"] == division)
+  ]
+  print(f"{context} entries={len(entries)} loading round-two scores", flush=True)
+  round_two_scores = _tournament_round_two_scores(tournament)
+  print(f"{context} calculating rankings", flush=True)
+  standings = _net_standings(entries, round_two_scores)
+  print(f"{context} complete rows={len(standings)}", flush=True)
+  return standings
+
+
+def _net_standings(entries, round_two_scores):
   scored = [entry for entry in entries if (_entry_net_score(entry) or 0) > 0]
   scored = _ranked_entries(scored)
   return [
@@ -914,6 +1014,9 @@ def _net_standings(entries):
       "division": entry["division"] or "No division",
       "gross": entry["gross_18"],
       "net": _entry_net_score(entry),
+      "rattler": _rattler_score(
+        _entry_net_score(entry), _entry_round_two_score(entry, round_two_scores)
+      ),
     }
     for index, entry in enumerate(scored)
   ]
@@ -955,87 +1058,162 @@ def _format_tournament_date(event_date):
 
 
 @anvil.server.callable
-def get_public_tournament_standings():
-  tournaments = sorted(
-    app_tables.tournaments.search(),
-    key=lambda tournament: tournament["year"],
-    reverse=True,
-  )
-  public_standings = []
-  for tournament in tournaments:
-    player_entries = [
-      entry
-      for entry in app_tables.tournament_entries.search(tournament=tournament)
-      if _entry_is_player(entry)
-    ]
-    budget_summary = _budget_summary(tournament)
-    round_one_groups = sorted(
-      app_tables.tournament_foursomes.search(tournament=tournament),
-      key=lambda group: group["sequence"],
-    )
-    round_two_pairs = sorted(
-      app_tables.round_two_pairings.search(tournament=tournament),
-      key=lambda pairing: pairing["sequence"],
-    )
-    divisions = [
-      {
-        "name": name,
-        "standings": _net_standings(
-          [entry for entry in player_entries if entry["division"] == name]
-        ),
-      }
-      for name in _division_names(tournament)
-    ]
-    public_standings.append({
+def list_public_tournaments():
+  """Public picker metadata only; never load historical details here."""
+  return [
+    {
+      "id": tournament.get_id(),
       "title": f"{tournament['year']} · {tournament['course']}",
       "date_label": _format_tournament_date(tournament["event_date"]),
-      "news_posts": [
-        {"title": post["title"], "body": post["body"]}
-        for post in sorted(
-          app_tables.news_posts.search(tournament=tournament),
-          key=lambda post: post["created_at"] or datetime.min,
-          reverse=True,
-        )
-      ],
-      "standings": _net_standings(player_entries),
-      "divisions": divisions,
-      "round_one_groups": [
-        _public_round_one_group(group) for group in round_one_groups
-      ],
-      "round_two_pairs": [
-        {
-          "pair_label": pairing["pair_label"],
-          "score_display": (
-            f"Shared 9-hole score · {pairing['score_9']}"
-            if pairing["score_9"] is not None and pairing["score_9"] > 0
-            else "Shared 9-hole score not posted"
-          ),
-        }
-        for pairing in round_two_pairs
-      ],
-      "budget_summary": {
-        "total": budget_summary["total"],
-        "paid": budget_summary["paid"],
-        "balance": budget_summary["balance"],
-        "participants": [
-          {
-            "name": row["entry"]["golfer"]["name"],
-            "participant_label": row["participant_label"],
-            "is_player": _entry_is_player(row["entry"]),
-            "division": (
-              (row["entry"]["division"] or "")
-              if _entry_is_player(row["entry"])
-              else ""
-            ),
-            "estimated_share": row["estimated_share"],
-            "paid": row["entry"]["amount_paid"] or 0,
-            "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
-          }
-          for row in budget_summary["rows"]
-        ],
-      },
-    })
-  return public_standings
+    }
+    for tournament in sorted(
+      app_tables.tournaments.search(q.fetch_only("year", "course", "event_date")),
+      key=lambda tournament: tournament["year"],
+      reverse=True,
+    )
+  ]
+
+
+@anvil.server.callable
+def get_public_tournament_standings(tournament_id):
+  """Build public details for one tournament without expense calculations."""
+  started = monotonic()
+
+  def log(stage):
+    # Flush each stage so the last message survives a server-process crash.
+    print(
+      f"[public standings] tournament={tournament_id} "
+      f"elapsed={monotonic() - started:.3f}s {stage}",
+      flush=True,
+    )
+
+  log("loading tournament")
+  tournament = app_tables.tournaments.get_by_id(tournament_id)
+  if tournament is None:
+    log("tournament unavailable")
+    return None
+  log("loading player entries")
+  player_entries = [
+    entry
+    for entry in app_tables.tournament_entries.search(tournament=tournament)
+    if _entry_is_player(entry)
+  ]
+  log(f"players={len(player_entries)}; loading round-one groups")
+  round_one_groups = sorted(
+    app_tables.tournament_foursomes.search(tournament=tournament),
+    key=lambda group: group["sequence"],
+  )
+  log(f"round-one groups={len(round_one_groups)}; loading round-two pairs")
+  round_two_pairs = sorted(
+    app_tables.round_two_pairings.search(tournament=tournament),
+    key=lambda pairing: pairing["sequence"],
+  )
+  log(f"round-two pairs={len(round_two_pairs)}; calculating round-two scores")
+  round_two_scores = _tournament_round_two_scores(tournament, round_two_pairs)
+  log("calculating division standings")
+  divisions = [
+    {
+      "name": name,
+      "standings": _net_standings(
+        [entry for entry in player_entries if entry["division"] == name],
+        round_two_scores,
+      ),
+    }
+    for name in _division_names(tournament)
+  ]
+  log(f"divisions={len(divisions)}; loading current awards")
+  awards = [
+    {
+      "award_name": record["award"]["name"],
+      "player_name": record["golfer"]["name"],
+      "is_champion": bool(record["award"]["is_champion"]),
+    }
+    for record in sorted(
+      (
+        record for record in app_tables.tournament_awards.search(q.fetch_only(
+          award=q.fetch_only("name", "is_champion"),
+          golfer=q.fetch_only("name"),
+        ), tournament=tournament)
+        if record["award"] is not None and record["golfer"] is not None
+      ),
+      key=lambda record: (
+        not record["award"]["is_champion"],
+        record["award"]["name"].casefold(),
+        record["golfer"]["name"].casefold(),
+      ),
+    )
+  ]
+  log(f"awards={len(awards)}; loading news")
+  news_posts = [
+    {"title": post["title"], "body": post["body"]}
+    for post in sorted(
+      app_tables.news_posts.search(tournament=tournament),
+      key=_news_post_sort_key,
+      reverse=True,
+    )
+  ]
+  log(f"news posts={len(news_posts)}; calculating overall standings")
+  standings = _net_standings(player_entries, round_two_scores)
+  log(f"standings={len(standings)}; formatting round-one groups")
+  public_round_one_groups = [
+    _public_round_one_group(group) for group in round_one_groups
+  ]
+  log("formatting round-two pairs")
+  public_round_two_pairs = [
+    {
+      "pair_label": pairing["pair_label"],
+      "score_display": (
+        f"Shared 9-hole score · {pairing['score_9']}"
+        if pairing["score_9"] is not None and pairing["score_9"] > 0
+        else "Shared 9-hole score not posted"
+      ),
+    }
+    for pairing in round_two_pairs
+  ]
+  log("formatting tournament details")
+  result = {
+    "title": f"{tournament['year']} · {tournament['course']}",
+    "date_label": _format_tournament_date(tournament["event_date"]),
+    "awards": awards,
+    "news_posts": news_posts,
+    "standings": standings,
+    "divisions": divisions,
+    "round_one_groups": public_round_one_groups,
+    "round_two_pairs": public_round_two_pairs,
+  }
+  log("response ready")
+  return result
+
+
+@anvil.server.callable
+def get_public_tournament_expenses(tournament_id):
+  """Public expense projection; reading must not initialize handicaps."""
+  tournament = app_tables.tournaments.get_by_id(tournament_id)
+  if tournament is None:
+    return None
+  budget_summary = _budget_summary(tournament, initialize_handicaps=False)
+  return {
+    "total": budget_summary["total"],
+    "paid": budget_summary["paid"],
+    "balance": budget_summary["balance"],
+    "participants": [
+      {
+        "name": row["entry"]["golfer"]["name"],
+        "participant_label": row["participant_label"],
+        "is_player": _entry_is_player(row["entry"]),
+        "division": (
+          (row["entry"]["division"] or "")
+          if _entry_is_player(row["entry"])
+          else ""
+        ),
+        "estimated_share": row["estimated_share"],
+        "paid": row["entry"]["amount_paid"] or 0,
+        "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
+      }
+      for row in budget_summary["rows"]
+    ],
+  }
+
 
 
 def _round_two_pair_label(sequence, first_entry, second_entry, rank_by_id):
@@ -1134,6 +1312,7 @@ def list_round_two_pairings(tournament):
 
 
 @anvil.server.callable(require_user=True)
+@in_transaction
 def save_round_two_pairings(tournament, assignments):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -1219,30 +1398,20 @@ def save_round_two_pairings(tournament, assignments):
     pairing["sequence"]: pairing
     for pairing in app_tables.round_two_pairings.search(tournament=tournament)
   }
-  saved_pairings = list(existing_rows.values())
+  # Snapshot scores before updating rows so reordering pairs cannot lose them.
+  saved_scores = {
+    frozenset((pairing["first_entry"].get_id(), _entry_id_or_none(pairing["second_entry"]))): pairing["score_9"]
+    for pairing in existing_rows.values()
+  }
+  saved_pairings = []
   saved_score_count = 0
   for sequence, (first_entry, second_entry, score_value, score_changed) in enumerate(
     normalized_assignments, 1
   ):
     existing = existing_rows.pop(sequence, None)
     if not score_changed:
-      matching_saved_pair = next(
-        (
-          pairing
-          for pairing in saved_pairings
-          if _same_round_two_pair(
-            first_entry,
-            second_entry,
-            pairing["first_entry"],
-            pairing["second_entry"],
-          )
-        ),
-        None,
-      )
-      score_value = (
-        matching_saved_pair["score_9"]
-        if matching_saved_pair is not None
-        else None
+      score_value = saved_scores.get(
+        frozenset((first_entry.get_id(), _entry_id_or_none(second_entry)))
       )
     if score_value is not None:
       saved_score_count += 1
@@ -1261,12 +1430,19 @@ def save_round_two_pairings(tournament, assignments):
       app_tables.round_two_pairings.add_row(**values)
     else:
       existing.update(**values)
+    # Confirm normalized display values without another client-side reload.
+    saved_pairings.append({
+      "sequence": sequence,
+      "pair_label": values["pair_label"],
+      "score_9": score_value,
+    })
 
   for stale_pairing in existing_rows.values():
     stale_pairing.delete()
   return _result(
     pair_count=len(normalized_assignments),
     scored_pair_count=saved_score_count,
+    saved_pairings=saved_pairings,
   )
 
 
@@ -1406,6 +1582,8 @@ def get_or_create_tournament_foursomes(tournament):
   existing_groups = list_tournament_foursomes(tournament)
   if existing_groups:
     return existing_groups
+  if any(app_tables.historical_imports.search(q.fetch_only(), tournament=tournament)):
+    return []
   entries = [
     entry for entry in list_tournament_entries(tournament)
     if _entry_is_player(entry)
@@ -1479,16 +1657,9 @@ def save_tournament_foursomes(tournament, assignments):
 
 @anvil.server.callable(require_user=True)
 def get_division_standings(tournament, division):
-  if not _valid_row(app_tables.tournaments, tournament):
+  if division is None:
     return []
-  if division not in _division_names(tournament):
-    return []
-  entries = [
-    entry
-    for entry in list_tournament_entries(tournament)
-    if _entry_is_player(entry) and entry["division"] == division
-  ]
-  return _net_standings(entries)
+  return _tournament_standings(tournament, division)
 
 
 @anvil.server.callable(require_user=True)
@@ -1802,7 +1973,7 @@ def remove_budget_category_from_entries(tournament, category, entries):
   )
 
 
-def _budget_summary(tournament, migrate_legacy=False):
+def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True):
   if not _valid_row(app_tables.tournaments, tournament):
     return {
       "participants": 0,
@@ -1812,7 +1983,10 @@ def _budget_summary(tournament, migrate_legacy=False):
       "categories": [],
       "rows": [],
     }
-  entries = list_tournament_entries(tournament)
+  entries = (
+    list_tournament_entries(tournament) if initialize_handicaps else
+    sorted(app_tables.tournament_entries.search(tournament=tournament), key=_entry_sort_key)
+  )
   category_rows = list(app_tables.budget_categories.search(tournament=tournament))
   if not category_rows and migrate_legacy:
     category_rows = _ensure_budget_categories(tournament, entries)
@@ -1908,4 +2082,8 @@ def _budget_summary(tournament, migrate_legacy=False):
 
 @anvil.server.callable(require_user=True)
 def get_budget_summary(tournament):
-  return _budget_summary(tournament, migrate_legacy=True)
+  tournament_id = tournament.get_id() if tournament is not None else None
+  print(f"[budget] tournament={tournament_id} loading summary", flush=True)
+  summary = _budget_summary(tournament, migrate_legacy=True)
+  print(f"[budget] tournament={tournament_id} response ready", flush=True)
+  return summary

@@ -19,7 +19,14 @@ class Form1(Form1Template):
     self.current_user_label.text = self.current_user["email"]
     self.current_event = None
     self._creating_tournament = False
+    self._entries = []
     self._player_entries = []
+    self.division_options = []
+    self.division_choices = [("No division", "")]
+    self._event_context_loaded = False
+    self._event_tournament_id = None
+    self._loaded_event_views = set()
+    self._loading_event_view = False
     for page in self._pages():
       page.initialize(self)
     self._show_view("event")
@@ -39,25 +46,41 @@ class Form1(Form1Template):
       self.expenses_page,
       self.email_participants_page,
       self.news_editor_page,
+      self.awards_page,
+      self.imports_page,
     )
 
   def _load_event_data(self, capture_field_detail_drafts=True):
-    """Refresh each page from the shared tournament selection."""
+    """Invalidate tournament data and refresh only the page being viewed."""
     if capture_field_detail_drafts:
       self.tournament_field_page._capture_field_detail_drafts()
-    self.news_editor_page._load_news_posts()
+    tournament_id = self.current_event.get_id() if self.current_event is not None else None
+    if tournament_id != self._event_tournament_id:
+      self.tournament_field_page.clear()
+      self._event_tournament_id = tournament_id
+    self._event_context_loaded = False
+    self._loaded_event_views.clear()
+    self._entries = []
+    self._player_entries = []
+    self.division_options = []
+    self.division_choices = [("No division", "")]
     self.tournament_field_page.reset_status()
+    self._load_event_view()
+
+  def _load_event_view(self):
+    """Keep global pages independent of hidden tournament server calls."""
+    name = self._active_view
+    if name in ("players", "imports") or self._loading_event_view:
+      return
+    if name in self._loaded_event_views and name not in ("standings", "awards"):
+      return
     if self._creating_tournament:
-      self.email_participants_page._load_email_filters(None, [])
       self.tournament_details_page.show_create()
       self.selected_tournament_name.visible = False
       return
 
     if self.current_event is None:
       self.selected_tournament_name.visible = False
-      self.division_options = []
-      self.division_choices = [("No division", "")]
-      self._player_entries = []
       self.tournament_details_page.clear()
       self.tournament_field_page.clear()
       self.round_one_page.clear()
@@ -65,29 +88,80 @@ class Form1(Form1Template):
       self.round_two_page.clear()
       self.expenses_page.clear()
       self.email_participants_page.clear()
-      return
+      if name not in ("news", "awards"):
+        return
 
-    tournament = self.current_event
-    self.email_participants_page._set_email_subject_default(tournament)
-    self.selected_tournament_name.visible = True
-    date_label = self._format_tournament_date(tournament["event_date"])
-    self.selected_tournament_name.text = (
-      f"{tournament['year']} · {tournament['course']}"
-      + (f" · {date_label}" if date_label else "")
+    self._loading_event_view = True
+    page = {
+      "event": self.tournament_details_page,
+      "field": self.tournament_field_page,
+      "round_one": self.round_one_page,
+      "round_two": self.round_two_page,
+      "standings": self.standings_page,
+      "budget": self.expenses_page,
+      "email": self.email_participants_page,
+      "news": self.news_editor_page,
+      "awards": self.awards_page,
+    }[name]
+    # Hide the previous tournament's controls until the new page is ready.
+    self._loaded_event_views.discard(name)
+    page.visible = False
+    controls = (self.event_picker,) + self._navigation_buttons()
+    for control in controls:
+      control.enabled = False
+    try:
+      tournament = self.current_event
+      if tournament is not None:
+        date_label = self._format_tournament_date(tournament["event_date"])
+        self.selected_tournament_name.text = (
+          f"{tournament['year']} · {tournament['course']}"
+          + (f" · {date_label}" if date_label else "")
+        )
+      if name == "news":
+        self.news_editor_page._load_news_posts()
+      elif name == "awards":
+        self.awards_page.load()
+      else:
+        if not self._event_context_loaded:
+          self.division_options = anvil.server.call("list_tournament_divisions", tournament)
+          self.division_choices = [("No division", "")] + [
+            (division, division) for division in self.division_options
+          ]
+          self._entries = anvil.server.call("list_tournament_entries", tournament)
+          self._player_entries = [
+            entry for entry in self._entries if entry["is_player"] is not False
+          ]
+          self._event_context_loaded = True
+        if name == "event":
+          self.tournament_details_page.load(self._entries, self._player_entries)
+        elif name == "field":
+          self.tournament_field_page.load(tournament, self._player_entries)
+        elif name == "round_one":
+          self.round_one_page.load(tournament, self._player_entries)
+        elif name == "round_two":
+          self.round_two_page.load(tournament, self._player_entries)
+        elif name == "standings":
+          self.standings_page.load(tournament)
+        elif name == "budget":
+          self.expenses_page.load(tournament)
+        elif name == "email":
+          self.email_participants_page._set_email_subject_default(tournament)
+          self.email_participants_page._load_email_filters(tournament, self._entries)
+      self._loaded_event_views.add(name)
+    finally:
+      self._loading_event_view = False
+      page.visible = name in self._loaded_event_views
+      for control in controls:
+        control.enabled = True
+
+  def _navigation_buttons(self):
+    return (
+      self.setup_nav, self.field_nav, self.round_one_nav, self.standings_nav,
+      self.round_two_nav, self.players_nav, self.email_nav, self.news_nav,
+      self.awards_nav, self.imports_nav, self.budget_categories_tab_button,
+      self.budget_assignments_tab_button, self.budget_payments_tab_button,
+      self.public_view_nav, self.sign_out_button,
     )
-    self.division_options = anvil.server.call("list_tournament_divisions", tournament)
-    self.division_choices = [("No division", "")] + [
-      (division, division) for division in self.division_options
-    ]
-    entries = anvil.server.call("list_tournament_entries", tournament)
-    self._player_entries = [entry for entry in entries if entry["is_player"] is not False]
-    self.email_participants_page._load_email_filters(tournament, entries)
-    self.tournament_details_page.load(entries, self._player_entries)
-    self.tournament_field_page.load(tournament, self._player_entries)
-    self.round_two_page.load(tournament, self._player_entries)
-    self.round_one_page.load(tournament, self._player_entries)
-    self.standings_page.load(tournament)
-    self.expenses_page.load(tournament)
 
   @staticmethod
   def _reload_after_delete():
@@ -118,8 +192,10 @@ class Form1(Form1Template):
     self._show_view(name)
 
   def _show_view(self, name):
+    if self._loading_event_view:
+      return
     self._active_view = name
-    show_tournament_context = name != "players"
+    show_tournament_context = name not in ("players", "imports")
     self.selected_tournament_name.visible = (
       show_tournament_context and not self._creating_tournament
       and self.current_event is not None
@@ -136,6 +212,10 @@ class Form1(Form1Template):
     self.expenses_page.visible = name == "budget"
     self.email_participants_page.visible = name == "email"
     self.news_editor_page.visible = name == "news"
+    self.awards_page.visible = name == "awards"
+    self.imports_page.visible = name == "imports"
+    self.tournament_selection_label.visible = name != "imports"
+    self.event_picker.visible = name != "imports"
     for view_name, button in (
       ("event", self.setup_nav),
       ("field", self.field_nav),
@@ -145,11 +225,17 @@ class Form1(Form1Template):
       ("email", self.email_nav),
       ("news", self.news_nav),
       ("players", self.players_nav),
+      ("awards", self.awards_nav),
+      ("imports", self.imports_nav),
     ):
       button.role = (
         "tournament-subtab-active" if name == view_name else "tournament-subtab"
       )
     self.expenses_page._update_budget_navigation()
+    if name == "imports":
+      self.imports_page.load_history()
+    else:
+      self._load_event_view()
 
   def _load_players(self):
     self.golfers = anvil.server.call("list_golfers")
@@ -209,6 +295,14 @@ class Form1(Form1Template):
   def news_nav_click(self, **event_args):
     self._show_tournament_view("news")
 
+  @handle("awards_nav", "click")
+  def awards_nav_click(self, **event_args):
+    self._show_view("awards")
+
+  @handle("imports_nav", "click")
+  def imports_nav_click(self, **event_args):
+    self._show_view("imports")
+
   @handle("public_view_nav", "click")
   def public_view_nav_click(self, **event_args):
     open_form("PublicStandings")
@@ -230,6 +324,9 @@ class Form1(Form1Template):
 
   @handle("event_picker", "change")
   def event_picker_change(self, **event_args):
+    if self._loading_event_view:
+      self.event_picker.selected_value = self.current_event
+      return
     selected_value = self.event_picker.selected_value
     if selected_value == self._CREATE_TOURNAMENT_PICKER_OPTION:
       self._creating_tournament = True

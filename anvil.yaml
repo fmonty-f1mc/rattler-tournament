@@ -1,5 +1,19 @@
 allow_embedding: false
 db_schema:
+  awards:
+    client: none
+    columns:
+    - admin_ui: {}
+      name: name
+      type: string
+    - admin_ui: {}
+      name: is_champion
+      type: bool
+    - admin_ui: {}
+      name: archived
+      type: bool
+    server: full
+    title: Awards
   budget_categories:
     client: none
     columns:
@@ -70,9 +84,43 @@ db_schema:
       client_hidden: null
       name: handicap
       type: number
+    - admin_ui: {}
+      client_hidden: null
+      name: handicap_official
+      type: bool
     indexes: []
     server: full
     title: Golfers
+  historical_imports:
+    client: none
+    columns:
+    - admin_ui: {}
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      name: year
+      type: number
+    - admin_ui: {}
+      name: source_name
+      type: string
+    - admin_ui: {}
+      name: source_sheet
+      type: string
+    - admin_ui: {}
+      name: source_url
+      type: string
+    - admin_ui: {}
+      name: fingerprint
+      type: string
+    - admin_ui: {}
+      name: data
+      type: simpleObject
+    - admin_ui: {}
+      name: imported_at
+      type: datetime
+    server: full
+    title: Historical Imports
   news_posts:
     client: none
     columns:
@@ -198,6 +246,23 @@ db_schema:
     indexes: []
     server: full
     title: Round Two Pairings
+  tournament_awards:
+    client: none
+    columns:
+    - admin_ui: {}
+      name: tournament
+      target: tournaments
+      type: link_single
+    - admin_ui: {}
+      name: award
+      target: awards
+      type: link_single
+    - admin_ui: {}
+      name: golfer
+      target: golfers
+      type: link_single
+    server: full
+    title: Tournament Awards
   tournament_divisions:
     client: none
     columns:

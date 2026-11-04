@@ -23,7 +23,7 @@
     <anvil-component type="ColumnPanel" name="directory_import_panel" prop:visible="False" prop:role="player-add-panel">
       <h3>Update from Google Sheets or Excel</h3>
       <p class="muted-copy">Export CSV, open it in Google Sheets using File → Import, edit the details, then use File → Download → Comma-separated values (.csv). Keep participant_id and revision unchanged. Import columns as text (turn off conversion to numbers, dates and formulas) to preserve phone numbers. A leading apostrophe on exported text protects spreadsheet formulas and is removed on re-import.</p>
-      <p class="muted-copy">This updates existing participants only. Blank contact cells clear those values; email must remain valid when changed. Blank handicap clears it. Active accepts TRUE or FALSE. Omitted rows stay unchanged. Use Bulk add for new participants.</p>
+      <p class="muted-copy">This updates existing participants only. Blank contact cells clear those values; email must remain valid when changed. Blank handicap clears it. Active and handicap_official accept TRUE or FALSE. An official handicap needs a handicap value. Omitted rows stay unchanged. Use Bulk add for new participants.</p>
       <div class="directory-toolbar">
         <anvil-component type="FileLoader" name="directory_csv_file" prop:text="Choose edited CSV" prop:file_types=".csv"></anvil-component>
         <anvil-component type="Button" name="preview_directory_button" prop:text="Preview changes" prop:role="secondary-button"></anvil-component>
@@ -46,7 +46,7 @@
         <div class="field-block"><label>Phone</label><anvil-component type="TextBox" name="player_phone" prop:placeholder="Phone number"></anvil-component></div>
         <div class="field-block"><label>City</label><anvil-component type="TextBox" name="player_city" prop:placeholder="City"></anvil-component></div>
         <div class="field-block"><label>State</label><anvil-component type="TextBox" name="player_state" prop:placeholder="State"></anvil-component></div>
-        <div class="field-block"><label>Player handicap (optional)</label><anvil-component type="TextBox" name="player_handicap" prop:placeholder="e.g. 12.4"></anvil-component></div>
+        <div class="field-block"><label>Player handicap (optional)</label><anvil-component type="TextBox" name="player_handicap" prop:placeholder="e.g. 12.4"></anvil-component><anvil-component type="CheckBox" name="player_handicap_official" prop:text="Official handicap" prop:checked="False"></anvil-component></div>
       </div>
       <div class="player-add-actions">
         <anvil-component type="Button" name="create_player_button" prop:text="Add to roster"></anvil-component>
@@ -75,7 +75,7 @@
     <anvil-component type="ColumnPanel" name="directory_spreadsheet" prop:visible="False" prop:role="directory-spreadsheet">
       <div class="directory-table-scroll" tabindex="0" role="region" aria-label="Participant directory spreadsheet">
         <div class="directory-table-content">
-          <div class="directory-grid-row directory-column-headings"><span>Name</span><span>Email</span><span>Phone</span><span>City</span><span>State</span><span>Handicap</span><span>Status</span></div>
+          <div class="directory-grid-row directory-column-headings"><span>Name</span><span>Email</span><span>Phone</span><span>City</span><span>State</span><span>Handicap</span><span>Official handicap</span><span>Status</span></div>
           <anvil-component type="RepeatingPanel" name="directory_edit_rows" prop:item_template="rattler_tournament.Components.Participants.DirectoryEditRow" prop:role="directory-edit-list"></anvil-component>
         </div>
       </div>
