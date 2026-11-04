@@ -6,6 +6,7 @@ import math
 import random
 import re
 from datetime import datetime
+from time import monotonic
 
 import anvil.server
 from anvil import BlobMedia
@@ -1104,26 +1105,44 @@ def list_public_tournaments():
 @anvil.server.callable
 def get_public_tournament_standings(tournament_id):
   """Build public details for one tournament without expense calculations."""
+  started = monotonic()
+
+  def log(stage):
+    # Flush each stage so the last message survives a server-process crash.
+    print(
+      f"[public standings] tournament={tournament_id} "
+      f"elapsed={monotonic() - started:.3f}s {stage}",
+      flush=True,
+    )
+
+  log("loading tournament")
   tournament = app_tables.tournaments.get_by_id(tournament_id)
   if tournament is None:
+    log("tournament unavailable")
     return None
+  log("loading previous-year awards")
   previous_awards = _public_awards_by_year(tournament["year"] - 1).get(
     tournament["year"] - 1, {}
   )
+  log(f"previous award winners={len(previous_awards)}; loading player entries")
   player_entries = [
     entry
     for entry in app_tables.tournament_entries.search(tournament=tournament)
     if _entry_is_player(entry)
   ]
+  log(f"players={len(player_entries)}; loading round-one groups")
   round_one_groups = sorted(
     app_tables.tournament_foursomes.search(tournament=tournament),
     key=lambda group: group["sequence"],
   )
+  log(f"round-one groups={len(round_one_groups)}; loading round-two pairs")
   round_two_pairs = sorted(
     app_tables.round_two_pairings.search(tournament=tournament),
     key=lambda pairing: pairing["sequence"],
   )
+  log(f"round-two pairs={len(round_two_pairs)}; calculating round-two scores")
   round_two_scores = _tournament_round_two_scores(tournament, round_two_pairs)
+  log("calculating division standings")
   divisions = [
     {
       "name": name,
@@ -1135,56 +1154,69 @@ def get_public_tournament_standings(tournament_id):
     }
     for name in _division_names(tournament)
   ]
-  return {
+  log(f"divisions={len(divisions)}; loading current awards")
+  awards = [
+    {
+      "award_name": record["award"]["name"],
+      "player_name": record["golfer"]["name"],
+      "is_champion": bool(record["award"]["is_champion"]),
+    }
+    for record in sorted(
+      (
+        record for record in app_tables.tournament_awards.search(q.fetch_only(
+          award=q.fetch_only("name", "is_champion"),
+          golfer=q.fetch_only("name"),
+        ), tournament=tournament)
+        if record["award"] is not None and record["golfer"] is not None
+      ),
+      key=lambda record: (
+        not record["award"]["is_champion"],
+        record["award"]["name"].casefold(),
+        record["golfer"]["name"].casefold(),
+      ),
+    )
+  ]
+  log(f"awards={len(awards)}; loading news")
+  news_posts = [
+    {"title": post["title"], "body": post["body"]}
+    for post in sorted(
+      app_tables.news_posts.search(tournament=tournament),
+      key=lambda post: post["created_at"] or datetime.min,
+      reverse=True,
+    )
+  ]
+  log(f"news posts={len(news_posts)}; calculating overall standings")
+  standings = _net_standings(player_entries, round_two_scores, previous_awards)
+  log(f"standings={len(standings)}; formatting round-one groups")
+  public_round_one_groups = [
+    _public_round_one_group(group, previous_awards) for group in round_one_groups
+  ]
+  log("formatting round-two pairs")
+  public_round_two_pairs = [
+    {
+      "pair_label": pairing["pair_label"],
+      "label_parts": _public_pair_label_parts(pairing, previous_awards),
+      "score_display": (
+        f"Shared 9-hole score · {pairing['score_9']}"
+        if pairing["score_9"] is not None and pairing["score_9"] > 0
+        else "Shared 9-hole score not posted"
+      ),
+    }
+    for pairing in round_two_pairs
+  ]
+  log("formatting tournament details")
+  result = {
     "title": f"{tournament['year']} · {tournament['course']}",
     "date_label": _format_tournament_date(tournament["event_date"]),
-    "awards": [
-      {
-        "award_name": record["award"]["name"],
-        "player_name": record["golfer"]["name"],
-        "is_champion": bool(record["award"]["is_champion"]),
-      }
-      for record in sorted(
-        (
-          record for record in app_tables.tournament_awards.search(q.fetch_only(
-            award=q.fetch_only("name", "is_champion"),
-            golfer=q.fetch_only("name"),
-          ), tournament=tournament)
-          if record["award"] is not None and record["golfer"] is not None
-        ),
-        key=lambda record: (
-          not record["award"]["is_champion"],
-          record["award"]["name"].casefold(),
-          record["golfer"]["name"].casefold(),
-        ),
-      )
-    ],
-    "news_posts": [
-      {"title": post["title"], "body": post["body"]}
-      for post in sorted(
-        app_tables.news_posts.search(tournament=tournament),
-        key=lambda post: post["created_at"] or datetime.min,
-        reverse=True,
-      )
-    ],
-    "standings": _net_standings(player_entries, round_two_scores, previous_awards),
+    "awards": awards,
+    "news_posts": news_posts,
+    "standings": standings,
     "divisions": divisions,
-    "round_one_groups": [
-      _public_round_one_group(group, previous_awards) for group in round_one_groups
-    ],
-    "round_two_pairs": [
-      {
-        "pair_label": pairing["pair_label"],
-        "label_parts": _public_pair_label_parts(pairing, previous_awards),
-        "score_display": (
-          f"Shared 9-hole score · {pairing['score_9']}"
-          if pairing["score_9"] is not None and pairing["score_9"] > 0
-          else "Shared 9-hole score not posted"
-        ),
-      }
-      for pairing in round_two_pairs
-    ],
+    "round_one_groups": public_round_one_groups,
+    "round_two_pairs": public_round_two_pairs,
   }
+  log("response ready")
+  return result
 
 
 @anvil.server.callable
