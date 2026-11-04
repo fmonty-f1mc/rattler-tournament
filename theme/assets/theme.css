@@ -951,7 +951,7 @@ textarea.anvil-text-area:disabled,
 .standing-header,
 .standing-row {
   display: grid;
-  grid-template-columns: 0.55fr 2fr 1.2fr 0.8fr 0.8fr;
+  grid-template-columns: 0.55fr 2fr 1.2fr 0.8fr 0.8fr 1fr;
   align-items: center;
   gap: 12px;
 }
@@ -1251,12 +1251,12 @@ textarea.anvil-text-area:disabled,
 }
 
 .player-history-content {
-  min-width: 680px;
+  min-width: 820px;
 }
 
 .player-history-grid {
   display: grid;
-  grid-template-columns: 80px minmax(220px, 1fr) 140px 120px 120px;
+  grid-template-columns: 80px minmax(220px, 1fr) 140px 120px 120px 140px;
   align-items: stretch;
   border-bottom: 1px solid var(--blank-border);
 }
@@ -1799,7 +1799,7 @@ input.anvil-role-budget-paid-input:disabled {
 
   .standing-header,
   .standing-row {
-    grid-template-columns: 32px minmax(0, 1.5fr) minmax(0, 1fr) 42px 42px;
+    grid-template-columns: 32px minmax(0, 1.5fr) minmax(0, 1fr) 42px 42px 52px;
     gap: 6px;
   }
 
@@ -1955,7 +1955,7 @@ input.anvil-role-budget-paid-input:disabled {
 
   .standing-header,
   .standing-row {
-    grid-template-columns: 28px minmax(0, 1.3fr) minmax(0, 0.85fr) 34px 34px;
+    grid-template-columns: 28px minmax(0, 1.3fr) minmax(0, 0.85fr) 34px 34px 46px;
     gap: 5px;
   }
 

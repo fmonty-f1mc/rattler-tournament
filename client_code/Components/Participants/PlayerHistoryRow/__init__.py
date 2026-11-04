@@ -20,5 +20,5 @@ class PlayerHistoryRow(PlayerHistoryRowTemplate):
       return "Not recorded"
     if entry["is_player"] is False:
       return "Not applicable"
-    value = entry["gross_18"] if field == "gross" else self.item["net"]
+    value = entry["gross_18"] if field == "gross" else self.item[field]
     return "Not recorded" if value is None else f"{value:g}"

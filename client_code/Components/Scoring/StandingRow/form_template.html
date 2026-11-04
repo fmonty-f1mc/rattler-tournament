@@ -5,5 +5,6 @@
     <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['division']"></anvil-component>
     <anvil-component type="Label" name="gross_label" bind:text="self.item['gross']"></anvil-component>
     <anvil-component type="Label" name="net_label" prop:role="row-title" bind:text="self.item['net']"></anvil-component>
+    <anvil-component type="Label" name="rattler_label" prop:role="row-title" bind:text="'—' if self.item['rattler'] is None else '{:g}'.format(self.item['rattler'])"></anvil-component>
   </div>
 </anvil-form>

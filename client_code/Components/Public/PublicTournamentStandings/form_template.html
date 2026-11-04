@@ -27,7 +27,8 @@
             <anvil-component type="DropDown" name="standings_sort_by"></anvil-component>
           </div>
         </div>
-        <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span></div>
+        <p class="muted-copy">Rattler Score = Net + Round 2 score; shown when both scores are recorded.</p>
+        <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span><span>Rattler Score</span></div>
         <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.Components.Scoring.StandingRow" prop:role="standing-list"></anvil-component>
         <anvil-component type="Label" name="no_scores_state" prop:role="muted-text"></anvil-component>
       </section>

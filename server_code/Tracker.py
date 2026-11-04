@@ -137,6 +137,32 @@ def _entry_net_score(entry):
   return round(gross - handicap, 10)
 
 
+def _tournament_round_two_scores(tournament, pairings=None):
+  """Map both players to their shared score, including unposted pair scores."""
+  if pairings is None:
+    pairings = app_tables.round_two_pairings.search(tournament=tournament)
+  scores = {}
+  for pairing in pairings:
+    for slot in ("first_entry", "second_entry"):
+      entry = pairing[slot]
+      if entry is not None:
+        scores[entry.get_id()] = pairing["score_9"]
+  return scores
+
+
+def _entry_round_two_score(entry, pair_scores):
+  # An assigned pair takes precedence, even when its score has been cleared.
+  # Imported years without pairings retain their individual alternate-shot score.
+  score = pair_scores.get(entry.get_id(), entry["gross_9"])
+  return score if score is not None and score > 0 else None
+
+
+def _rattler_score(net, round_two):
+  if net is None or round_two is None:
+    return None
+  return round(net + round_two, 10)
+
+
 def _ranked_entries(entries):
   return sorted(
     entries,
@@ -921,10 +947,10 @@ def save_round_one_scores_batch(tournament, scores):
 @anvil.server.callable(require_user=True)
 def get_net_standings(tournament):
   entries = [entry for entry in list_tournament_entries(tournament) if _entry_is_player(entry)]
-  return _net_standings(entries)
+  return _net_standings(entries, _tournament_round_two_scores(tournament))
 
 
-def _net_standings(entries):
+def _net_standings(entries, round_two_scores):
   scored = [entry for entry in entries if (_entry_net_score(entry) or 0) > 0]
   scored = _ranked_entries(scored)
   return [
@@ -934,6 +960,9 @@ def _net_standings(entries):
       "division": entry["division"] or "No division",
       "gross": entry["gross_18"],
       "net": _entry_net_score(entry),
+      "rattler": _rattler_score(
+        _entry_net_score(entry), _entry_round_two_score(entry, round_two_scores)
+      ),
     }
     for index, entry in enumerate(scored)
   ]
@@ -997,11 +1026,13 @@ def get_public_tournament_standings():
       app_tables.round_two_pairings.search(tournament=tournament),
       key=lambda pairing: pairing["sequence"],
     )
+    round_two_scores = _tournament_round_two_scores(tournament, round_two_pairs)
     divisions = [
       {
         "name": name,
         "standings": _net_standings(
-          [entry for entry in player_entries if entry["division"] == name]
+          [entry for entry in player_entries if entry["division"] == name],
+          round_two_scores,
         ),
       }
       for name in _division_names(tournament)
@@ -1017,7 +1048,7 @@ def get_public_tournament_standings():
           reverse=True,
         )
       ],
-      "standings": _net_standings(player_entries),
+      "standings": _net_standings(player_entries, round_two_scores),
       "divisions": divisions,
       "round_one_groups": [
         _public_round_one_group(group) for group in round_one_groups
@@ -1510,7 +1541,7 @@ def get_division_standings(tournament, division):
     for entry in list_tournament_entries(tournament)
     if _entry_is_player(entry) and entry["division"] == division
   ]
-  return _net_standings(entries)
+  return _net_standings(entries, _tournament_round_two_scores(tournament))
 
 
 @anvil.server.callable(require_user=True)
