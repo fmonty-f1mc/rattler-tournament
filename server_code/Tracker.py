@@ -999,13 +999,18 @@ def _public_award_markers(entry, previous_awards):
   return previous_awards.get(entry["golfer"].get_id(), "")
 
 
-def _public_awards_by_year():
+def _public_awards_by_year(year):
   winners = {}
-  for record in app_tables.tournament_awards.search(q.fetch_only(
-    tournament=q.fetch_only("year"),
-    award=q.fetch_only("name", "is_champion"),
-    golfer=q.fetch_only("name"),
-  )):
+  records = (
+    record
+    for tournament in app_tables.tournaments.search(year=year)
+    for record in app_tables.tournament_awards.search(q.fetch_only(
+      tournament=q.fetch_only("year"),
+      award=q.fetch_only("name", "is_champion"),
+      golfer=q.fetch_only("name"),
+    ), tournament=tournament)
+  )
+  for record in records:
     award = record["award"]
     if not record["tournament"] or not award or not record["golfer"]:
       continue
@@ -1080,114 +1085,137 @@ def _format_tournament_date(event_date):
 
 
 @anvil.server.callable
-def get_public_tournament_standings():
-  tournaments = sorted(
-    app_tables.tournaments.search(),
-    key=lambda tournament: tournament["year"],
-    reverse=True,
-  )
-  public_standings = []
-  awards_by_year = _public_awards_by_year()
-  for tournament in tournaments:
-    previous_awards = awards_by_year.get(tournament["year"] - 1, {})
-    player_entries = [
-      entry
-      for entry in app_tables.tournament_entries.search(tournament=tournament)
-      if _entry_is_player(entry)
-    ]
-    budget_summary = _budget_summary(tournament)
-    round_one_groups = sorted(
-      app_tables.tournament_foursomes.search(tournament=tournament),
-      key=lambda group: group["sequence"],
-    )
-    round_two_pairs = sorted(
-      app_tables.round_two_pairings.search(tournament=tournament),
-      key=lambda pairing: pairing["sequence"],
-    )
-    round_two_scores = _tournament_round_two_scores(tournament, round_two_pairs)
-    divisions = [
-      {
-        "name": name,
-        "standings": _net_standings(
-          [entry for entry in player_entries if entry["division"] == name],
-          round_two_scores,
-          previous_awards,
-        ),
-      }
-      for name in _division_names(tournament)
-    ]
-    public_standings.append({
+def list_public_tournaments():
+  """Public picker metadata only; never load historical details here."""
+  return [
+    {
+      "id": tournament.get_id(),
       "title": f"{tournament['year']} · {tournament['course']}",
       "date_label": _format_tournament_date(tournament["event_date"]),
-      "awards": [
-        {
-          "award_name": record["award"]["name"],
-          "player_name": record["golfer"]["name"],
-          "is_champion": bool(record["award"]["is_champion"]),
-        }
-        for record in sorted(
-          (
-            record for record in app_tables.tournament_awards.search(q.fetch_only(
-              award=q.fetch_only("name", "is_champion"),
-              golfer=q.fetch_only("name"),
-            ), tournament=tournament)
-            if record["award"] is not None and record["golfer"] is not None
-          ),
-          key=lambda record: (
-            not record["award"]["is_champion"],
-            record["award"]["name"].casefold(),
-            record["golfer"]["name"].casefold(),
-          ),
-        )
-      ],
-      "news_posts": [
-        {"title": post["title"], "body": post["body"]}
-        for post in sorted(
-          app_tables.news_posts.search(tournament=tournament),
-          key=lambda post: post["created_at"] or datetime.min,
-          reverse=True,
-        )
-      ],
-      "standings": _net_standings(player_entries, round_two_scores, previous_awards),
-      "divisions": divisions,
-      "round_one_groups": [
-        _public_round_one_group(group, previous_awards) for group in round_one_groups
-      ],
-      "round_two_pairs": [
-        {
-          "pair_label": pairing["pair_label"],
-          "label_parts": _public_pair_label_parts(pairing, previous_awards),
-          "score_display": (
-            f"Shared 9-hole score · {pairing['score_9']}"
-            if pairing["score_9"] is not None and pairing["score_9"] > 0
-            else "Shared 9-hole score not posted"
-          ),
-        }
-        for pairing in round_two_pairs
-      ],
-      "budget_summary": {
-        "total": budget_summary["total"],
-        "paid": budget_summary["paid"],
-        "balance": budget_summary["balance"],
-        "participants": [
-          {
-            "name": row["entry"]["golfer"]["name"],
-            "participant_label": row["participant_label"],
-            "is_player": _entry_is_player(row["entry"]),
-            "division": (
-              (row["entry"]["division"] or "")
-              if _entry_is_player(row["entry"])
-              else ""
-            ),
-            "estimated_share": row["estimated_share"],
-            "paid": row["entry"]["amount_paid"] or 0,
-            "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
-          }
-          for row in budget_summary["rows"]
-        ],
-      },
-    })
-  return public_standings
+    }
+    for tournament in sorted(
+      app_tables.tournaments.search(q.fetch_only("year", "course", "event_date")),
+      key=lambda tournament: tournament["year"],
+      reverse=True,
+    )
+  ]
+
+
+@anvil.server.callable
+def get_public_tournament_standings(tournament_id):
+  """Build public details for one tournament without expense calculations."""
+  tournament = app_tables.tournaments.get_by_id(tournament_id)
+  if tournament is None:
+    return None
+  previous_awards = _public_awards_by_year(tournament["year"] - 1).get(
+    tournament["year"] - 1, {}
+  )
+  player_entries = [
+    entry
+    for entry in app_tables.tournament_entries.search(tournament=tournament)
+    if _entry_is_player(entry)
+  ]
+  round_one_groups = sorted(
+    app_tables.tournament_foursomes.search(tournament=tournament),
+    key=lambda group: group["sequence"],
+  )
+  round_two_pairs = sorted(
+    app_tables.round_two_pairings.search(tournament=tournament),
+    key=lambda pairing: pairing["sequence"],
+  )
+  round_two_scores = _tournament_round_two_scores(tournament, round_two_pairs)
+  divisions = [
+    {
+      "name": name,
+      "standings": _net_standings(
+        [entry for entry in player_entries if entry["division"] == name],
+        round_two_scores,
+        previous_awards,
+      ),
+    }
+    for name in _division_names(tournament)
+  ]
+  return {
+    "title": f"{tournament['year']} · {tournament['course']}",
+    "date_label": _format_tournament_date(tournament["event_date"]),
+    "awards": [
+      {
+        "award_name": record["award"]["name"],
+        "player_name": record["golfer"]["name"],
+        "is_champion": bool(record["award"]["is_champion"]),
+      }
+      for record in sorted(
+        (
+          record for record in app_tables.tournament_awards.search(q.fetch_only(
+            award=q.fetch_only("name", "is_champion"),
+            golfer=q.fetch_only("name"),
+          ), tournament=tournament)
+          if record["award"] is not None and record["golfer"] is not None
+        ),
+        key=lambda record: (
+          not record["award"]["is_champion"],
+          record["award"]["name"].casefold(),
+          record["golfer"]["name"].casefold(),
+        ),
+      )
+    ],
+    "news_posts": [
+      {"title": post["title"], "body": post["body"]}
+      for post in sorted(
+        app_tables.news_posts.search(tournament=tournament),
+        key=lambda post: post["created_at"] or datetime.min,
+        reverse=True,
+      )
+    ],
+    "standings": _net_standings(player_entries, round_two_scores, previous_awards),
+    "divisions": divisions,
+    "round_one_groups": [
+      _public_round_one_group(group, previous_awards) for group in round_one_groups
+    ],
+    "round_two_pairs": [
+      {
+        "pair_label": pairing["pair_label"],
+        "label_parts": _public_pair_label_parts(pairing, previous_awards),
+        "score_display": (
+          f"Shared 9-hole score · {pairing['score_9']}"
+          if pairing["score_9"] is not None and pairing["score_9"] > 0
+          else "Shared 9-hole score not posted"
+        ),
+      }
+      for pairing in round_two_pairs
+    ],
+  }
+
+
+@anvil.server.callable
+def get_public_tournament_expenses(tournament_id):
+  """Public expense projection; reading must not initialize handicaps."""
+  tournament = app_tables.tournaments.get_by_id(tournament_id)
+  if tournament is None:
+    return None
+  budget_summary = _budget_summary(tournament, initialize_handicaps=False)
+  return {
+    "total": budget_summary["total"],
+    "paid": budget_summary["paid"],
+    "balance": budget_summary["balance"],
+    "participants": [
+      {
+        "name": row["entry"]["golfer"]["name"],
+        "participant_label": row["participant_label"],
+        "is_player": _entry_is_player(row["entry"]),
+        "division": (
+          (row["entry"]["division"] or "")
+          if _entry_is_player(row["entry"])
+          else ""
+        ),
+        "estimated_share": row["estimated_share"],
+        "paid": row["entry"]["amount_paid"] or 0,
+        "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
+      }
+      for row in budget_summary["rows"]
+    ],
+  }
+
 
 
 def _round_two_pair_label(sequence, first_entry, second_entry, rank_by_id):
@@ -1949,7 +1977,7 @@ def remove_budget_category_from_entries(tournament, category, entries):
   )
 
 
-def _budget_summary(tournament, migrate_legacy=False):
+def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True):
   if not _valid_row(app_tables.tournaments, tournament):
     return {
       "participants": 0,
@@ -1959,7 +1987,10 @@ def _budget_summary(tournament, migrate_legacy=False):
       "categories": [],
       "rows": [],
     }
-  entries = list_tournament_entries(tournament)
+  entries = (
+    list_tournament_entries(tournament) if initialize_handicaps else
+    sorted(app_tables.tournament_entries.search(tournament=tournament), key=_entry_sort_key)
+  )
   category_rows = list(app_tables.budget_categories.search(tournament=tournament))
   if not category_rows and migrate_legacy:
     category_rows = _ensure_budget_categories(tournament, entries)
