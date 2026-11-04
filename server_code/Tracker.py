@@ -10,6 +10,7 @@ from datetime import datetime
 import anvil.server
 from anvil import BlobMedia
 from anvil.tables import app_tables
+import anvil.tables.query as q
 
 
 def _result(message=None, **values):
@@ -950,7 +951,7 @@ def get_net_standings(tournament):
   return _net_standings(entries, _tournament_round_two_scores(tournament))
 
 
-def _net_standings(entries, round_two_scores):
+def _net_standings(entries, round_two_scores, previous_awards=None):
   scored = [entry for entry in entries if (_entry_net_score(entry) or 0) > 0]
   scored = _ranked_entries(scored)
   return [
@@ -963,18 +964,71 @@ def _net_standings(entries, round_two_scores):
       "rattler": _rattler_score(
         _entry_net_score(entry), _entry_round_two_score(entry, round_two_scores)
       ),
+      **({"award_markers": _public_award_markers(entry, previous_awards)}
+         if previous_awards is not None else {}),
     }
     for index, entry in enumerate(scored)
   ]
 
 
-def _public_round_one_group(group):
+def _public_award_markers(entry, previous_awards):
+  if entry is None or entry["golfer"] is None:
+    return ""
+  return previous_awards.get(entry["golfer"].get_id(), "")
+
+
+def _public_awards_by_year():
+  winners = {}
+  for record in app_tables.tournament_awards.search(q.fetch_only(
+    tournament=q.fetch_only("year"),
+    award=q.fetch_only("name", "is_champion"),
+    golfer=q.fetch_only("name"),
+  )):
+    award = record["award"]
+    if not record["tournament"] or not award or not record["golfer"]:
+      continue
+    markers = winners.setdefault(record["tournament"]["year"], {}).setdefault(
+      record["golfer"].get_id(), set()
+    )
+    if award["is_champion"]:
+      markers.add("🐍")
+    if "nicklaus" in (award["name"] or "").casefold():
+      markers.add("🏌️")
+  return {
+    year: {golfer_id: "".join(emoji for emoji in ("🐍", "🏌️") if emoji in markers)
+           for golfer_id, markers in golfers.items()}
+    for year, golfers in winners.items()
+  }
+
+
+def _public_pair_label_parts(pairing, previous_awards):
+  # Keep the stored ranks, separators and solo wording, marking each linked golfer.
+  remaining = pairing["pair_label"] or ""
+  parts = []
+  for entry in (pairing["first_entry"], pairing["second_entry"]):
+    if entry is None:
+      continue
+    name = _entry_name(entry)
+    before, found, after = remaining.partition(name)
+    if found:
+      parts.append({
+        "text": before + found,
+        "award_markers": _public_award_markers(entry, previous_awards),
+      })
+      remaining = after
+  if remaining:
+    parts.append({"text": remaining, "award_markers": ""})
+  return parts
+
+
+def _public_round_one_group(group, previous_awards):
   public_group = {
     "group_label": group["group_label"] or f"Group {group['sequence']}",
     "tee_time": group["tee_time"] or "Tee time not posted",
   }
   for slot in range(1, 5):
     entry = group[f"player_{slot}"]
+    public_group[f"player_{slot}_award_markers"] = _public_award_markers(entry, previous_awards)
     if entry:
       division = (entry["division"] or "").strip()
       public_group[f"player_{slot}_name"] = _entry_name(entry)
@@ -1011,7 +1065,9 @@ def get_public_tournament_standings():
     reverse=True,
   )
   public_standings = []
+  awards_by_year = _public_awards_by_year()
   for tournament in tournaments:
+    previous_awards = awards_by_year.get(tournament["year"] - 1, {})
     player_entries = [
       entry
       for entry in app_tables.tournament_entries.search(tournament=tournament)
@@ -1033,6 +1089,7 @@ def get_public_tournament_standings():
         "standings": _net_standings(
           [entry for entry in player_entries if entry["division"] == name],
           round_two_scores,
+          previous_awards,
         ),
       }
       for name in _division_names(tournament)
@@ -1048,14 +1105,15 @@ def get_public_tournament_standings():
           reverse=True,
         )
       ],
-      "standings": _net_standings(player_entries, round_two_scores),
+      "standings": _net_standings(player_entries, round_two_scores, previous_awards),
       "divisions": divisions,
       "round_one_groups": [
-        _public_round_one_group(group) for group in round_one_groups
+        _public_round_one_group(group, previous_awards) for group in round_one_groups
       ],
       "round_two_pairs": [
         {
           "pair_label": pairing["pair_label"],
+          "label_parts": _public_pair_label_parts(pairing, previous_awards),
           "score_display": (
             f"Shared 9-hole score · {pairing['score_9']}"
             if pairing["score_9"] is not None and pairing["score_9"] > 0

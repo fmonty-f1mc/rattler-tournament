@@ -1,5 +1,6 @@
 <anvil-form container="ColumnPanel">
   <section class="public-tournament-card">
+    <p class="muted-copy">🐍 Previous year’s Rattler Champion · 🏌️ Previous year’s Nicklaus award</p>
     <anvil-component type="FlowPanel" name="public_tab_nav" prop:role="tournament-subnav">
       <anvil-component type="Button" name="round_one_tab_button" prop:text="Round One" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="standings_tab_button" prop:text="Standings" prop:role="tournament-subtab"></anvil-component>
@@ -29,7 +30,7 @@
         </div>
         <p class="muted-copy">Rattler Score = Net + Round 2 score; shown when both scores are recorded.</p>
         <div class="standing-header"><span>Place</span><span>Player</span><span>Division</span><span>Gross</span><span>Net</span><span>Rattler Score</span></div>
-        <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.Components.Scoring.StandingRow" prop:role="standing-list"></anvil-component>
+        <anvil-component type="RepeatingPanel" name="standings_rows" prop:item_template="rattler_tournament.Components.Public.PublicStandingRow" prop:role="standing-list"></anvil-component>
         <anvil-component type="Label" name="no_scores_state" prop:role="muted-text"></anvil-component>
       </section>
     </anvil-component>
