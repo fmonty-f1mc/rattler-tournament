@@ -1,3 +1,4 @@
+import anvil.email
 """Preview and atomically import selected year sheets from an XLSX workbook."""
 
 from datetime import datetime
