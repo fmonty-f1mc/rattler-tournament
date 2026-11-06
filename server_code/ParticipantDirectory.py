@@ -1,4 +1,3 @@
-import anvil.email
 """Atomic directory edits and round-trip CSV updates; tournament rows stay linked."""
 import csv
 import hashlib

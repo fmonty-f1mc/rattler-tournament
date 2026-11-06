@@ -15,15 +15,12 @@ class PublicStandings(PublicStandingsTemplate):
     self.tournaments = []
     self._tournaments_loaded = False
     self._current_tournament = None
-    self._expenses_loaded = False
     self._loading = False
     self._active_public_tab = "news"
     self.tournament_picker.items = []
     self.tournament_picker.visible = False
     self.tournament_label.visible = False
-    self._expense_participants = []
     self._render_tournament(None)
-    self._render_expenses(None)
     self._show_public_tab("news")
 
   def _show_public_tab(self, name):
@@ -41,11 +38,8 @@ class PublicStandings(PublicStandingsTemplate):
       ("news", self.news_section, self.news_tab_button),
       ("standings", self.standings_section, self.standings_tab_button),
       ("awards", self.awards_section, self.awards_tab_button),
-      ("expenses", self.expenses_section, self.expenses_tab_button),
     ):
-      panel.visible = self._active_public_tab == tab_name and ready and (
-        tab_name != "expenses" or not self.tournaments or self._expenses_loaded
-      )
+      panel.visible = self._active_public_tab == tab_name and ready
       button.role = (
         "tournament-subtab-active"
         if self._active_public_tab == tab_name else "tournament-subtab"
@@ -60,7 +54,7 @@ class PublicStandings(PublicStandingsTemplate):
     self.retry_button.visible = False
     controls = (
       self.tournament_picker, self.news_tab_button, self.standings_tab_button,
-      self.awards_tab_button, self.expenses_tab_button, self.retry_button,
+      self.awards_tab_button, self.retry_button,
       self.sign_in_button,
     )
     for control in controls:
@@ -91,23 +85,11 @@ class PublicStandings(PublicStandingsTemplate):
             return
           self._current_tournament = tournament
           self._render_tournament(tournament)
-        if self._active_public_tab == "expenses" and not self._expenses_loaded:
-          budget = anvil.server.call("get_public_tournament_expenses", tournament_id)
-          if budget is None:
-            self._tournament_unavailable()
-            return
-          self._render_expenses(budget)
-          self._expenses_loaded = True
       else:
         self._render_tournament(None)
-        self._render_expenses(None)
       self.load_status.visible = False
     except RuntimeUnavailableError:
-      self.load_status.text = (
-        "Expenses are temporarily unavailable. Please retry."
-        if self._active_public_tab == "expenses"
-        else "Tournament data is temporarily unavailable. Please retry."
-      )
+      self.load_status.text = "Tournament data is temporarily unavailable. Please retry."
       self.retry_button.visible = True
     finally:
       self._loading = False
@@ -119,9 +101,7 @@ class PublicStandings(PublicStandingsTemplate):
     # A committee member may delete a tournament after the picker was loaded.
     self._tournaments_loaded = False
     self._current_tournament = None
-    self._expenses_loaded = False
     self._render_tournament(None)
-    self._render_expenses(None)
     self.load_status.text = "This tournament is no longer available. Retry to refresh the list."
     self.retry_button.visible = True
 
@@ -129,9 +109,7 @@ class PublicStandings(PublicStandingsTemplate):
     if self._loading:
       return
     self._current_tournament = None
-    self._expenses_loaded = False
     self._render_tournament(None)
-    self._render_expenses(None)
     self._update_public_sections()
     self._load_public_data()
 
@@ -160,87 +138,6 @@ class PublicStandings(PublicStandingsTemplate):
       if tournament else "No tournaments have been added yet."
     )
 
-  @staticmethod
-  def _money(value):
-    return "${:,.2f}".format(value or 0)
-
-  def _render_expenses(self, budget):
-    self.budget_total.text = self._money(budget["total"] if budget else 0)
-    self.budget_paid.text = self._money(budget["paid"] if budget else 0)
-    self.budget_balance.text = self._money(budget["balance"] if budget else 0)
-    self._expense_participants = budget["participants"] if budget else []
-    self.expense_search.text = ""
-    self.expense_participant_type_filter.items = [
-      ("Everyone", "all"),
-      ("Players", "players"),
-      ("Non-players", "non_players"),
-    ]
-    self.expense_participant_type_filter.selected_value = "all"
-    divisions = sorted(
-      {
-        participant["division"]
-        for participant in self._expense_participants
-        if participant["is_player"] and participant["division"]
-      },
-      key=lambda value: value.lower(),
-    )
-    self.expense_division_filter.items = [
-      ("All divisions", "all"),
-      ("Players without division", "unassigned"),
-    ] + [(division, "division:" + division) for division in divisions]
-    self.expense_division_filter.selected_value = "all"
-    self.expense_payment_filter.items = [
-      ("Any payment status", "all"),
-      ("Balance due", "owing"),
-      ("Paid in full", "paid"),
-    ]
-    self.expense_payment_filter.selected_value = "all"
-    self._refresh_expense_participants()
-
-  def _matching_expense_participants(self):
-    query = (self.expense_search.text or "").strip().lower()
-    participant_type = self.expense_participant_type_filter.selected_value or "all"
-    division_filter = self.expense_division_filter.selected_value or "all"
-    payment_filter = self.expense_payment_filter.selected_value or "all"
-    matches = []
-    for participant in self._expense_participants:
-      if query and query not in (participant["name"] or "").lower():
-        continue
-      if participant_type == "players" and not participant["is_player"]:
-        continue
-      if participant_type == "non_players" and participant["is_player"]:
-        continue
-      if division_filter == "unassigned" and (
-        not participant["is_player"] or participant["division"]
-      ):
-        continue
-      if division_filter.startswith("division:") and participant["division"] != division_filter[len("division:"):]:
-        continue
-      balance = participant["balance"] or 0
-      if payment_filter == "owing" and balance <= 0:
-        continue
-      if payment_filter == "paid" and balance > 0:
-        continue
-      matches.append(participant)
-    return matches
-
-  def _refresh_expense_participants(self):
-    matches = self._matching_expense_participants()
-    self.budget_participant_rows.items = matches
-    total_count = len(self._expense_participants)
-    visible_count = len(matches)
-    participant_word = "participant" if total_count == 1 else "participants"
-    self.expense_filter_status.text = (
-      f"Showing {visible_count} of {total_count} {participant_word}"
-    )
-    self.no_budget_participants_state.visible = not matches
-    if not self.tournaments:
-      self.no_budget_participants_state.text = "No tournaments have been added yet."
-    elif not total_count:
-      self.no_budget_participants_state.text = "No participant expense details have been added."
-    else:
-      self.no_budget_participants_state.text = "No participants match these filters."
-
   @handle("tournament_picker", "change")
   def tournament_picker_change(self, **event_args):
     self._show_selected_tournament()
@@ -257,29 +154,9 @@ class PublicStandings(PublicStandingsTemplate):
   def news_tab_button_click(self, **event_args):
     self._show_public_tab("news")
 
-  @handle("expenses_tab_button", "click")
-  def expenses_tab_button_click(self, **event_args):
-    self._show_public_tab("expenses")
-
   @handle("awards_tab_button", "click")
   def awards_tab_button_click(self, **event_args):
     self._show_public_tab("awards")
-
-  @handle("expense_search", "change")
-  def expense_search_change(self, **event_args):
-    self._refresh_expense_participants()
-
-  @handle("expense_participant_type_filter", "change")
-  def expense_participant_type_filter_change(self, **event_args):
-    self._refresh_expense_participants()
-
-  @handle("expense_division_filter", "change")
-  def expense_division_filter_change(self, **event_args):
-    self._refresh_expense_participants()
-
-  @handle("expense_payment_filter", "change")
-  def expense_payment_filter_change(self, **event_args):
-    self._refresh_expense_participants()
 
   @handle("sign_in_button", "click")
   def sign_in_button_click(self, **event_args):

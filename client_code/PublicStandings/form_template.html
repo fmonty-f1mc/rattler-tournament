@@ -7,7 +7,6 @@
       <anvil-component type="Button" name="news_tab_button" prop:text="News" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="standings_tab_button" prop:text="Standings &amp; tee times" prop:role="tournament-subtab"></anvil-component>
       <anvil-component type="Button" name="awards_tab_button" prop:text="Awards" prop:role="tournament-subtab"></anvil-component>
-      <anvil-component type="Button" name="expenses_tab_button" prop:text="Expenses" prop:role="tournament-subtab"></anvil-component>
     </anvil-component>
     </nav>
     <anvil-component type="Button" name="sign_in_button" prop:text="Committee sign in" prop:role="secondary-button"></anvil-component>
@@ -41,28 +40,6 @@
       </section>
       <anvil-component type="RepeatingPanel" name="award_rows" prop:item_template="rattler_tournament.Components.Public.PublicAwardCard"></anvil-component>
       <anvil-component type="Label" name="awards_empty_state" prop:role="muted-text" prop:text="No award winners have been recorded for this tournament yet."></anvil-component>
-    </anvil-component>
-    <anvil-component type="ColumnPanel" name="expenses_section">
-      <section class="public-standings-intro">
-        <p class="eyebrow">TOURNAMENT EXPENSES</p>
-        <h2>Expenses</h2>
-        <p class="muted-copy">Review the selected tournament's expenses and participant balances.</p>
-      </section>
-      <div class="public-budget-summary">
-        <div><span>Estimated expenses</span><anvil-component type="Label" name="budget_total" prop:text="$0.00"></anvil-component></div>
-        <div><span>Paid so far</span><anvil-component type="Label" name="budget_paid" prop:text="$0.00"></anvil-component></div>
-        <div><span>Left to cover</span><anvil-component type="Label" name="budget_balance" prop:text="$0.00"></anvil-component></div>
-      </div>
-      <h4>Participant balances</h4>
-      <div class="public-expense-filters">
-        <div class="field-block"><label>Search by name</label><anvil-component type="TextBox" name="expense_search" prop:placeholder="Search participants"></anvil-component></div>
-        <div class="field-block"><label>Participant type</label><anvil-component type="DropDown" name="expense_participant_type_filter"></anvil-component></div>
-        <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="expense_division_filter"></anvil-component></div>
-        <div class="field-block"><label>Payment status</label><anvil-component type="DropDown" name="expense_payment_filter"></anvil-component></div>
-      </div>
-      <anvil-component type="Label" name="expense_filter_status" prop:role="muted-text"></anvil-component>
-      <anvil-component type="RepeatingPanel" name="budget_participant_rows" prop:item_template="rattler_tournament.Components.Public.PublicBudgetRow" prop:role="public-budget-participant-list"></anvil-component>
-      <anvil-component type="Label" name="no_budget_participants_state" prop:role="muted-text" prop:text="No participant expense details have been added."></anvil-component>
     </anvil-component>
   </anvil-block>
   <anvil-block slot="title">

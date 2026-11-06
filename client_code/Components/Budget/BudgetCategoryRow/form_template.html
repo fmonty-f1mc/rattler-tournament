@@ -1,7 +1,14 @@
 <anvil-form container="ColumnPanel">
   <div class="budget-category-row">
     <label>Category name<anvil-component type="TextBox" name="category_name_box"></anvil-component></label>
-    <label>Total $<anvil-component type="TextBox" name="category_total_box" prop:placeholder="0"></anvil-component></label>
+    <div class="field-block">
+      <label>Amount applies to</label>
+      <div class="budget-category-mode" role="group" aria-label="Category pricing mode">
+        <anvil-component type="Button" name="total_mode_button" prop:text="Total" prop:role="tournament-subtab"></anvil-component>
+        <anvil-component type="Button" name="per_person_mode_button" prop:text="Per person" prop:role="tournament-subtab"></anvil-component>
+      </div>
+    </div>
+    <label><anvil-component type="Label" name="category_amount_label" prop:text="Total $"></anvil-component><anvil-component type="TextBox" name="category_total_box" prop:placeholder="0"></anvil-component></label>
     <div class="budget-category-actions">
       <anvil-component type="Button" name="save_button" prop:text="Save" prop:role="secondary-button"></anvil-component>
       <anvil-component type="Button" name="delete_button" prop:text="Delete" prop:role="danger-button"></anvil-component>

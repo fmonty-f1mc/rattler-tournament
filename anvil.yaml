@@ -31,6 +31,9 @@ db_schema:
       name: total
       type: number
     - admin_ui: {}
+      name: per_person
+      type: bool
+    - admin_ui: {}
       client_hidden: null
       name: players_only
       type: bool
@@ -506,7 +509,4 @@ services:
 - client_config: {}
   server_config: {enc_delegation_refresh_token: H5Fr03IOkdNl15JiVaLAhXMIjIQmrIYF5pZG5SKCsxuUMTDNS6ES+NOhug1elvjKa0cugg0JlORqMMUOtj+BhV1FG+6cStEEJBxgGeOFzBxf5IN7027u6NVAqPI5zsSwcQEVCLwAL4X1Rm/Q+7vgXWCkaKjcgjjK5MzobXnY0qdolgE2HKsVbfhVhaHfrz4Yphgn6dnDa2J6kouQYOwtd618o9gQdX1k57LDKFOgir+xV9qjUcN9j4vpKXNeGkOhxoCtkeY2lujS00vOlsjdf00q+1GFvadZvX2qFcf1IcgTBnhYStgBszcGKI4gZw==}
   source: /runtime/services/google.yml
-- client_config: {}
-  server_config: {}
-  source: /runtime/services/anvil/email.yml
 startup: {module: Form1, type: form}

@@ -1,4 +1,3 @@
-import anvil.email
 import anvil.google.drive, anvil.google.mail
 from anvil.google.drive import app_files
 import csv
@@ -1186,37 +1185,6 @@ def get_public_tournament_standings(tournament_id):
   return result
 
 
-@anvil.server.callable
-def get_public_tournament_expenses(tournament_id):
-  """Public expense projection; reading must not initialize handicaps."""
-  tournament = app_tables.tournaments.get_by_id(tournament_id)
-  if tournament is None:
-    return None
-  budget_summary = _budget_summary(tournament, initialize_handicaps=False)
-  return {
-    "total": budget_summary["total"],
-    "paid": budget_summary["paid"],
-    "balance": budget_summary["balance"],
-    "participants": [
-      {
-        "name": row["entry"]["golfer"]["name"],
-        "participant_label": row["participant_label"],
-        "is_player": _entry_is_player(row["entry"]),
-        "division": (
-          (row["entry"]["division"] or "")
-          if _entry_is_player(row["entry"])
-          else ""
-        ),
-        "estimated_share": row["estimated_share"],
-        "paid": row["entry"]["amount_paid"] or 0,
-        "balance": row["estimated_share"] - (row["entry"]["amount_paid"] or 0),
-      }
-      for row in budget_summary["rows"]
-    ],
-  }
-
-
-
 def _round_two_pair_label(sequence, first_entry, second_entry, rank_by_id):
   first_rank = rank_by_id.get(first_entry.get_id())
   if second_entry is None:
@@ -1762,6 +1730,7 @@ def _legacy_budget_category_specs(tournament, entries):
       "key": "legacy-{}".format(index),
       "name": name,
       "total": total or 0,
+      "per_person": False,
       "players_only": players_only,
       "selected_entry_ids": selected_entry_ids,
       "category": None,
@@ -1782,6 +1751,7 @@ def _ensure_budget_categories(tournament, entries=None):
         tournament=tournament,
         name=spec["name"],
         total=spec["total"],
+        per_person=False,
         players_only=spec["players_only"],
       )
       for entry in entries:
@@ -1807,21 +1777,24 @@ def add_budget_category(tournament, name):
     tournament=tournament,
     name=name,
     total=0,
+    per_person=False,
     players_only=False,
   )
   return _result(category=category)
 
 
 @anvil.server.callable(require_user=True)
-def save_budget_category(category, name, total):
+def save_budget_category(category, name, total, per_person=False):
   if not _valid_row(app_tables.budget_categories, category):
     return _result("Choose an expense category.")
   name = (name or "").strip()
   if not name:
     return _result("Enter a category name.")
-  amount = _number(total, "Category total", allow_blank=False)
+  if not isinstance(per_person, bool):
+    return _result("Choose Total or Per person for the category amount.")
+  amount = _number(total, "Category amount", allow_blank=True)
   if amount is None or amount < 0:
-    return _result("Enter a valid non-negative category total.")
+    return _result("Enter a valid non-negative category amount.")
   tournament = category["tournament"]
   if any(
     other.get_id() != category.get_id()
@@ -1829,7 +1802,7 @@ def save_budget_category(category, name, total):
     for other in app_tables.budget_categories.search(tournament=tournament)
   ):
     return _result("That category already exists for this tournament.")
-  category.update(name=name, total=amount)
+  category.update(name=name, total=amount, per_person=per_person)
   return _result()
 
 
@@ -1998,6 +1971,7 @@ def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True)
         "key": category.get_id(),
         "name": category["name"],
         "total": category["total"] or 0,
+        "per_person": category["per_person"] is True,
         "players_only": bool(category["players_only"]),
         "category": category,
         "selected_entry_ids": {
@@ -2028,12 +2002,20 @@ def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True)
   for spec in category_specs:
     count = category_counts[spec["key"]]
     spec["count"] = count
-    spec["share"] = spec["total"] / count if count else spec["total"]
+    # The stored amount is either a shared total or a fixed rate per assignee.
+    spec["amount"] = spec["total"]
+    if spec["per_person"]:
+      spec["share"] = spec["amount"]
+      spec["total"] = spec["amount"] * count
+    else:
+      spec["share"] = spec["amount"] / count if count else spec["amount"]
 
   categories = [
     {
       "category": spec["category"],
       "name": spec["name"],
+      "amount": spec["amount"],
+      "per_person": spec["per_person"],
       "total": spec["total"],
       "players_only": spec["players_only"],
       "count": spec["count"],
@@ -2054,6 +2036,7 @@ def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True)
         "name": spec["name"],
         "selected": spec["key"] in entry_selection_ids[entry.get_id()],
         "share": spec["share"],
+        "per_person": spec["per_person"],
         "count": spec["count"],
         "players_only": spec["players_only"],
         "entry_is_player": _entry_is_player(entry),

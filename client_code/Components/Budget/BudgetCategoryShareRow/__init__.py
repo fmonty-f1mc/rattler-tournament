@@ -14,10 +14,13 @@ class BudgetCategoryShareRow(BudgetCategoryShareRowTemplate):
       self.item["name"],
       self.item["share"],
       self.item["count"],
+      self.item["per_person"],
     )
 
   @staticmethod
-  def _share_label(category, value, count):
+  def _share_label(category, value, count, per_person):
+    if per_person:
+      return f"{category} · ${value:,.2f}/participant ({count} assigned)"
     if count:
       return f"{category} · ${value:,.2f}/participant ({count} sharing)"
     return f"{category} · ${value:,.2f} if you're first"
