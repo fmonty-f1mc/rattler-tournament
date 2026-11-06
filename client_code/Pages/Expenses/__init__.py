@@ -294,6 +294,7 @@ class Expenses(ExpensesTemplate):
     category,
     name,
     total,
+    per_person,
     **event_args,
   ):
     result = anvil.server.call(
@@ -301,6 +302,7 @@ class Expenses(ExpensesTemplate):
       category,
       name,
       total,
+      per_person,
     )
     if not result["ok"]:
       self.budget_status.text = result["message"]

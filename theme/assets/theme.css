@@ -1427,7 +1427,7 @@ input.anvil-role-budget-paid-input:disabled {
 
 .budget-category-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.2fr) minmax(110px, 0.7fr) auto;
+  grid-template-columns: minmax(150px, 1.2fr) minmax(190px, 1fr) minmax(110px, 0.7fr) auto;
   align-items: center;
   gap: 10px;
   padding: 12px 0;
@@ -1456,6 +1456,12 @@ input.anvil-role-budget-paid-input:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.budget-category-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .budget-category-add-form {

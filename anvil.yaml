@@ -31,6 +31,9 @@ db_schema:
       name: total
       type: number
     - admin_ui: {}
+      name: per_person
+      type: bool
+    - admin_ui: {}
       client_hidden: null
       name: players_only
       type: bool
