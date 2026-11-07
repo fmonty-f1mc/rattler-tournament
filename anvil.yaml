@@ -53,6 +53,12 @@ db_schema:
       name: category
       target: budget_categories
       type: link_single
+    - admin_ui: {}
+      name: paid
+      type: bool
+    - admin_ui: {}
+      name: paid_amount
+      type: number
     indexes: []
     server: full
     title: Budget Shares

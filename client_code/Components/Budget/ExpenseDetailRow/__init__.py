@@ -5,6 +5,20 @@ from anvil import *
 class ExpenseDetailRow(ExpenseDetailRowTemplate):
   def __init__(self, **properties):
     super().__init__(**properties)
-    self.expense_share_label.text = "${:,.2f} per person".format(self.item["share"])
     count = self.item["count"]
-    self.sharing_count_label.text = f"{count} participant" + ("s" if count != 1 else "")
+    mode = "per person" if self.item["per_person"] else "sharing"
+    self.sharing_count_label.text = f"{count} assigned · {mode}"
+
+  @handle("paid_checkbox", "change")
+  def paid_checkbox_change(self, **event_args):
+    self.paid_checkbox.enabled = False
+    try:
+      self.parent.raise_event(
+        "x-budget-category-paid-changed",
+        entry=self.item["entry"],
+        category=self.item["category"],
+        paid=self.paid_checkbox.checked,
+      )
+    finally:
+      self.paid_checkbox.enabled = True
+      self.refresh_data_bindings()

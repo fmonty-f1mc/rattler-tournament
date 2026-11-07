@@ -2397,3 +2397,170 @@ input.anvil-role-budget-paid-input:disabled {
   padding: 10px 12px;
   overflow-wrap: anywhere;
 }
+
+/* Payments: participant navigation, balances, and category controls. */
+.payments-workspace { padding-bottom: 24px; }
+.payments-heading { margin: 0 0 22px; }
+.payments-heading h2 { margin: 4px 0 8px; font-size: 26px; letter-spacing: -0.6px; }
+.payments-heading p { margin: 0; }
+.payments-filter-panel {
+  margin-bottom: 22px;
+  padding: 20px;
+  border: 1px solid var(--blank-border);
+  border-radius: 14px;
+  background: var(--blank-surface);
+}
+.payments-search-row { display: flex; align-items: end; gap: 16px; }
+.payments-search-row > .field-block { flex: 1; }
+.payments-workspace .field-block { min-width: 0; }
+.payments-workspace .field-block > .anvil-text-box,
+.payments-workspace .field-block > .anvil-dropdown { width: 100%; min-width: 0; }
+input.anvil-role-payment-search { min-height: 46px; border-radius: 9px; }
+.payments-status-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.anvil-role-payment-filter > button,
+.anvil-role-payment-filter-active > button {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--blank-border);
+  border-radius: 24px;
+  background: var(--blank-surface);
+  color: var(--blank-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.anvil-role-payment-filter-active > button {
+  border-color: var(--blank-primary-dark);
+  background: var(--blank-primary-dark);
+  color: white;
+}
+.anvil-role-payment-filter > button:hover { background: var(--blank-surface-muted); color: var(--blank-text); }
+.anvil-role-payment-filter > button:focus-visible,
+.anvil-role-payment-filter-active > button:focus-visible,
+.anvil-role-payment-disclosure > button:focus-visible,
+.anvil-role-payment-text-action > button:focus-visible { outline: 3px solid var(--blank-focus-ring); outline-offset: 3px; }
+.payments-filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.payments-layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; align-items: start; gap: 22px; }
+.payments-main { min-width: 0; }
+.payments-list-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.anvil-role-payment-result-count { color: var(--blank-muted); font-size: 12px; font-weight: 650; }
+.anvil-role-payment-text-action > button,
+.anvil-role-payment-disclosure > button {
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--blank-primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.anvil-role-payment-text-action > button:hover,
+.anvil-role-payment-disclosure > button:hover { background: var(--blank-surface-muted); }
+.anvil-role-payment-text-action > button:disabled { opacity: 0.45; cursor: default; }
+.anvil-role-payment-participant-list > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.anvil-role-payment-participant-card,
+.anvil-role-payment-participant-card-selected {
+  min-width: 0;
+  padding: 18px 20px 10px;
+  border: 1px solid var(--blank-border);
+  border-radius: 14px;
+  background: var(--blank-surface);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.025);
+}
+.anvil-role-payment-participant-card-selected {
+  border-color: var(--blank-primary);
+  box-shadow: 0 0 0 1px var(--blank-primary);
+}
+.payment-person-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.payment-person-identity { min-width: 0; }
+.anvil-role-payment-person-select { min-height: 32px; font-size: 15px; font-weight: 750; overflow-wrap: anywhere; }
+.payment-person-identity .anvil-role-muted-text { margin-left: 24px; font-size: 11px; }
+.anvil-role-payment-state-due,
+.anvil-role-payment-state-settled {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.anvil-role-payment-state-due { background: #fff2e5; color: #945110; }
+.anvil-role-payment-state-settled { background: #eaf6ee; color: #16743a; }
+.payment-person-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 18px 0; }
+.payment-person-totals > div { min-width: 0; }
+.payment-person-totals > div + div { border-left: 1px solid var(--blank-border); padding-left: 12px; }
+.payment-person-totals span { display: block; margin-bottom: 4px; color: var(--blank-muted); font-size: 10px; font-weight: 650; }
+.payment-person-totals .anvil-label { font-size: 19px; font-weight: 750; letter-spacing: -0.5px; overflow-wrap: anywhere; }
+.anvil-role-payment-total { color: var(--blank-text); }
+.payment-person-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px; border-top: 1px solid var(--blank-border); padding-top: 6px; }
+.payment-person-footer .anvil-role-muted-text { font-size: 10px; }
+.anvil-role-payment-category-panel { padding: 0 0 4px; }
+.payment-category-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--blank-border); }
+.payment-category-description { min-width: 0; }
+.anvil-role-payment-category-name { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.payment-category-description .anvil-role-muted-text { font-size: 10px; }
+.anvil-role-payment-category-amount { font-size: 13px; font-weight: 750; color: var(--blank-text); }
+.anvil-role-expense-payment-paid,
+.anvil-role-expense-payment-unpaid { display: inline-flex; align-items: center; min-height: 42px; min-width: 86px; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--blank-border); border-radius: 9px; font-size: 12px; font-weight: 700; }
+.anvil-role-expense-payment-paid { background: #eaf6ee; border-color: #b7ddc4; color: #16743a; }
+.anvil-role-expense-payment-unpaid { background: var(--blank-surface-muted); color: var(--blank-muted); }
+.payments-action-panel {
+  position: sticky;
+  top: 20px;
+  padding: 22px;
+  border: 1px solid var(--blank-border);
+  border-top: 3px solid var(--blank-primary-dark);
+  border-radius: 14px;
+  background: var(--blank-surface);
+}
+.payments-action-heading { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+.payments-action-heading h3 { margin: 2px 0 0; font-size: 18px; letter-spacing: -0.4px; }
+.payments-action-heading p { margin: 0; }
+.payments-step { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px; background: var(--blank-surface-muted); color: var(--blank-primary-dark); font-weight: 800; }
+.payments-action-panel > .muted-copy { margin: 0 0 16px; font-size: 12px; }
+.anvil-role-payment-selection-summary { font-size: 13px; font-weight: 700; color: var(--blank-primary-dark); }
+.payments-action-panel > .field-block { margin-top: 18px; }
+input.anvil-role-payment-amount { min-height: 48px; font-size: 22px; font-weight: 700; border-radius: 9px; }
+.payments-field-hint { margin: 8px 0 16px; color: var(--blank-muted); font-size: 11px; line-height: 1.6; }
+.payments-action-panel .anvil-role-budget-save-button,
+.payments-action-panel .anvil-role-budget-save-button > button { width: 100%; }
+.payments-action-panel .anvil-role-budget-save-button > button { min-height: 46px; border-radius: 9px; }
+.payments-action-panel .anvil-role-budget-save-button > button:disabled { border-color: var(--blank-border); background: var(--blank-control-disabled); color: var(--blank-muted); cursor: default; }
+.anvil-role-payment-feedback { padding: 10px 0; color: #a82222; font-size: 12px; }
+.payments-category-tip { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--blank-border); font-size: 12px; }
+.payments-category-tip p { margin: 6px 0 0; color: var(--blank-muted); font-size: 11px; line-height: 1.7; }
+.payments-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; }
+.payments-pagination .anvil-role-muted-text { font-size: 11px; text-align: center; }
+.anvil-role-payment-empty-state { padding: 40px 24px; border: 1px dashed var(--blank-border); border-radius: 14px; color: var(--blank-muted); text-align: center; background: var(--blank-surface); }
+@media (max-width: 1100px) {
+  .payments-layout { grid-template-columns: minmax(0, 1fr); }
+  .payments-action-panel { position: static; order: -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 18px; padding: 18px; }
+  .payments-action-heading { grid-column: 1 / -1; margin-bottom: 0; }
+  .payments-action-panel > .muted-copy { grid-column: 1 / -1; margin: 0; }
+  .payments-action-panel > .field-block { grid-column: 1; margin-top: 0; }
+  .payments-action-panel > .anvil-role-budget-save-button { grid-column: 2; grid-row: 4; align-self: end; }
+  .payments-action-panel > .payments-field-hint,
+  .payments-action-panel > .anvil-role-payment-feedback,
+  .payments-category-tip { grid-column: 1 / -1; margin: 0; }
+  .payments-category-tip { margin-top: 8px; padding-top: 12px; }
+}
+@media (max-width: 600px) {
+  .payments-heading h2 { font-size: 22px; }
+  .payments-filter-panel { padding: 14px; }
+  .payments-search-row { gap: 6px; }
+  .payments-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .payments-filter-grid > .field-block:last-child { grid-column: 1 / -1; }
+  .payments-status-tabs { gap: 6px; }
+  .anvil-role-payment-filter > button,
+  .anvil-role-payment-filter-active > button { padding: 8px 12px; font-size: 11px; }
+  .anvil-role-payment-participant-card,
+  .anvil-role-payment-participant-card-selected { padding: 14px 12px 8px; }
+  .payment-person-totals { gap: 8px; }
+  .payment-person-totals > div + div { padding-left: 8px; }
+  .payment-person-totals .anvil-label { font-size: 17px; }
+  .payment-person-totals span { font-size: 9px; }
+  .payment-category-row { gap: 8px; }
+  .anvil-role-expense-payment-paid,
+  .anvil-role-expense-payment-unpaid { min-width: 76px; padding: 8px; }
+  .payments-action-panel { gap: 8px 12px; padding: 14px; }
+}

@@ -37,26 +37,51 @@
     </div>
   </anvil-component>
   <anvil-component type="ColumnPanel" name="budget_payments_tab" prop:role="tracker-view">
-    <div class="tracker-card">
-      <div class="budget-cost-header">
-        <div class="section-heading"><div><p class="eyebrow">Payments</p><h2>Expense details and payments</h2></div><span class="muted-copy">Choose participants, enter a payment amount, and click Add &amp; Save Payments to add it to their totals.</span></div>
-        <anvil-component type="Button" name="save_budget_payments_button" prop:text="Add &amp; Save Payments" prop:role="budget-save-button"></anvil-component>
-      </div>
-      <div class="budget-bulk-controls">
-        <div class="field-block"><label>Participant type</label><anvil-component type="DropDown" name="budget_cost_type_filter"></anvil-component></div>
-        <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="budget_cost_division_filter"></anvil-component></div>
-        <div class="field-block"><label>Search by name</label><anvil-component type="TextBox" name="budget_cost_search" prop:placeholder="Search participants"></anvil-component></div>
-      </div>
-      <div class="budget-payment-bulk-controls">
-        <div class="field-block budget-payment-amount-field"><label>Payment amount to add for selected ($)</label><anvil-component type="TextBox" name="budget_bulk_paid_amount" prop:placeholder="0"></anvil-component></div>
-        <div class="budget-payment-bulk-actions">
-          <anvil-component type="Button" name="select_matching_budget_payments_button" prop:text="Select all matching" prop:role="secondary-button"></anvil-component>
-          <anvil-component type="Button" name="clear_budget_payment_selection_button" prop:text="Clear selection" prop:role="secondary-button"></anvil-component>
+    <section class="payments-workspace">
+      <div class="payments-heading"><p class="eyebrow">Payments</p><h2>Keep every payment in view</h2><p class="muted-copy">Find a participant, open their categories, or select people to record a custom payment.</p></div>
+      <div class="payments-filter-panel">
+        <div class="payments-search-row">
+          <div class="field-block"><label>Find a participant</label><anvil-component type="TextBox" name="budget_cost_search" prop:placeholder="Search by name…" prop:role="payment-search"></anvil-component></div>
+          <anvil-component type="Button" name="reset_payment_filters_button" prop:text="Reset filters" prop:role="payment-text-action"></anvil-component>
+        </div>
+        <nav class="payments-status-tabs" aria-label="Filter payment balances">
+          <anvil-component type="Button" name="payments_all_button" prop:text="Everyone" prop:role="payment-filter-active"></anvil-component>
+          <anvil-component type="Button" name="payments_outstanding_button" prop:text="Outstanding" prop:role="payment-filter"></anvil-component>
+          <anvil-component type="Button" name="payments_settled_button" prop:text="Settled" prop:role="payment-filter"></anvil-component>
+          <anvil-component type="Button" name="payments_selected_button" prop:text="Selected" prop:role="payment-filter"></anvil-component>
+        </nav>
+        <div class="payments-filter-grid">
+          <div class="field-block"><label>Participant type</label><anvil-component type="DropDown" name="budget_cost_type_filter"></anvil-component></div>
+          <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="budget_cost_division_filter"></anvil-component></div>
+          <div class="field-block"><label>Sort by</label><anvil-component type="DropDown" name="payment_sort_picker"></anvil-component></div>
         </div>
       </div>
-      <anvil-component type="Label" name="budget_payment_selection_status" prop:role="muted-text"></anvil-component>
-      <anvil-component type="Label" name="budget_cost_match_status" prop:role="muted-text"></anvil-component>
-      <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="rattler_tournament.Components.Budget.BudgetRow" prop:role="budget-list"></anvil-component>
-    </div>
+      <div class="payments-layout">
+        <div class="payments-main">
+          <div class="payments-list-toolbar">
+            <anvil-component type="Label" name="budget_cost_match_status" prop:role="payment-result-count"></anvil-component>
+            <anvil-component type="Button" name="select_matching_budget_payments_button" prop:text="Select all matching" prop:role="payment-text-action"></anvil-component>
+          </div>
+          <anvil-component type="Label" name="payment_empty_state" prop:role="payment-empty-state" prop:visible="false" prop:text="No participants match. Try another name or reset your filters."></anvil-component>
+          <anvil-component type="RepeatingPanel" name="budget_rows" prop:item_template="rattler_tournament.Components.Budget.BudgetRow" prop:role="payment-participant-list"></anvil-component>
+          <div class="payments-pagination">
+            <anvil-component type="Button" name="previous_payments_page_button" prop:text="← Previous" prop:role="secondary-button"></anvil-component>
+            <anvil-component type="Label" name="payments_page_status" prop:role="muted-text" prop:text="Page 1 of 1"></anvil-component>
+            <anvil-component type="Button" name="next_payments_page_button" prop:text="Next →" prop:role="secondary-button"></anvil-component>
+          </div>
+        </div>
+        <aside class="payments-action-panel" aria-label="Record a custom payment">
+          <div class="payments-action-heading"><span class="payments-step">$</span><div><p class="eyebrow">Custom amount</p><h3>Record a payment</h3></div></div>
+          <p class="muted-copy">Select participants using the checkboxes beside their names.</p>
+          <anvil-component type="Label" name="budget_payment_selection_status" prop:role="payment-selection-summary" prop:text="No participants selected"></anvil-component>
+          <anvil-component type="Button" name="clear_budget_payment_selection_button" prop:text="Clear selection" prop:role="payment-text-action"></anvil-component>
+          <div class="field-block"><label>Amount per selected person ($)</label><anvil-component type="TextBox" name="budget_bulk_paid_amount" prop:placeholder="0.00" prop:role="payment-amount"></anvil-component></div>
+          <p class="payments-field-hint">The same amount is added to each selected person's total paid.</p>
+          <anvil-component type="Label" name="payment_custom_feedback" prop:role="payment-feedback" prop:visible="false"></anvil-component>
+          <anvil-component type="Button" name="save_budget_payments_button" prop:text="Add payment" prop:role="budget-save-button" prop:enabled="false"></anvil-component>
+          <div class="payments-category-tip"><strong>Paying a whole category?</strong><p>Open a participant's expense categories and switch Unpaid to Paid. Category changes save immediately. Switching back reverses that category payment.</p></div>
+        </aside>
+      </div>
+    </section>
   </anvil-component>
 </anvil-form>
