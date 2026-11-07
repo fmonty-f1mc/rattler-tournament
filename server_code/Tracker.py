@@ -1817,6 +1817,47 @@ def delete_budget_category(category):
 
 
 @anvil.server.callable(require_user=True)
+@in_transaction
+def set_budget_category_paid(tournament, entry, category, paid):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not _valid_row(app_tables.tournament_entries, entry):
+    return _result("Choose a valid tournament entry.")
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  if not isinstance(paid, bool):
+    return _result("Choose Paid or Unpaid.")
+  if entry["tournament"] != tournament or category["tournament"] != tournament:
+    return _result("Choose a participant and category from this tournament.")
+
+  assignments = list(app_tables.budget_shares.search(category=category))
+  assignment = next((share for share in assignments if share["entry"] == entry), None)
+  if assignment is None:
+    return _result("This expense category is no longer assigned to this participant.")
+  if bool(assignment["paid"]) == paid:
+    return _result()
+
+  if paid:
+    entry_ids = {
+      row.get_id() for row in app_tables.tournament_entries.search(tournament=tournament)
+    }
+    count = len({
+      share["entry"].get_id() for share in assignments
+      if share["entry"] is not None and share["entry"].get_id() in entry_ids
+    })
+    amount = category["total"] or 0
+    payment_amount = amount if category["per_person"] else amount / count
+  else:
+    # Undo the amount recorded when paid, even if costs or assignments changed.
+    payment_amount = -(assignment["paid_amount"] or 0)
+
+  entry["amount_paid"] = (entry["amount_paid"] or 0) + payment_amount
+  assignment.update(paid=paid, paid_amount=payment_amount if paid else 0)
+  return _result()
+
+
+@anvil.server.callable(require_user=True)
+@in_transaction
 def add_entry_payments(tournament, payments):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Choose a tournament.")
@@ -1965,6 +2006,17 @@ def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True)
   if not category_rows and migrate_legacy:
     category_rows = _ensure_budget_categories(tournament, entries)
 
+  category_assignments = {
+    category.get_id(): list(app_tables.budget_shares.search(category=category))
+    for category in category_rows
+  }
+  paid_assignments = {
+    (share["entry"].get_id(), category_id)
+    for category_id, assignments in category_assignments.items()
+    for share in assignments
+    if share["entry"] is not None and share["paid"] is True
+  }
+
   if category_rows:
     category_specs: list = [
       {
@@ -1976,7 +2028,7 @@ def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True)
         "category": category,
         "selected_entry_ids": {
           share["entry"].get_id()
-          for share in app_tables.budget_shares.search(category=category)
+          for share in category_assignments[category.get_id()]
           if share["entry"] is not None
         },
       }
@@ -2032,6 +2084,8 @@ def _budget_summary(tournament, migrate_legacy=False, initialize_handicaps=True)
     )
     category_shares: list = [
       {
+        "entry": entry,
+        "paid": (entry.get_id(), spec["key"]) in paid_assignments,
         "category": spec["category"],
         "name": spec["name"],
         "selected": spec["key"] in entry_selection_ids[entry.get_id()],

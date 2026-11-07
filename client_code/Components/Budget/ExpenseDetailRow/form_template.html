@@ -1,9 +1,10 @@
 <anvil-form container="ColumnPanel">
-  <div class="budget-expense-detail-row">
-    <anvil-component type="Label" name="expense_name" prop:role="budget-expense-name" bind:text="self.item['name']"></anvil-component>
-    <div class="budget-expense-share">
-      <anvil-component type="Label" name="expense_share_label" prop:role="budget-expense-share"></anvil-component>
-      <anvil-component type="Label" name="sharing_count_label" prop:role="budget-expense-count"></anvil-component>
+  <div class="payment-category-row">
+    <div class="payment-category-description">
+      <anvil-component type="Label" name="expense_name" prop:role="payment-category-name" bind:text="self.item['name']"></anvil-component>
+      <anvil-component type="Label" name="sharing_count_label" prop:role="muted-text"></anvil-component>
     </div>
+    <anvil-component type="Label" name="expense_share_label" prop:role="payment-category-amount" bind:text="'${:,.2f}'.format(self.item['share'])"></anvil-component>
+    <anvil-component type="CheckBox" name="paid_checkbox" bind:role="'expense-payment-paid' if self.item['paid'] else 'expense-payment-unpaid'" bind:checked="self.item['paid']" bind:text="'Paid' if self.item['paid'] else 'Unpaid'"></anvil-component>
   </div>
 </anvil-form>

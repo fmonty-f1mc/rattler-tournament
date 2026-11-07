@@ -14,6 +14,16 @@ class Expenses(ExpensesTemplate):
     self._budget_cost_items = []
     self._budget_selected_entry_ids = set()
     self._budget_selection_tournament_id = None
+    self._payment_page = 0
+    self._payment_filter = "all"
+    self._payment_tournament_id = None
+    self._saving_payments = False
+    self.payment_sort_picker.items = [
+      ("Largest balance first", "balance"),
+      ("Name A–Z", "name"),
+      ("Highest paid first", "paid"),
+    ]
+    self.payment_sort_picker.selected_value = "balance"
     self.budget_status.text = ""
 
   def clear(self):
@@ -33,6 +43,12 @@ class Expenses(ExpensesTemplate):
     self.budget_cost_division_filter.items = [("All divisions", "all")]
     self.budget_cost_division_filter.selected_value = "all"
     self.budget_cost_search.text = ""
+    self._payment_page = 0
+    self._payment_filter = "all"
+    self._payment_tournament_id = None
+    self.budget_bulk_paid_amount.text = ""
+    self.payment_custom_feedback.visible = False
+    self._refresh_budget_cost_rows()
     self.budget_cost_match_status.text = "0 participants"
     self.budget_payment_selection_status.text = "0 participants selected."
     self._budget_target_items: list = []
@@ -46,6 +62,13 @@ class Expenses(ExpensesTemplate):
     self.budget_participants.text = "0 participants"
 
   def load(self, tournament):
+    if self._payment_tournament_id != tournament.get_id():
+      self._payment_page = 0
+      self._payment_tournament_id = tournament.get_id()
+      self.budget_bulk_paid_amount.text = ""
+      self.payment_custom_feedback.visible = False
+      if self._payment_filter == "selected":
+        self._payment_filter = "all"
     summary = anvil.server.call("get_budget_summary", tournament)
     self.budget_category_rows.items = summary["categories"]
     self._load_budget_cost_items(summary["rows"])
@@ -98,6 +121,9 @@ class Expenses(ExpensesTemplate):
     self._update_budget_navigation()
 
   def _load_budget_cost_items(self, rows):
+    expanded_ids = {
+      item["entry"].get_id() for item in self._budget_cost_items if item.get("_expanded")
+    }
     self._budget_cost_items = []
     divisions = set()
     for row in rows:
@@ -109,6 +135,7 @@ class Expenses(ExpensesTemplate):
       row["_is_player"] = is_player
       row["_division"] = division
       row["payment_selected"] = False
+      row["_expanded"] = entry.get_id() in expanded_ids
       self._budget_cost_items.append(row)
 
     type_options = [
@@ -153,18 +180,54 @@ class Expenses(ExpensesTemplate):
         continue
       if division_filter.startswith("division:") and item["_division"] != division_filter[len("division:"):]:
         continue
+      balance = self._payment_balance(item)
+      if self._payment_filter == "outstanding" and balance <= 0:
+        continue
+      if self._payment_filter == "settled" and balance > 0:
+        continue
+      if self._payment_filter == "selected" and not item["payment_selected"]:
+        continue
       matches.append(item)
-    return matches
+    sort_order = self.payment_sort_picker.selected_value or "balance"
+    def sort_key(item):
+      name = (item["entry"]["golfer"]["name"] or "").lower()
+      if sort_order == "name":
+        return (0, name)
+      if sort_order == "paid":
+        return (-(item["entry"]["amount_paid"] or 0), name)
+      return (-self._payment_balance(item), name)
+    return sorted(matches, key=sort_key)
 
-  def _refresh_budget_cost_rows(self):
+  @staticmethod
+  def _payment_balance(item):
+    return round(item["estimated_share"] - (item["entry"]["amount_paid"] or 0), 2)
+
+  def _refresh_budget_cost_rows(self, reset_page=False):
+    if reset_page:
+      self._payment_page = 0
     matching_items = self._matching_budget_cost_items()
-    self.budget_rows.items = matching_items
     count = len(self._budget_cost_items)
-    visible_count = len(matching_items)
+    matching_count = len(matching_items)
+    page_count = max(1, (matching_count + 9) // 10)
+    self._payment_page = min(self._payment_page, page_count - 1)
+    start = self._payment_page * 10
+    self.budget_rows.items = matching_items[start:start + 10]
     self.budget_cost_match_status.text = (
-      f"{visible_count} matching participant" + ("s" if visible_count != 1 else "")
-      + f" · {count} total"
+      f"{start + 1}–{min(start + 10, matching_count)} of {matching_count} matching · {count} total"
+      if matching_count else f"0 matching · {count} total"
     )
+    self.payment_empty_state.visible = matching_count == 0
+    self.payments_page_status.text = f"Page {self._payment_page + 1} of {page_count}"
+    self.previous_payments_page_button.enabled = self._payment_page > 0
+    self.next_payments_page_button.enabled = self._payment_page + 1 < page_count
+    self.select_matching_budget_payments_button.enabled = matching_count > 0
+    for value, button in (
+      ("all", self.payments_all_button),
+      ("outstanding", self.payments_outstanding_button),
+      ("settled", self.payments_settled_button),
+      ("selected", self.payments_selected_button),
+    ):
+      button.role = "payment-filter-active" if self._payment_filter == value else "payment-filter"
     self._update_budget_payment_selection_status()
 
   def _update_budget_payment_selection_status(self):
@@ -172,7 +235,17 @@ class Expenses(ExpensesTemplate):
       1 for item in self._budget_cost_items if item["payment_selected"]
     )
     self.budget_payment_selection_status.text = (
-      f"{selected_count} participant" + ("s" if selected_count != 1 else "") + " selected."
+      f"{selected_count} participant" + ("s" if selected_count != 1 else "") + " selected"
+      if selected_count else "No participants selected"
+    )
+    visible_selected = sum(1 for item in self.budget_rows.items or [] if item["payment_selected"])
+    if selected_count > visible_selected:
+      hidden_count = selected_count - visible_selected
+      self.budget_payment_selection_status.text += f" · {hidden_count} outside this page"
+    self.save_budget_payments_button.enabled = selected_count > 0 and not self._saving_payments
+    self.clear_budget_payment_selection_button.enabled = selected_count > 0
+    self.save_budget_payments_button.text = (
+      f"Add payment to {selected_count}" if selected_count else "Add payment"
     )
 
   def _select_budget_payment_items(self, items, selected):
@@ -338,19 +411,86 @@ class Expenses(ExpensesTemplate):
 
   @handle("budget_cost_type_filter", "change")
   def budget_cost_type_filter_change(self, **event_args):
-    self._refresh_budget_cost_rows()
+    self._refresh_budget_cost_rows(reset_page=True)
 
   @handle("budget_cost_division_filter", "change")
   def budget_cost_division_filter_change(self, **event_args):
-    self._refresh_budget_cost_rows()
+    self._refresh_budget_cost_rows(reset_page=True)
 
   @handle("budget_cost_search", "change")
   def budget_cost_search_change(self, **event_args):
+    self._refresh_budget_cost_rows(reset_page=True)
+
+  @handle("payment_sort_picker", "change")
+  def payment_sort_picker_change(self, **event_args):
+    self._refresh_budget_cost_rows(reset_page=True)
+
+  def _set_payment_filter(self, value):
+    self._payment_filter = value
+    self._refresh_budget_cost_rows(reset_page=True)
+
+  @handle("payments_all_button", "click")
+  def payments_all_button_click(self, **event_args):
+    self._set_payment_filter("all")
+
+  @handle("payments_outstanding_button", "click")
+  def payments_outstanding_button_click(self, **event_args):
+    self._set_payment_filter("outstanding")
+
+  @handle("payments_settled_button", "click")
+  def payments_settled_button_click(self, **event_args):
+    self._set_payment_filter("settled")
+
+  @handle("payments_selected_button", "click")
+  def payments_selected_button_click(self, **event_args):
+    self._set_payment_filter("selected")
+
+  @handle("reset_payment_filters_button", "click")
+  def reset_payment_filters_button_click(self, **event_args):
+    self.budget_cost_search.text = ""
+    self.budget_cost_type_filter.selected_value = "all"
+    self.budget_cost_division_filter.selected_value = "all"
+    self.payment_sort_picker.selected_value = "balance"
+    self._set_payment_filter("all")
+
+  @handle("previous_payments_page_button", "click")
+  def previous_payments_page_button_click(self, **event_args):
+    self._payment_page = max(0, self._payment_page - 1)
     self._refresh_budget_cost_rows()
+
+  @handle("next_payments_page_button", "click")
+  def next_payments_page_button_click(self, **event_args):
+    self._payment_page += 1
+    self._refresh_budget_cost_rows()
+
+  @handle("budget_bulk_paid_amount", "change")
+  def budget_bulk_paid_amount_change(self, **event_args):
+    self.payment_custom_feedback.visible = False
 
   @handle("budget_rows", "x-budget-payment-selection-changed")
   def budget_rows_payment_selection_changed(self, **event_args):
-    self._update_budget_payment_selection_status()
+    if self._payment_filter == "selected":
+      self._refresh_budget_cost_rows()
+    else:
+      self._update_budget_payment_selection_status()
+
+  @handle("budget_rows", "x-budget-category-paid-changed")
+  def budget_rows_category_paid_changed(self, entry, category, paid, **event_args):
+    result = anvil.server.call(
+      "set_budget_category_paid", self.app.current_event, entry, category, paid,
+    )
+    if not result["ok"]:
+      self.budget_status.text = result["message"]
+      return
+    selected_ids = {
+      item["entry"].get_id() for item in self._budget_cost_items if item["payment_selected"]
+    }
+    self.load(self.app.current_event)
+    for item in self._budget_cost_items:
+      item["payment_selected"] = item["entry"].get_id() in selected_ids
+    self._refresh_budget_cost_rows()
+    status = "paid" if paid else "unpaid"
+    self.budget_status.text = f"{category['name']} marked {status} for {entry['golfer']['name']}."
 
   @handle("select_matching_budget_payments_button", "click")
   def select_matching_budget_payments_button_click(self, **event_args):
@@ -448,6 +588,9 @@ class Expenses(ExpensesTemplate):
 
   @handle("save_budget_payments_button", "click")
   def save_budget_payments_button_click(self, **event_args):
+    if self._saving_payments:
+      return
+    self.payment_custom_feedback.visible = False
     if self.app.current_event is None:
       self.budget_status.text = "Create or select a tournament first."
       return
@@ -468,13 +611,22 @@ class Expenses(ExpensesTemplate):
       for item in selected_items
     ]
 
-    result = anvil.server.call(
-      "add_entry_payments",
-      self.app.current_event,
-      payments,
-    )
+    self._saving_payments = True
+    self.save_budget_payments_button.enabled = False
+    self.save_budget_payments_button.text = "Saving…"
+    try:
+      result = anvil.server.call(
+        "add_entry_payments",
+        self.app.current_event,
+        payments,
+      )
+    finally:
+      self._saving_payments = False
+      self._update_budget_payment_selection_status()
     if not result["ok"]:
       self.budget_status.text = result["message"]
+      self.payment_custom_feedback.text = result["message"]
+      self.payment_custom_feedback.visible = True
       return
     self.budget_bulk_paid_amount.text = ""
     self.app._load_event_data()

@@ -1,18 +1,22 @@
-<anvil-form container="ColumnPanel" prop:visible="true">
-  <div class="budget-row">
-    <div class="budget-player">
-      <div class="budget-player-name">
-        <anvil-component type="CheckBox" name="payment_selection_checkbox" bind:text="self.item['entry']['golfer']['name']"></anvil-component>
-        <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
-      </div>
-      <div class="budget-expense-details">
-        <anvil-component type="Label" name="amount_owed_label" prop:role="budget-owed"></anvil-component>
-        <anvil-component type="Label" name="no_expenses_label" prop:role="muted-text" prop:text="No expenses assigned."></anvil-component>
-        <anvil-component type="RepeatingPanel" name="expense_rows" prop:item_template="rattler_tournament.Components.Budget.ExpenseDetailRow" prop:role="budget-expense-detail-list"></anvil-component>
-      </div>
+<anvil-form container="ColumnPanel" prop:role="payment-participant-card">
+  <div class="payment-person-heading">
+    <div class="payment-person-identity">
+      <anvil-component type="CheckBox" name="payment_selection_checkbox" prop:role="payment-person-select" bind:text="self.item['entry']['golfer']['name']" bind:checked="self.item['payment_selected']"></anvil-component>
+      <anvil-component type="Label" name="division_label" prop:role="muted-text" bind:text="self.item['participant_label']"></anvil-component>
     </div>
-    <div class="budget-payment">
-      <label>Total paid $<anvil-component type="TextBox" name="paid_box" prop:placeholder="0" prop:role="budget-paid-input"></anvil-component></label>
-    </div>
+    <anvil-component type="Label" name="payment_state_label" prop:role="payment-state-due"></anvil-component>
   </div>
+  <div class="payment-person-totals">
+    <div><span>Total expenses</span><anvil-component type="Label" name="total_expenses_label" prop:role="payment-total" bind:text="'${:,.2f}'.format(self.item['estimated_share'])"></anvil-component></div>
+    <div><span>Total paid</span><anvil-component type="Label" name="paid_label" prop:role="budget-paid" bind:text="'${:,.2f}'.format(self.item['entry']['amount_paid'] or 0)"></anvil-component></div>
+    <div><span>Remaining balance</span><anvil-component type="Label" name="amount_owed_label" prop:role="budget-owed"></anvil-component></div>
+  </div>
+  <div class="payment-person-footer">
+    <anvil-component type="Button" name="toggle_expenses_button" prop:role="payment-disclosure"></anvil-component>
+    <anvil-component type="Label" name="category_payment_count_label" prop:role="muted-text"></anvil-component>
+  </div>
+  <anvil-component type="ColumnPanel" name="expense_details_panel" prop:visible="false" prop:role="payment-category-panel">
+    <anvil-component type="Label" name="no_expenses_label" prop:role="muted-text" prop:text="No expenses assigned to this participant."></anvil-component>
+    <anvil-component type="RepeatingPanel" name="expense_rows" prop:item_template="rattler_tournament.Components.Budget.ExpenseDetailRow"></anvil-component>
+  </anvil-component>
 </anvil-form>
