@@ -39,8 +39,10 @@ def _valid_row(table, candidate):
 
 
 def _email_filter_error(tournament, recipient_type, division_filter):
-  if recipient_type not in ("all", "players", "non_players"):
+  if recipient_type not in ("all", "players", "non_players", "test"):
     return "Choose a valid participant filter."
+  if recipient_type == "test":
+    return None if division_filter == "all" else "Choose All divisions for a test email."
   if division_filter in ("all", "unassigned"):
     pass
   elif isinstance(division_filter, str) and division_filter.startswith("division:"):
@@ -55,6 +57,8 @@ def _email_filter_error(tournament, recipient_type, division_filter):
 
 
 def _email_golfers(tournament, recipient_type="all", division_filter="all"):
+  if recipient_type == "test":
+    return
   for entry in app_tables.tournament_entries.search(tournament=tournament):
     is_player = _entry_is_player(entry)
     if recipient_type == "players" and not is_player:
@@ -83,6 +87,22 @@ def _tournament_email_details(tournament, recipient_type="all", division_filter=
       continue
     recipient_by_address.setdefault(address.lower(), address)
   return list(recipient_by_address.values()), missing_count, invalid_count
+
+
+def _parse_email_cc(cc):
+  if cc is None or cc == "":
+    return [], None
+  if not isinstance(cc, str) or "\r" in cc or "\n" in cc:
+    return [], "Enter valid CC email addresses separated by commas or semicolons."
+  addresses = {}
+  for value in re.split(r"[,;]", cc):
+    address = value.strip()
+    if not address:
+      continue
+    if not re.fullmatch(r"[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+", address):
+      return [], "Enter valid CC email addresses separated by commas or semicolons."
+    addresses.setdefault(address.lower(), address)
+  return list(addresses.values()), None
 
 
 def _entry_name(entry):
@@ -543,12 +563,22 @@ def delete_tournament(tournament):
 
 
 @anvil.server.callable(require_user=True)
-def get_tournament_email_summary(tournament, recipient_type="all", division_filter="all"):
+def get_tournament_email_summary(tournament, recipient_type="all", division_filter="all", cc=""):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
   filter_error = _email_filter_error(tournament, recipient_type, division_filter)
   if filter_error:
     return _result(filter_error)
+  cc_addresses, cc_error = _parse_email_cc(cc)
+  if cc_error:
+    return _result(cc_error)
+  if recipient_type == "test":
+    if not cc_addresses:
+      return _result("Enter at least one CC email address for a test email.")
+    return _result(
+      recipient_count=0, missing_count=0, invalid_count=0,
+      cc_addresses=cc_addresses, test_mode=True,
+    )
   recipients, missing_count, invalid_count = _tournament_email_details(
     tournament, recipient_type, division_filter
   )
@@ -556,6 +586,8 @@ def get_tournament_email_summary(tournament, recipient_type="all", division_filt
     recipient_count=len(recipients),
     missing_count=missing_count,
     invalid_count=invalid_count,
+    cc_addresses=cc_addresses,
+    test_mode=False,
   )
 
 
@@ -563,6 +595,8 @@ def get_tournament_email_summary(tournament, recipient_type="all", division_filt
 def export_tournament_email_list(tournament, recipient_type="all", division_filter="all"):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
+  if recipient_type == "test":
+    return _result("Choose a participant list to export email addresses.")
   filter_error = _email_filter_error(tournament, recipient_type, division_filter)
   if filter_error:
     return _result(filter_error)
@@ -594,7 +628,8 @@ def export_tournament_email_list(tournament, recipient_type="all", division_filt
 
 @anvil.server.callable(require_user=True)
 def send_tournament_email(
-  tournament, subject, body, recipient_type="all", division_filter="all"
+  tournament, subject, body, recipient_type="all", division_filter="all", cc="",
+  include_sections=None,
 ):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Select a tournament first.")
@@ -602,32 +637,54 @@ def send_tournament_email(
   body = (body or "").strip()
   if not subject:
     return _result("Enter an email subject.")
-  if not body:
-    return _result("Enter a message.")
   if "\n" in subject or "\r" in subject:
     return _result("Email subject cannot contain line breaks.")
+  cc_addresses, cc_error = _parse_email_cc(cc)
+  if cc_error:
+    return _result(cc_error)
 
   filter_error = _email_filter_error(tournament, recipient_type, division_filter)
   if filter_error:
     return _result(filter_error)
-  recipients, missing_count, invalid_count = _tournament_email_details(
-    tournament, recipient_type, division_filter
-  )
-  if not recipients:
-    return _result("No selected participants have a usable email address.")
+  test_mode = recipient_type == "test"
+  if test_mode:
+    if not cc_addresses:
+      return _result("Enter at least one CC email address for a test email.")
+    recipients, missing_count, invalid_count = [], 0, 0
+  else:
+    recipients, missing_count, invalid_count = _tournament_email_details(
+      tournament, recipient_type, division_filter
+    )
+    if not recipients:
+      return _result("No selected participants have a usable email address.")
 
+  from TournamentEmail import compose_tournament_email
+  composed = compose_tournament_email(tournament, body, include_sections)
+  if not composed["ok"]:
+    return composed
+
+  cc_keys = {address.lower() for address in cc_addresses}
   anvil.google.mail.send(
-    bcc=recipients,
+    bcc=[address for address in recipients if address.lower() not in cc_keys],
+    cc=cc_addresses or None,
     subject=subject,
-    text=body,
+    text=composed["body"],
   )
   skipped_count = missing_count + invalid_count
-  message = f"Email sent to {len(recipients)} unique email addresses."
+  message = (
+    f"Test email sent to {len(cc_addresses)} CC address(es) only."
+    if test_mode else f"Email sent to {len(recipients)} unique email addresses."
+  )
+  if cc_addresses and not test_mode:
+    message += f" Copied {len(cc_addresses)} CC address(es)."
   if skipped_count:
     message += f" Skipped {skipped_count} participant(s) without a usable email address."
   return _result(
-    message,
-    sent_count=len(recipients),
+    message=message,
+    ok=True,
+    sent_count=len(cc_addresses) if test_mode else len(recipients),
+    cc_count=len(cc_addresses),
+    test_mode=test_mode,
     missing_count=missing_count,
     invalid_count=invalid_count,
   )

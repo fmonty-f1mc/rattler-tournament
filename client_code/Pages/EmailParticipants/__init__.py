@@ -17,11 +17,13 @@ class EmailParticipants(EmailParticipantsTemplate):
     self.email_status.text = ""
 
   def clear(self):
+    self.email_preview.visible = False
     self._load_email_filters(None, [])
 
   def _load_email_filters(self, tournament, entries):
     recipient_options = [
-      ("Everyone", "all"), ("Players", "players"), ("Non-players", "non_players")
+      ("Everyone", "all"), ("Players", "players"), ("Non-players", "non_players"),
+      ("Test — CC only", "test"),
     ]
     if tournament is None:
       self._email_filter_tournament_id = None
@@ -32,10 +34,12 @@ class EmailParticipants(EmailParticipantsTemplate):
       self.email_division_filter.items = [("All divisions", "all")]
       self.email_division_filter.selected_value = "all"
       self.email_division_filter.enabled = False
+      self._update_email_recipient_controls()
       return
 
     tournament_id = tournament.get_id()
     if self._email_filter_tournament_id != tournament_id:
+      self.email_preview.visible = False
       self._email_filter_tournament_id = tournament_id
       self.email_recipient_type.selected_value = "all"
       self.email_division_filter.selected_value = "all"
@@ -59,7 +63,7 @@ class EmailParticipants(EmailParticipantsTemplate):
     self._email_has_players = any(
       entry["is_player"] is not False for entry in entries
     )
-    self.email_recipient_type.enabled = bool(entries)
+    self.email_recipient_type.enabled = True
     self._update_email_division_filter_state()
 
   def _set_email_subject_default(self, tournament):
@@ -72,12 +76,21 @@ class EmailParticipants(EmailParticipantsTemplate):
     self._email_default_subject = default_subject
 
   def _update_email_division_filter_state(self):
-    if self.email_recipient_type.selected_value == "non_players":
+    if self.email_recipient_type.selected_value in ("non_players", "test"):
       self.email_division_filter.selected_value = "all"
     self.email_division_filter.enabled = (
       self.app.current_event is not None
       and self._email_has_players
-      and self.email_recipient_type.selected_value != "non_players"
+      and self.email_recipient_type.selected_value not in ("non_players", "test")
+    )
+    self._update_email_recipient_controls()
+
+  def _update_email_recipient_controls(self):
+    test_mode = self.email_recipient_type.selected_value == "test"
+    self.email_test_hint.visible = test_mode
+    self.export_email_list_button.enabled = self.app.current_event is not None and not test_mode
+    self.send_tournament_email_button.text = (
+      "Send test email to CC" if test_mode else "Send email to participants"
     )
 
   @handle("email_recipient_type", "change")
@@ -88,6 +101,9 @@ class EmailParticipants(EmailParticipantsTemplate):
   def export_email_list_button_click(self, **event_args):
     if self.app.current_event is None:
       self.email_status.text = "Create or select a tournament first."
+      return
+    if self.email_recipient_type.selected_value == "test":
+      self.email_status.text = "Choose a participant list to export email addresses."
       return
     self.export_email_list_button.enabled = False
     try:
@@ -103,7 +119,7 @@ class EmailParticipants(EmailParticipantsTemplate):
       skipped = result["missing_count"] + result["invalid_count"]
       self.email_status.text = f"Exported {result['recipient_count']} unique email addresses. Skipped {skipped} participant(s) with missing or invalid email addresses."
     finally:
-      self.export_email_list_button.enabled = True
+      self._update_email_recipient_controls()
 
   @handle("send_tournament_email_button", "click")
   def send_tournament_email_button_click(self, **event_args):
@@ -113,22 +129,29 @@ class EmailParticipants(EmailParticipantsTemplate):
 
     subject = (self.email_subject.text or "").strip()
     body = (self.email_body.text or "").strip()
+    cc = self.email_cc.text or ""
+    include_sections = self._selected_email_sections()
     if not subject:
       self.email_status.text = "Enter an email subject."
       return
-    if not body:
-      self.email_status.text = "Enter a message."
+    if not body and not include_sections:
+      self.email_status.text = "Enter a message or select tournament information to include."
       return
 
     self.send_tournament_email_button.enabled = False
     recipient_type = self.email_recipient_type.selected_value or "all"
     division_filter = self.email_division_filter.selected_value or "all"
     try:
+      preview = self._load_email_preview(body, include_sections)
+      if not preview["ok"]:
+        self.email_status.text = preview["message"]
+        return
       summary = anvil.server.call(
         "get_tournament_email_summary",
         self.app.current_event,
         recipient_type,
         division_filter,
+        cc,
       )
     finally:
       self.send_tournament_email_button.enabled = True
@@ -137,7 +160,8 @@ class EmailParticipants(EmailParticipantsTemplate):
       self.email_status.text = summary["message"]
       return
     recipient_count = summary["recipient_count"]
-    if not recipient_count:
+    test_mode = summary["test_mode"]
+    if not recipient_count and not test_mode:
       self.email_status.text = "No matching participants have a usable email address."
       return
 
@@ -150,11 +174,27 @@ class EmailParticipants(EmailParticipantsTemplate):
       " Participants with " + " and ".join(skipped_details) + " will be skipped."
       if skipped_details else ""
     )
-    confirmed = confirm(
+    cc_message = (
+      " CC (visible to all recipients): " + ", ".join(summary["cc_addresses"]) + "."
+      if summary["cc_addresses"] else ""
+    )
+    section_message = (
+      " Includes: " + ", ".join(preview["section_titles"]) + "."
+      if preview["section_titles"] else ""
+    )
+    warning_message = " " + " ".join(preview["warnings"]) if preview["warnings"] else ""
+    confirmation_message = (
+      "Send a test email only to these CC addresses: "
+      + ", ".join(summary["cc_addresses"]) + "? "
+      + "Tournament participant lists will not receive this email."
+      if test_mode else
       f"Send this message to {recipient_count} unique email addresses for "
       f"{self.app.current_event['year']} · {self.app.current_event['course']}? "
-      f"Recipients will be BCCed.{skipped_message}",
-      title="Email tournament participants",
+      f"Participant addresses will be BCCed unless also listed in CC.{cc_message}"
+    )
+    confirmed = confirm(
+      confirmation_message + section_message + warning_message + skipped_message,
+      title="Send test email" if test_mode else "Email tournament participants",
     )
     if not confirmed:
       return
@@ -169,8 +209,59 @@ class EmailParticipants(EmailParticipantsTemplate):
         body,
         recipient_type,
         division_filter,
+        cc,
+        include_sections,
       )
     finally:
       self.send_tournament_email_button.enabled = True
 
     self.email_status.text = result["message"]
+
+  def _selected_email_sections(self):
+    return [
+      key for key, checkbox in (
+        ("details", self.include_details),
+        ("round_one", self.include_round_one),
+        ("round_two", self.include_round_two),
+        ("standings", self.include_standings),
+        ("division_standings", self.include_division_standings),
+        ("awards", self.include_awards),
+      ) if checkbox.checked
+    ]
+
+  def _load_email_preview(self, body, include_sections):
+    self.email_preview.visible = False
+    result = anvil.server.call(
+      "preview_tournament_email", self.app.current_event, body, include_sections,
+    )
+    if result["ok"]:
+      self.email_preview.text = result["body"]
+      self.email_preview.visible = True
+    return result
+
+  @handle("preview_email_button", "click")
+  def preview_email_button_click(self, **event_args):
+    if self.app.current_event is None:
+      self.email_status.text = "Create or select a tournament first."
+      return
+    self.preview_email_button.enabled = False
+    try:
+      result = self._load_email_preview(
+        (self.email_body.text or "").strip(), self._selected_email_sections(),
+      )
+      if result["ok"]:
+        self.email_status.text = " ".join(result["warnings"]) or "Preview ready."
+      else:
+        self.email_status.text = result["message"]
+    finally:
+      self.preview_email_button.enabled = True
+
+  @handle("email_body", "change")
+  @handle("include_details", "change")
+  @handle("include_round_one", "change")
+  @handle("include_round_two", "change")
+  @handle("include_standings", "change")
+  @handle("include_division_standings", "change")
+  @handle("include_awards", "change")
+  def email_content_change(self, **event_args):
+    self.email_preview.visible = False
