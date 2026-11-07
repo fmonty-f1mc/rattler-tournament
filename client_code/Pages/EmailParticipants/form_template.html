@@ -3,13 +3,12 @@
   <div class="tracker-card">
     <p class="muted-copy">Participant addresses are sent as BCC. Entries without a usable email address are skipped.</p>
     <anvil-component type="Label" name="email_from_line" prop:text="From: Google account connected to this app" prop:role="muted-text"></anvil-component>
-    <div class="form-grid form-grid-two">
+    <div class="form-grid form-grid-three email-recipient-controls">
       <div class="field-block"><label>Participants</label><anvil-component type="DropDown" name="email_recipient_type"></anvil-component></div>
       <div class="field-block"><label>Division</label><anvil-component type="DropDown" name="email_division_filter"></anvil-component></div>
+      <div class="email-export-action"><anvil-component type="Button" name="export_email_list_button" prop:text="Export email list (CSV)" prop:role="secondary-button"></anvil-component></div>
     </div>
     <anvil-component type="Label" name="email_test_hint" prop:text="Test mode: sends only to the addresses in CC. At least one CC address is required." prop:visible="false" prop:role="muted-text"></anvil-component>
-    <anvil-component type="Button" name="export_email_list_button" prop:text="Export email list (CSV)" prop:role="secondary-button"></anvil-component>
-    <p class="muted-copy">Download names and unique email addresses for the selected filters. Missing or invalid addresses are skipped.</p>
     <div class="field-block"><label>CC</label><anvil-component type="TextBox" name="email_cc" prop:placeholder="name@example.com; another@example.com"></anvil-component></div>
     <p class="muted-copy">Separate CC addresses with commas or semicolons. CC is required for Test — CC only, and optional for participant emails. CC addresses are visible to everyone receiving the message.</p>
     <div class="field-block"><label>Subject</label><anvil-component type="TextBox" name="email_subject" prop:placeholder="[RattlerMail tournament year]"></anvil-component></div>

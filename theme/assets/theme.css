@@ -632,6 +632,16 @@ textarea.anvil-text-area:disabled,
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.email-recipient-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+}
+
+.email-export-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .player-roster-filters {
   display: grid;
   grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(140px, 1fr));
@@ -1687,6 +1697,10 @@ input.anvil-role-budget-paid-input:disabled {
   .budget-category-row,
   .budget-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .email-export-action {
+    grid-column: 1 / -1;
   }
 
   .field-block,
