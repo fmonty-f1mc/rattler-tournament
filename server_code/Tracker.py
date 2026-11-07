@@ -1816,6 +1816,25 @@ def delete_budget_category(category):
   return _result()
 
 
+def _category_payment_amount(tournament, category, assignments):
+  amount = category["total"] or 0
+  if category["per_person"]:
+    return amount
+  entry_ids = {
+    row.get_id() for row in app_tables.tournament_entries.search(tournament=tournament)
+  }
+  count = len({
+    share["entry"].get_id() for share in assignments
+    if share["entry"] is not None and share["entry"].get_id() in entry_ids
+  })
+  return amount / count
+
+
+def _record_category_payment(entry, assignment, paid, payment_amount):
+  entry["amount_paid"] = (entry["amount_paid"] or 0) + payment_amount
+  assignment.update(paid=paid, paid_amount=payment_amount if paid else 0)
+
+
 @anvil.server.callable(require_user=True)
 @in_transaction
 def set_budget_category_paid(tournament, entry, category, paid):
@@ -1838,22 +1857,60 @@ def set_budget_category_paid(tournament, entry, category, paid):
     return _result()
 
   if paid:
-    entry_ids = {
-      row.get_id() for row in app_tables.tournament_entries.search(tournament=tournament)
-    }
-    count = len({
-      share["entry"].get_id() for share in assignments
-      if share["entry"] is not None and share["entry"].get_id() in entry_ids
-    })
-    amount = category["total"] or 0
-    payment_amount = amount if category["per_person"] else amount / count
+    payment_amount = _category_payment_amount(tournament, category, assignments)
   else:
     # Undo the amount recorded when paid, even if costs or assignments changed.
     payment_amount = -(assignment["paid_amount"] or 0)
 
-  entry["amount_paid"] = (entry["amount_paid"] or 0) + payment_amount
-  assignment.update(paid=paid, paid_amount=payment_amount if paid else 0)
+  _record_category_payment(entry, assignment, paid, payment_amount)
   return _result()
+
+
+@anvil.server.callable(require_user=True)
+@in_transaction
+def pay_budget_category_for_entries(tournament, category, entries):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not _valid_row(app_tables.budget_categories, category):
+    return _result("Choose an expense category.")
+  if category["tournament"] != tournament:
+    return _result("Choose an expense category from this tournament.")
+  if not isinstance(entries, (list, tuple)):
+    return _result("Choose valid tournament participants.")
+  if not entries:
+    return _result("Select at least one participant.")
+
+  selected_entries = {}
+  for entry in entries:
+    if not _valid_row(app_tables.tournament_entries, entry):
+      return _result("Choose a valid tournament entry.")
+    if entry["tournament"] != tournament:
+      return _result("Choose participants from this tournament.")
+    selected_entries[entry.get_id()] = entry
+
+  assignments = list(app_tables.budget_shares.search(category=category))
+  assignment_by_entry = {
+    share["entry"].get_id(): share for share in assignments if share["entry"] is not None
+  }
+  to_pay = []
+  not_assigned = 0
+  already_paid = 0
+  for entry_id, entry in selected_entries.items():
+    assignment = assignment_by_entry.get(entry_id)
+    if assignment is None:
+      not_assigned += 1
+    elif assignment["paid"] is True:
+      already_paid += 1
+    else:
+      to_pay.append((entry, assignment))
+
+  if to_pay:
+    payment_amount = _category_payment_amount(tournament, category, assignments)
+    for entry, assignment in to_pay:
+      _record_category_payment(entry, assignment, True, payment_amount)
+  return _result(
+    saved_count=len(to_pay), already_paid=already_paid, not_assigned=not_assigned,
+  )
 
 
 @anvil.server.callable(require_user=True)
