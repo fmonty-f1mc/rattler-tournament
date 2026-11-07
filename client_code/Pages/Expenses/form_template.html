@@ -70,16 +70,24 @@
             <anvil-component type="Button" name="next_payments_page_button" prop:text="Next →" prop:role="secondary-button"></anvil-component>
           </div>
         </div>
-        <aside class="payments-action-panel" aria-label="Record a custom payment">
-          <div class="payments-action-heading"><span class="payments-step">$</span><div><p class="eyebrow">Custom amount</p><h3>Record a payment</h3></div></div>
+        <aside class="payments-action-panel" aria-label="Record participant payments">
+          <div class="payments-action-heading"><span class="payments-step">$</span><div><p class="eyebrow">Selected participants</p><h3>Record payments</h3></div></div>
           <p class="muted-copy">Select participants using the checkboxes beside their names.</p>
           <anvil-component type="Label" name="budget_payment_selection_status" prop:role="payment-selection-summary" prop:text="No participants selected"></anvil-component>
           <anvil-component type="Button" name="clear_budget_payment_selection_button" prop:text="Clear selection" prop:role="payment-text-action"></anvil-component>
-          <div class="field-block"><label>Amount per selected person ($)</label><anvil-component type="TextBox" name="budget_bulk_paid_amount" prop:placeholder="0.00" prop:role="payment-amount"></anvil-component></div>
+          <div class="field-block"><label>Custom amount per person ($)</label><anvil-component type="TextBox" name="budget_bulk_paid_amount" prop:placeholder="0.00" prop:role="payment-amount"></anvil-component></div>
           <p class="payments-field-hint">The same amount is added to each selected person's total paid.</p>
           <anvil-component type="Label" name="payment_custom_feedback" prop:role="payment-feedback" prop:visible="false"></anvil-component>
           <anvil-component type="Button" name="save_budget_payments_button" prop:text="Add payment" prop:role="budget-save-button" prop:enabled="false"></anvil-component>
-          <div class="payments-category-tip"><strong>Paying a whole category?</strong><p>Open a participant's expense categories and switch Unpaid to Paid. Category changes save immediately. Switching back reverses that category payment.</p></div>
+          <section class="payments-category-bulk" aria-label="Pay a category for selected participants">
+            <h4>Pay an expense category</h4>
+            <p class="payments-field-hint">Mark this category paid for selected participants. Anyone not assigned the expense, or already paid, is skipped.</p>
+            <div class="field-block"><label>Expense category</label><anvil-component type="DropDown" name="payment_category_picker"></anvil-component></div>
+            <anvil-component type="Label" name="payment_category_preview" prop:role="muted-text" prop:text="Choose a category to see who will be paid."></anvil-component>
+            <anvil-component type="Label" name="payment_category_feedback" prop:role="payment-feedback" prop:visible="false"></anvil-component>
+            <anvil-component type="Button" name="pay_selected_category_button" prop:text="Mark category paid" prop:role="budget-save-button" prop:enabled="false"></anvil-component>
+          </section>
+          <div class="payments-category-tip"><strong>Need to undo a category payment?</strong><p>Open the participant's expense categories and switch Paid to Unpaid to reverse that category payment.</p></div>
         </aside>
       </div>
     </section>

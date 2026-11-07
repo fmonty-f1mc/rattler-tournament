@@ -632,6 +632,16 @@ textarea.anvil-text-area:disabled,
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.email-recipient-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+}
+
+.email-export-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .player-roster-filters {
   display: grid;
   grid-template-columns: minmax(220px, 2fr) repeat(2, minmax(140px, 1fr));
@@ -1689,6 +1699,10 @@ input.anvil-role-budget-paid-input:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .email-export-action {
+    grid-column: 1 / -1;
+  }
+
   .field-block,
   .score-input-block,
   .round-two-pairing-players label,
@@ -2527,6 +2541,10 @@ input.anvil-role-payment-amount { min-height: 48px; font-size: 22px; font-weight
 .payments-action-panel .anvil-role-budget-save-button > button { min-height: 46px; border-radius: 9px; }
 .payments-action-panel .anvil-role-budget-save-button > button:disabled { border-color: var(--blank-border); background: var(--blank-control-disabled); color: var(--blank-muted); cursor: default; }
 .anvil-role-payment-feedback { padding: 10px 0; color: #a82222; font-size: 12px; }
+.payments-category-bulk { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--blank-border); min-width: 0; }
+.payments-category-bulk h4 { margin: 0 0 8px; font-size: 14px; }
+.payments-category-bulk > .anvil-role-muted-text { margin: 10px 0; font-size: 11px; line-height: 1.6; }
+.anvil-role-payment-success { padding: 10px 0; color: #16743a; font-size: 12px; }
 .payments-category-tip { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--blank-border); font-size: 12px; }
 .payments-category-tip p { margin: 6px 0 0; color: var(--blank-muted); font-size: 11px; line-height: 1.7; }
 .payments-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; }
@@ -2543,6 +2561,7 @@ input.anvil-role-payment-amount { min-height: 48px; font-size: 22px; font-weight
   .payments-action-panel > .anvil-role-payment-feedback,
   .payments-category-tip { grid-column: 1 / -1; margin: 0; }
   .payments-category-tip { margin-top: 8px; padding-top: 12px; }
+  .payments-category-bulk { grid-column: 1 / -1; margin-top: 8px; padding-top: 14px; }
 }
 @media (max-width: 600px) {
   .payments-heading h2 { font-size: 22px; }

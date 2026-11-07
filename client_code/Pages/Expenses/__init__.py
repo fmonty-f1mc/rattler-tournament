@@ -18,6 +18,8 @@ class Expenses(ExpensesTemplate):
     self._payment_filter = "all"
     self._payment_tournament_id = None
     self._saving_payments = False
+    self.payment_category_picker.items = [("Choose a category", None)]
+    self.payment_category_picker.selected_value = None
     self.payment_sort_picker.items = [
       ("Largest balance first", "balance"),
       ("Name A–Z", "name"),
@@ -48,6 +50,9 @@ class Expenses(ExpensesTemplate):
     self._payment_tournament_id = None
     self.budget_bulk_paid_amount.text = ""
     self.payment_custom_feedback.visible = False
+    self.payment_category_feedback.visible = False
+    self.payment_category_picker.items = [("Choose a category", None)]
+    self.payment_category_picker.selected_value = None
     self._refresh_budget_cost_rows()
     self.budget_cost_match_status.text = "0 participants"
     self.budget_payment_selection_status.text = "0 participants selected."
@@ -67,6 +72,8 @@ class Expenses(ExpensesTemplate):
       self._payment_tournament_id = tournament.get_id()
       self.budget_bulk_paid_amount.text = ""
       self.payment_custom_feedback.visible = False
+      self.payment_category_feedback.visible = False
+      self.payment_category_picker.selected_value = None
       if self._payment_filter == "selected":
         self._payment_filter = "all"
     summary = anvil.server.call("get_budget_summary", tournament)
@@ -91,6 +98,14 @@ class Expenses(ExpensesTemplate):
       ),
       category_options[0][1] if category_options else None,
     )
+    payment_category = self.payment_category_picker.selected_value
+    payment_category_id = payment_category.get_id() if payment_category is not None else None
+    self.payment_category_picker.items = [("Choose a category", None)] + category_options
+    self.payment_category_picker.selected_value = next(
+      (category for _, category in category_options if category.get_id() == payment_category_id),
+      None,
+    )
+    self._update_budget_payment_selection_status()
     self._load_budget_target_items(summary["rows"], tournament)
     self.budget_total.text = self._money(summary["total"])
     self.budget_paid.text = self._money(summary["paid"])
@@ -246,6 +261,40 @@ class Expenses(ExpensesTemplate):
     self.clear_budget_payment_selection_button.enabled = selected_count > 0
     self.save_budget_payments_button.text = (
       f"Add payment to {selected_count}" if selected_count else "Add payment"
+    )
+    self.payment_category_picker.enabled = not self._saving_payments
+    self.clear_budget_payment_selection_button.enabled = selected_count > 0 and not self._saving_payments
+    self._update_category_payment_preview()
+
+  def _update_category_payment_preview(self):
+    category = self.payment_category_picker.selected_value
+    selected = [item for item in self._budget_cost_items if item["payment_selected"]]
+    self.pay_selected_category_button.enabled = (
+      bool(selected) and category is not None and not self._saving_payments
+    )
+    if category is None:
+      self.payment_category_preview.text = "Choose a category to see who will be paid."
+      return
+    if not selected:
+      self.payment_category_preview.text = "Select participants to pay this category."
+      return
+    to_pay = 0
+    already_paid = 0
+    not_assigned = 0
+    for item in selected:
+      assigned = next((
+        share for share in item["categories"]
+        if share["selected"] and share["category"] is not None
+        and share["category"].get_id() == category.get_id()
+      ), None)
+      if assigned is None:
+        not_assigned += 1
+      elif assigned["paid"]:
+        already_paid += 1
+      else:
+        to_pay += 1
+    self.payment_category_preview.text = (
+      f"{to_pay} to pay · {already_paid} already paid · {not_assigned} not assigned"
     )
 
   def _select_budget_payment_items(self, items, selected):
@@ -467,6 +516,58 @@ class Expenses(ExpensesTemplate):
   def budget_bulk_paid_amount_change(self, **event_args):
     self.payment_custom_feedback.visible = False
 
+  @handle("payment_category_picker", "change")
+  def payment_category_picker_change(self, **event_args):
+    self.payment_category_feedback.visible = False
+    self._update_category_payment_preview()
+
+  @handle("pay_selected_category_button", "click")
+  def pay_selected_category_button_click(self, **event_args):
+    if self._saving_payments:
+      return
+    self.payment_category_feedback.visible = False
+    category = self.payment_category_picker.selected_value
+    entries = [item["entry"] for item in self._budget_cost_items if item["payment_selected"]]
+    if self.app.current_event is None:
+      message = "Create or select a tournament first."
+    elif category is None:
+      message = "Choose an expense category first."
+    elif not entries:
+      message = "Select at least one participant first."
+    else:
+      message = None
+    if message:
+      self.payment_category_feedback.text = message
+      self.payment_category_feedback.role = "payment-feedback"
+      self.payment_category_feedback.visible = True
+      return
+
+    self._saving_payments = True
+    self._update_budget_payment_selection_status()
+    self.pay_selected_category_button.text = "Saving…"
+    try:
+      result = anvil.server.call(
+        "pay_budget_category_for_entries", self.app.current_event, category, entries,
+      )
+      if not result["ok"]:
+        self.payment_category_feedback.text = result["message"]
+        self.payment_category_feedback.role = "payment-feedback"
+        self.payment_category_feedback.visible = True
+        return
+      self._reload_payments_preserving_selection()
+      message = (
+        f"{category['name']}: {result['saved_count']} paid; "
+        f"{result['already_paid']} already paid; {result['not_assigned']} not assigned (skipped)."
+      )
+      self.payment_category_feedback.text = message
+      self.payment_category_feedback.role = "payment-success"
+      self.payment_category_feedback.visible = True
+      self.budget_status.text = message
+    finally:
+      self._saving_payments = False
+      self.pay_selected_category_button.text = "Mark category paid"
+      self._update_budget_payment_selection_status()
+
   @handle("budget_rows", "x-budget-payment-selection-changed")
   def budget_rows_payment_selection_changed(self, **event_args):
     if self._payment_filter == "selected":
@@ -482,6 +583,11 @@ class Expenses(ExpensesTemplate):
     if not result["ok"]:
       self.budget_status.text = result["message"]
       return
+    self._reload_payments_preserving_selection()
+    status = "paid" if paid else "unpaid"
+    self.budget_status.text = f"{category['name']} marked {status} for {entry['golfer']['name']}."
+
+  def _reload_payments_preserving_selection(self):
     selected_ids = {
       item["entry"].get_id() for item in self._budget_cost_items if item["payment_selected"]
     }
@@ -489,8 +595,6 @@ class Expenses(ExpensesTemplate):
     for item in self._budget_cost_items:
       item["payment_selected"] = item["entry"].get_id() in selected_ids
     self._refresh_budget_cost_rows()
-    status = "paid" if paid else "unpaid"
-    self.budget_status.text = f"{category['name']} marked {status} for {entry['golfer']['name']}."
 
   @handle("select_matching_budget_payments_button", "click")
   def select_matching_budget_payments_button_click(self, **event_args):
@@ -612,7 +716,7 @@ class Expenses(ExpensesTemplate):
     ]
 
     self._saving_payments = True
-    self.save_budget_payments_button.enabled = False
+    self._update_budget_payment_selection_status()
     self.save_budget_payments_button.text = "Saving…"
     try:
       result = anvil.server.call(
