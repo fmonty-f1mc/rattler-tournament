@@ -69,6 +69,8 @@
       <div class="field-block"><label>Search participants</label><anvil-component type="TextBox" name="player_search" prop:placeholder="Search name, email, or phone"></anvil-component></div>
       <anvil-component type="CheckBox" name="email_unlisted_filter" prop:text="Email unlisted" prop:role="player-contact-filter"></anvil-component>
       <anvil-component type="CheckBox" name="phone_unlisted_filter" prop:text="Phone unlisted" prop:role="player-contact-filter"></anvil-component>
+      <anvil-component type="CheckBox" name="handicap_unlisted_filter" prop:text="Handicap unlisted" prop:role="player-contact-filter"></anvil-component>
+      <div class="field-block"><label>Handicap status</label><anvil-component type="DropDown" name="official_handicap_filter"></anvil-component></div>
     </div>
     <anvil-component type="Label" name="player_filter_status" prop:role="muted-text"></anvil-component>
     <anvil-component type="RepeatingPanel" name="player_rows" prop:item_template="rattler_tournament.Components.Participants.PlayerRow" prop:role="player-list"></anvil-component>

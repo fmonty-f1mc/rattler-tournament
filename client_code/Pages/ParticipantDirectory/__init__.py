@@ -18,6 +18,12 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
     self._directory_revisions = {}
     self._preview_file = None
     self._preview_count = 0
+    self.official_handicap_filter.items = [
+      ("All handicap statuses", "all"),
+      ("Official handicap", "official"),
+      ("Not official handicap", "not_official"),
+    ]
+    self.official_handicap_filter.selected_value = "all"
     self.player_status.text = ""
     self._show_player_add_mode(None)
 
@@ -26,6 +32,8 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
     query = (self.player_search.text or "").strip().lower()
     email_unlisted = self.email_unlisted_filter.checked
     phone_unlisted = self.phone_unlisted_filter.checked
+    handicap_unlisted = self.handicap_unlisted_filter.checked
+    official_status = self.official_handicap_filter.selected_value or "all"
     matches = []
 
     roster = self._directory_rows if self._editing_directory else self.app.golfers
@@ -40,6 +48,12 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
       if email_unlisted and email:
         continue
       if phone_unlisted and phone:
+        continue
+      if handicap_unlisted and golfer["handicap"] is not None:
+        continue
+      if official_status == "official" and not golfer["handicap_official"]:
+        continue
+      if official_status == "not_official" and golfer["handicap_official"]:
         continue
       matches.append(golfer)
 
@@ -80,6 +94,7 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
     for name in ("edit_directory_button", "export_directory_button", "open_directory_import_button",
                  "save_directory_button", "cancel_directory_button", "player_search",
                  "email_unlisted_filter", "phone_unlisted_filter", "directory_csv_file",
+                 "handicap_unlisted_filter", "official_handicap_filter",
                  "preview_directory_button", "close_directory_import_button",
                  "open_individual_player_add_button", "open_bulk_player_add_button",
                  "create_player_button", "import_players_button"):
@@ -243,6 +258,11 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
 
   @handle("phone_unlisted_filter", "change")
   def phone_unlisted_filter_change(self, **event_args):
+    self._refresh_player_rows()
+
+  @handle("handicap_unlisted_filter", "change")
+  @handle("official_handicap_filter", "change")
+  def handicap_filters_change(self, **event_args):
     self._refresh_player_rows()
 
   def _show_player_add_mode(self, mode):

@@ -23,6 +23,7 @@ class BudgetRow(BudgetRowTemplate):
     self.expense_rows.items = expense_details
     self.no_expenses_label.visible = not expense_details
     paid_count = sum(1 for category in expense_details if category["paid"])
+    self.remove_payments_button.enabled = saved_paid > 0 or paid_count > 0
     self.category_payment_count_label.text = (
       f"{paid_count} of {len(expense_details)} categories paid"
       if expense_details else "No categories assigned"
@@ -59,3 +60,13 @@ class BudgetRow(BudgetRowTemplate):
     self.item["payment_selected"] = self.payment_selection_checkbox.checked
     self._update_selection_style()
     self.parent.raise_event("x-budget-payment-selection-changed")
+
+  @handle("remove_payments_button", "click")
+  def remove_payments_button_click(self, **event_args):
+    self.remove_payments_button.enabled = False
+    try:
+      self.parent.raise_event(
+        "x-remove-entry-payments", entry=self.item["entry"],
+      )
+    finally:
+      self.remove_payments_button.enabled = True

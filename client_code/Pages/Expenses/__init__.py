@@ -18,6 +18,8 @@ class Expenses(ExpensesTemplate):
     self._payment_filter = "all"
     self._payment_tournament_id = None
     self._saving_payments = False
+    self.payment_expense_category_filter.items = [("All expense categories", "all")]
+    self.payment_expense_category_filter.selected_value = "all"
     self.payment_category_picker.items = [("Choose a category", None)]
     self.payment_category_picker.selected_value = None
     self.payment_sort_picker.items = [
@@ -45,6 +47,8 @@ class Expenses(ExpensesTemplate):
     self.budget_cost_division_filter.items = [("All divisions", "all")]
     self.budget_cost_division_filter.selected_value = "all"
     self.budget_cost_search.text = ""
+    self.payment_expense_category_filter.items = [("All expense categories", "all")]
+    self.payment_expense_category_filter.selected_value = "all"
     self._payment_page = 0
     self._payment_filter = "all"
     self._payment_tournament_id = None
@@ -74,11 +78,11 @@ class Expenses(ExpensesTemplate):
       self.payment_custom_feedback.visible = False
       self.payment_category_feedback.visible = False
       self.payment_category_picker.selected_value = None
+      self.payment_expense_category_filter.selected_value = "all"
       if self._payment_filter == "selected":
         self._payment_filter = "all"
     summary = anvil.server.call("get_budget_summary", tournament)
     self.budget_category_rows.items = summary["categories"]
-    self._load_budget_cost_items(summary["rows"])
     selected_category_id = (
       self.budget_bulk_category_picker.selected_value.get_id()
       if self.budget_bulk_category_picker.selected_value is not None
@@ -89,6 +93,15 @@ class Expenses(ExpensesTemplate):
       for category in summary["categories"]
       if category["category"] is not None
     ]
+    selected_filter = self.payment_expense_category_filter.selected_value or "all"
+    filter_options = [("All expense categories", "all")] + [
+      (name, category.get_id()) for name, category in category_options
+    ]
+    self.payment_expense_category_filter.items = filter_options
+    self.payment_expense_category_filter.selected_value = next(
+      (value for _, value in filter_options if value == selected_filter), "all",
+    )
+    self._load_budget_cost_items(summary["rows"])
     self.budget_bulk_category_picker.items = category_options
     self.budget_bulk_category_picker.selected_value = next(
       (
@@ -181,6 +194,7 @@ class Expenses(ExpensesTemplate):
     query = (self.budget_cost_search.text or "").strip().lower()
     type_filter = self.budget_cost_type_filter.selected_value or "all"
     division_filter = self.budget_cost_division_filter.selected_value or "all"
+    category_filter = self.payment_expense_category_filter.selected_value or "all"
     matches = []
     for item in self._budget_cost_items:
       entry = item["entry"]
@@ -194,6 +208,12 @@ class Expenses(ExpensesTemplate):
       if division_filter == "unassigned" and (not item["_is_player"] or item["_division"]):
         continue
       if division_filter.startswith("division:") and item["_division"] != division_filter[len("division:"):]:
+        continue
+      if category_filter != "all" and not any(
+        share["selected"] and share["category"] is not None
+        and share["category"].get_id() == category_filter
+        for share in item["categories"]
+      ):
         continue
       balance = self._payment_balance(item)
       if self._payment_filter == "outstanding" and balance <= 0:
@@ -474,6 +494,10 @@ class Expenses(ExpensesTemplate):
   def payment_sort_picker_change(self, **event_args):
     self._refresh_budget_cost_rows(reset_page=True)
 
+  @handle("payment_expense_category_filter", "change")
+  def payment_expense_category_filter_change(self, **event_args):
+    self._refresh_budget_cost_rows(reset_page=True)
+
   def _set_payment_filter(self, value):
     self._payment_filter = value
     self._refresh_budget_cost_rows(reset_page=True)
@@ -500,6 +524,7 @@ class Expenses(ExpensesTemplate):
     self.budget_cost_type_filter.selected_value = "all"
     self.budget_cost_division_filter.selected_value = "all"
     self.payment_sort_picker.selected_value = "balance"
+    self.payment_expense_category_filter.selected_value = "all"
     self._set_payment_filter("all")
 
   @handle("previous_payments_page_button", "click")
@@ -586,6 +611,33 @@ class Expenses(ExpensesTemplate):
     self._reload_payments_preserving_selection()
     status = "paid" if paid else "unpaid"
     self.budget_status.text = f"{category['name']} marked {status} for {entry['golfer']['name']}."
+
+  @handle("budget_rows", "x-remove-entry-payments")
+  def budget_rows_remove_entry_payments(self, entry, **event_args):
+    if self._saving_payments:
+      return
+    paid = entry["amount_paid"] or 0
+    if not confirm(
+      f"Remove all payments ({self._money(paid)}) for {entry['golfer']['name']}? "
+      "Their total paid will become $0.00 and all their expense categories will be marked unpaid. "
+      "Their assigned expenses will remain.",
+      title="Remove payments",
+    ):
+      return
+    self._saving_payments = True
+    self._update_budget_payment_selection_status()
+    try:
+      result = anvil.server.call(
+        "remove_entry_payments", self.app.current_event, entry, paid,
+      )
+      self._reload_payments_preserving_selection()
+      self.budget_status.text = (
+        f"Payments removed for {entry['golfer']['name']}."
+        if result["ok"] else result["message"]
+      )
+    finally:
+      self._saving_payments = False
+      self._update_budget_payment_selection_status()
 
   def _reload_payments_preserving_selection(self):
     selected_ids = {

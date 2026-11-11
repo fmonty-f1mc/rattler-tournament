@@ -2007,6 +2007,24 @@ def add_entry_payments(tournament, payments):
 
 
 @anvil.server.callable(require_user=True)
+@in_transaction
+def remove_entry_payments(tournament, entry, expected_paid):
+  if not _valid_row(app_tables.tournaments, tournament):
+    return _result("Choose a tournament.")
+  if not _valid_row(app_tables.tournament_entries, entry):
+    return _result("Choose a valid tournament entry.")
+  if entry["tournament"] != tournament:
+    return _result("Choose a participant from this tournament.")
+  if expected_paid != (entry["amount_paid"] or 0):
+    return _result("Payments changed. Review the refreshed total and try again.")
+
+  for share in app_tables.budget_shares.search(entry=entry):
+    share.update(paid=False, paid_amount=0)
+  entry["amount_paid"] = 0
+  return _result()
+
+
+@anvil.server.callable(require_user=True)
 def add_budget_category_to_entries(tournament, category, entries):
   if not _valid_row(app_tables.tournaments, tournament):
     return _result("Choose a tournament.")
