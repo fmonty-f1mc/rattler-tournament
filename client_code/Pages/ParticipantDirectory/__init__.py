@@ -29,6 +29,15 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
 
   def _refresh_player_rows(self):
     self._commit_directory_cells()
+    current_year_ids = None
+    if self.current_year_participants_filter.checked:
+      self.current_year_participants_filter.enabled = False
+      try:
+        result = anvil.server.call("list_current_year_participants")
+        current_year_ids = {golfer.get_id() for golfer in result["participants"]}
+        self.current_year_participants_filter.text = f"Current year participants ({result['year']})"
+      finally:
+        self.current_year_participants_filter.enabled = True
     query = (self.player_search.text or "").strip().lower()
     email_unlisted = self.email_unlisted_filter.checked
     phone_unlisted = self.phone_unlisted_filter.checked
@@ -38,6 +47,8 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
 
     roster = self._directory_rows if self._editing_directory else self.app.golfers
     for golfer in roster:
+      if current_year_ids is not None and golfer.get_id() not in current_year_ids:
+        continue
       name = (golfer["name"] or "").lower()
       email = (golfer["email"] or "").strip()
       phone = (golfer["phone"] or "").strip()
@@ -95,6 +106,7 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
                  "save_directory_button", "cancel_directory_button", "player_search",
                  "email_unlisted_filter", "phone_unlisted_filter", "directory_csv_file",
                  "handicap_unlisted_filter", "official_handicap_filter",
+                 "current_year_participants_filter",
                  "preview_directory_button", "close_directory_import_button",
                  "open_individual_player_add_button", "open_bulk_player_add_button",
                  "create_player_button", "import_players_button"):
@@ -262,6 +274,7 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
 
   @handle("handicap_unlisted_filter", "change")
   @handle("official_handicap_filter", "change")
+  @handle("current_year_participants_filter", "change")
   def handicap_filters_change(self, **event_args):
     self._refresh_player_rows()
 

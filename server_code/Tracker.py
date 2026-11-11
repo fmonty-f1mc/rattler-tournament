@@ -333,6 +333,18 @@ def list_golfers():
 
 
 @anvil.server.callable(require_user=True)
+def list_current_year_participants():
+  year = datetime.now(timezone.utc).year
+  participants = {}
+  for tournament in app_tables.tournaments.search(q.fetch_only("year"), year=year):
+    for entry in app_tables.tournament_entries.search(q.fetch_only("golfer"), tournament=tournament):
+      golfer = entry["golfer"]
+      if golfer is not None:
+        participants[golfer.get_id()] = golfer
+  return {"year": year, "participants": list(participants.values())}
+
+
+@anvil.server.callable(require_user=True)
 def import_golfers_from_csv(csv_file):
   if csv_file is None:
     return _result("Choose a CSV file first.")
