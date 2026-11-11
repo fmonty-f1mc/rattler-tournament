@@ -5,6 +5,7 @@ import io
 import json
 import math
 import re
+from datetime import date
 
 import anvil.server
 from anvil import BlobMedia
@@ -112,6 +113,37 @@ def _plan(updates):
 def load_directory_for_editing():
   rows = sorted(app_tables.golfers.search(), key=lambda row: (row["name"] or "").lower())
   return {"rows": rows, "revisions": {row.get_id(): _revision(row) for row in rows}}
+
+
+@anvil.server.callable(require_user=True)
+def calculate_participant_handicap(golfer):
+  """Weight prior gross 18 scores by rank, favouring the lowest strokes."""
+  if not _valid_row(app_tables.golfers, golfer):
+    return _error("This participant no longer exists. Refresh the directory.")
+
+  scores = []
+  current_year = date.today().year
+  for entry in app_tables.tournament_entries.search(
+    q.fetch_only("gross_18", tournament=q.fetch_only("year")),
+    golfer=golfer, is_player=True,
+  ):
+    tournament = entry["tournament"]
+    if tournament is None or tournament["year"] is None or tournament["year"] >= current_year:
+      continue
+    gross = entry["gross_18"]
+    if gross is not None and math.isfinite(gross) and gross > 0:
+      scores.append(gross)
+  if not scores:
+    return _error("No gross 18 scores from previous Rattlers are available for this participant.")
+
+  # Best to worst receive weights N, N-1, ..., 1. Equal scores contribute
+  # identically regardless of their ordering within a tie.
+  scores.sort()
+  count = len(scores)
+  weighted_total = sum(score * (count - rank) for rank, score in enumerate(scores))
+  average = weighted_total / (count * (count + 1) / 2)
+  return {"ok": True, "weighted_average_gross_18": average,
+          "score_count": len(scores), "handicap": round(average - 72, 1)}
 
 
 @anvil.server.callable(require_user=True)

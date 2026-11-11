@@ -40,6 +40,9 @@
           <anvil-component type="Label" name="handicap_label" bind:text="'Not set' if self.item['handicap'] is None else str(self.item['handicap']) + (' · Official' if self.item['handicap_official'] else '')"></anvil-component>
           <anvil-component type="TextBox" name="handicap_box" prop:placeholder="Optional, e.g. 12.4"></anvil-component>
           <anvil-component type="CheckBox" name="official_checkbox" prop:text="Official handicap"></anvil-component>
+          <anvil-component type="Button" name="calculate_handicap_button" prop:text="Calculate Handicap" prop:role="secondary-button"></anvil-component>
+          <anvil-component type="Label" name="calculation_status" prop:role="muted-text" prop:visible="False"></anvil-component>
+          <p class="muted-copy">Weighted average gross 18 from prior years minus 72. Scores ranked best to worst receive weights N down to 1 (e.g. 3, 2, 1 for three rounds). Save changes to apply.</p>
         </div>
         <div class="player-detail-cell">
           <span class="player-detail-label">Status</span>

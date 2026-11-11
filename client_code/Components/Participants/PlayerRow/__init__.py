@@ -105,7 +105,31 @@ class PlayerRow(PlayerRowTemplate):
   @handle("cancel_button", "click")
   def cancel_button_click(self, **event_args):
     self._restore_item_values()
+    self.calculation_status.visible = False
     self._set_editing(False)
+
+  @handle("calculate_handicap_button", "click")
+  def calculate_handicap_button_click(self, **event_args):
+    self.calculate_handicap_button.enabled = False
+    try:
+      result = anvil.server.call("calculate_participant_handicap", self.item)
+      self.calculation_status.visible = True
+      if not result["ok"]:
+        self.calculation_status.text = result["message"]
+        return
+      if not self._editing:
+        self._set_editing(True)
+      self.handicap_box.text = str(result["handicap"])
+      self.official_checkbox.checked = False
+      average = "{:.2f}".format(result["weighted_average_gross_18"])
+      count = result["score_count"]
+      self.calculation_status.text = (
+        f"Weighted gross 18: {average} across {count} prior round(s), with best scores weighted most. "
+        f"Handicap: {result['handicap']} (weighted average minus 72, rounded to 1 decimal). "
+        "Save changes to apply as an unofficial handicap."
+      )
+    finally:
+      self.calculate_handicap_button.enabled = True
 
   @handle("save_button", "click")
   def save_button_click(self, **event_args):
