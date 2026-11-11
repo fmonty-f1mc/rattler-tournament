@@ -639,6 +639,8 @@ textarea.anvil-text-area:disabled,
 
 .email-export-action {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
 }
 

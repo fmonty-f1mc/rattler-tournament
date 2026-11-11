@@ -18,6 +18,7 @@ class EmailParticipants(EmailParticipantsTemplate):
 
   def clear(self):
     self.email_preview.visible = False
+    self.email_addresses_preview.visible = False
     self._load_email_filters(None, [])
 
   def _load_email_filters(self, tournament, entries):
@@ -26,6 +27,8 @@ class EmailParticipants(EmailParticipantsTemplate):
       ("Test — CC only", "test"),
     ]
     if tournament is None:
+      self.email_no_handicap.checked = False
+      self.email_addresses_preview.visible = False
       self._email_filter_tournament_id = None
       self._email_has_players = False
       self.email_recipient_type.items = recipient_options
@@ -40,6 +43,8 @@ class EmailParticipants(EmailParticipantsTemplate):
     tournament_id = tournament.get_id()
     if self._email_filter_tournament_id != tournament_id:
       self.email_preview.visible = False
+      self.email_addresses_preview.visible = False
+      self.email_no_handicap.checked = False
       self._email_filter_tournament_id = tournament_id
       self.email_recipient_type.selected_value = "all"
       self.email_division_filter.selected_value = "all"
@@ -88,6 +93,10 @@ class EmailParticipants(EmailParticipantsTemplate):
   def _update_email_recipient_controls(self):
     test_mode = self.email_recipient_type.selected_value == "test"
     self.email_test_hint.visible = test_mode
+    if test_mode:
+      self.email_no_handicap.checked = False
+    self.email_no_handicap.enabled = self.app.current_event is not None and not test_mode
+    self.preview_emails_button.enabled = self.app.current_event is not None
     self.export_email_list_button.enabled = self.app.current_event is not None and not test_mode
     self.send_tournament_email_button.text = (
       "Send test email to CC" if test_mode else "Send email to participants"
@@ -95,7 +104,45 @@ class EmailParticipants(EmailParticipantsTemplate):
 
   @handle("email_recipient_type", "change")
   def email_recipient_type_change(self, **event_args):
+    self.email_addresses_preview.visible = False
     self._update_email_division_filter_state()
+
+  @handle("email_division_filter", "change")
+  @handle("email_no_handicap", "change")
+  @handle("email_cc", "change")
+  def email_recipient_filters_change(self, **event_args):
+    self.email_addresses_preview.visible = False
+
+  @handle("preview_emails_button", "click")
+  def preview_emails_button_click(self, **event_args):
+    if self.app.current_event is None:
+      self.email_status.text = "Create or select a tournament first."
+      return
+    self.email_addresses_preview.visible = False
+    self.preview_emails_button.enabled = False
+    try:
+      result = anvil.server.call(
+        "get_tournament_email_summary", self.app.current_event,
+        self.email_recipient_type.selected_value or "all",
+        self.email_division_filter.selected_value or "all",
+        self.email_cc.text or "", self.email_no_handicap.checked,
+      )
+      if not result["ok"]:
+        self.email_status.text = result["message"]
+        return
+      cc_keys = {address.lower() for address in result["cc_addresses"]}
+      bcc = [address for address in result["recipient_addresses"] if address.lower() not in cc_keys]
+      self.email_addresses_preview.text = (
+        f"Matching participant email addresses: {result['recipient_count']}\n"
+        + "BCC: " + ("; ".join(bcc) or "None")
+        + "\nCC: " + ("; ".join(result["cc_addresses"]) or "None")
+        + f"\nSkipped: {result['missing_count']} missing; {result['invalid_count']} invalid."
+        + ("\nTest mode: only CC addresses will receive the email." if result["test_mode"] else "")
+      )
+      self.email_addresses_preview.visible = True
+      self.email_status.text = "Recipient preview ready. No email has been sent."
+    finally:
+      self._update_email_recipient_controls()
 
   @handle("export_email_list_button", "click")
   def export_email_list_button_click(self, **event_args):
@@ -111,6 +158,7 @@ class EmailParticipants(EmailParticipantsTemplate):
         "export_tournament_email_list", self.app.current_event,
         self.email_recipient_type.selected_value or "all",
         self.email_division_filter.selected_value or "all",
+        self.email_no_handicap.checked,
       )
       if not result["ok"]:
         self.email_status.text = result["message"]
@@ -152,6 +200,7 @@ class EmailParticipants(EmailParticipantsTemplate):
         recipient_type,
         division_filter,
         cc,
+        self.email_no_handicap.checked,
       )
     finally:
       self.send_tournament_email_button.enabled = True
@@ -211,6 +260,7 @@ class EmailParticipants(EmailParticipantsTemplate):
         division_filter,
         cc,
         include_sections,
+        self.email_no_handicap.checked,
       )
     finally:
       self.send_tournament_email_button.enabled = True
