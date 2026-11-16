@@ -190,10 +190,11 @@ class ParticipantDirectory(ParticipantDirectoryTemplate):
 
   @handle("export_directory_button", "click")
   def export_directory_button_click(self, **event_args):
+    participants = list(self.player_rows.items or [])
     self._set_directory_busy(True)
     try:
-      anvil.media.download(anvil.server.call("export_participant_directory"))
-      self.player_status.text = "Exported the full directory, including participants hidden by filters."
+      anvil.media.download(anvil.server.call("export_participant_directory", participants))
+      self.player_status.text = f"Exported {len(participants)} participant(s) matching the directory filters."
     finally:
       self._set_directory_busy(False)
 

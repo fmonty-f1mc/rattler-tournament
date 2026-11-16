@@ -207,11 +207,16 @@ def _read_cell(value):
 
 
 @anvil.server.callable(require_user=True)
-def export_participant_directory():
+def export_participant_directory(participants):
+  """Export only the participants displayed by the directory's filters."""
+  participant_ids = {row.get_id() for row in participants}
   output = io.StringIO(newline="")
   writer = csv.writer(output)
   writer.writerow(HEADERS)
-  rows = sorted(app_tables.golfers.search(), key=lambda row: (row["name"] or "").lower())
+  rows = sorted(
+    (row for row in app_tables.golfers.search() if row.get_id() in participant_ids),
+    key=lambda row: (row["name"] or "").lower(),
+  )
   for row in rows:
     values = _values(row)
     writer.writerow([row.get_id(), _revision(row)] + [_csv_cell(values[key]) for key in FIELDS])
