@@ -61,6 +61,7 @@
         <div class="payments-main">
           <div class="payments-list-toolbar">
             <anvil-component type="Label" name="budget_cost_match_status" prop:role="payment-result-count"></anvil-component>
+            <anvil-component type="Button" name="export_payment_names_button" prop:text="Export names (CSV)" prop:role="payment-text-action" prop:enabled="false"></anvil-component>
             <anvil-component type="Button" name="select_matching_budget_payments_button" prop:text="Select all matching" prop:role="payment-text-action"></anvil-component>
           </div>
           <anvil-component type="Label" name="payment_empty_state" prop:role="payment-empty-state" prop:visible="false" prop:text="No participants match. Try another name or reset your filters."></anvil-component>

@@ -1,6 +1,7 @@
 from ._anvil_designer import ExpensesTemplate
 from anvil import *
 import anvil.server
+import anvil.media
 
 
 class Expenses(ExpensesTemplate):
@@ -31,6 +32,7 @@ class Expenses(ExpensesTemplate):
     self.budget_status.text = ""
 
   def clear(self):
+    self.export_payment_names_button.enabled = False
     self.budget_rows.items = []
     self._budget_cost_items = []
     self.budget_category_rows.items = []
@@ -256,6 +258,7 @@ class Expenses(ExpensesTemplate):
     self.previous_payments_page_button.enabled = self._payment_page > 0
     self.next_payments_page_button.enabled = self._payment_page + 1 < page_count
     self.select_matching_budget_payments_button.enabled = matching_count > 0
+    self.export_payment_names_button.enabled = matching_count > 0
     for value, button in (
       ("all", self.payments_all_button),
       ("outstanding", self.payments_outstanding_button),
@@ -489,6 +492,21 @@ class Expenses(ExpensesTemplate):
   @handle("budget_cost_search", "change")
   def budget_cost_search_change(self, **event_args):
     self._refresh_budget_cost_rows(reset_page=True)
+
+  @handle("export_payment_names_button", "click")
+  def export_payment_names_button_click(self, **event_args):
+    names = [item["entry"]["golfer"]["name"] or ""
+             for item in self._matching_budget_cost_items()]
+    if not names:
+      return
+    lines = ['"Name"']
+    for name in names:
+      # Prevent spreadsheet applications from interpreting names as formulas.
+      if name.lstrip().startswith(("=", "+", "-", "@")) or name.startswith(("\t", "\r", "\n")):
+        name = "'" + name
+      lines.append('"' + name.replace('"', '""') + '"')
+    content = ("\ufeff" + "\r\n".join(lines) + "\r\n").encode("utf-8")
+    anvil.media.download(BlobMedia("text/csv", content, name="payment-names.csv"))
 
   @handle("payment_sort_picker", "change")
   def payment_sort_picker_change(self, **event_args):
