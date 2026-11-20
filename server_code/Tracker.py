@@ -485,9 +485,8 @@ def update_golfer(golfer, name, email, phone, city, state, handicap=None, handic
   if not name:
     return _result("Add a player name.")
   email = (email or "").strip()
-  if not email:
-    return _result("Add an email address for this participant.")
-  if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+  # Preserve existing incomplete contact details when editing other fields.
+  if email != (golfer["email"] or "").strip() and email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
     return _result("Enter a valid email address, such as name@example.com.")
   if any(
     other.get_id() != golfer.get_id()
