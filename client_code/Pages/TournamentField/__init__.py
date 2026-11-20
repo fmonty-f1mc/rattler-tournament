@@ -438,10 +438,11 @@ class TournamentField(TournamentFieldTemplate):
     for item in selected_items:
       golfer = item["entry"]["golfer"]
       player_handicap = self._cap_key(golfer["handicap"])
-      if not isinstance(player_handicap, (int, float)) or not math.isfinite(player_handicap * 1.5):
+      multiplier = 1.2 if golfer["handicap_official"] else 0.8
+      if not isinstance(player_handicap, (int, float)) or not math.isfinite(player_handicap * multiplier):
         skipped_names.append(golfer["name"])
         continue
-      rattlercap = str(min(20, math.ceil(player_handicap * 1.5)))
+      rattlercap = str(min(30, math.floor(player_handicap * multiplier + 0.5)))
       item["handicap"] = rattlercap
       self._field_detail_drafts[item["entry"].get_id()] = {
         "division": item["division"],
